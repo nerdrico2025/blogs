@@ -1,0 +1,6 @@
+# Redirecionamentos 301 deste blog (usados ao migrar de outro site).
+# Uma regra por linha: /caminho-antigo/ /caminho-novo/   (ou uma URL completa como destino)
+# Links do WordPress com data (/2024/05/slug/) já redirecionam sozinhos para /slug/ quando o post existe.
+#
+# /sobre-nos/ /sobre/
+# /quem-somos/ /sobre/
