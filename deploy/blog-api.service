@@ -1,0 +1,33 @@
+# ALTERNATIVA SEM EASYPANEL: o caminho principal é o Docker no Easypanel (docs/deploy-easypanel.md).
+# Este arquivo só serve para instalar o blog direto num VPS com Nginx + systemd.
+[Unit]
+Description=Blog: API de publicação (compatível com WordPress)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=blog
+Group=blog
+WorkingDirectory=__ROOT__/app
+EnvironmentFile=/etc/blog/api.env
+ExecStart=/usr/bin/node api/main.ts
+Restart=always
+RestartSec=3
+TimeoutStopSec=180
+UMask=0022
+
+# Endurecimento
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=__ROOT__
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+
+[Install]
+WantedBy=multi-user.target
