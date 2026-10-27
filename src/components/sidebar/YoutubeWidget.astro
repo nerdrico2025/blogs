@@ -1,0 +1,16 @@
+---
+import site from "../../../site.config.ts";
+import Icon from "../Icon.astro";
+import { latestVideo } from "../../lib/youtube.ts";
+const w = site.sidebar.youtube;
+const video = await latestVideo();
+---
+<section class="card widget yt-card" aria-labelledby="w-yt">
+  <span class="kicker">{w.kicker}</span>
+  <a class="yt-thumb img-box" href={video.url} rel="noopener" tabindex="-1" aria-hidden="true">
+    <img src={video.thumbnail} alt="" width="480" height="270" loading="lazy" decoding="async" />
+    <span class="yt-play"><Icon name="play" /></span>
+  </a>
+  <h2 class="yt-title" id="w-yt">{video.title}</h2>
+  <a class="btn btn-youtube btn-block" href={video.url} rel="noopener"><Icon name="youtube" />{w.button}</a>
+</section>

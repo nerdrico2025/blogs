@@ -1,0 +1,34 @@
+---
+import site from "../../../site.config.ts";
+import Icon from "../Icon.astro";
+import type { Author } from "../../lib/config-schema.ts";
+interface Props {
+  author: Author;
+}
+const { author } = Astro.props;
+const cfg = site.article.authorBox;
+const youtube = author.links?.youtube ?? site.social?.youtube;
+---
+{cfg.enabled && (
+  <section class="card author-box" aria-labelledby="author-name" data-pagefind-ignore>
+    <img class="author-photo" src={author.avatar} alt="" width="90" height="90" loading="lazy" decoding="async" />
+    <div>
+      <span class="kicker">{cfg.kicker}</span>
+      <h2 class="author-name" id="author-name">{author.name}</h2>
+      {author.role && <p class="author-role">{author.role}</p>}
+      <p class="author-bio">{author.bio}</p>
+      <div class="author-actions">
+        {youtube && <a class="btn btn-youtube" href={youtube} rel="noopener"><Icon name="youtube" />{cfg.youtubeLabel}</a>}
+        {site.sidebar.newsletter.enabled && <a class="btn btn-ink" href={site.sidebar.newsletter.button.href} rel="noopener"><Icon name="mail" />{cfg.newsletterLabel}</a>}
+      </div>
+    </div>
+    {cfg.club.enabled && (
+      <div class="author-club">
+        <strong>{cfg.club.title}</strong>
+        <p>{cfg.club.text}</p>
+        <a class="btn btn-club" href={cfg.club.button.href} rel="noopener">{cfg.club.button.label}</a>
+        <small>{cfg.club.note}</small>
+      </div>
+    )}
+  </section>
+)}

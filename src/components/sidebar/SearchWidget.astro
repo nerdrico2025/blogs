@@ -1,0 +1,14 @@
+---
+import site from "../../../site.config.ts";
+import Icon from "../Icon.astro";
+const w = site.sidebar.search;
+---
+<section class="card widget" aria-labelledby="w-search">
+  <span class="kicker">{w.kicker}</span>
+  <h2 id="w-search">{w.title}</h2>
+  <form class="search-form" action="/search/" method="get" role="search">
+    <label class="sr-only" for="w-search-q">Buscar no blog</label>
+    <input id="w-search-q" type="search" name="q" placeholder={w.placeholder} autocomplete="off" />
+    <button type="submit" aria-label="Buscar"><Icon name="search" /></button>
+  </form>
+</section>

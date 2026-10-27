@@ -1,0 +1,44 @@
+---
+/**
+ * Imagem responsiva a partir de /wp-content/uploads (avif + webp, srcset, width/height).
+ * Se a imagem não tiver metadados (ex.: arquivo da marca), cai num <img> simples.
+ */
+import { readMediaMeta, srcset, variantUrl } from "../../shared/media.ts";
+
+interface Props {
+  src: string;
+  alt: string;
+  sizes: string;
+  /** Imagem acima da dobra: sem lazy e com fetchpriority=high. */
+  priority?: boolean;
+  /** Largura preferida do <img> de fallback. */
+  fallbackWidth?: number;
+  width?: number;
+  height?: number;
+  class?: string;
+}
+
+const { src, alt, sizes, priority = false, fallbackWidth = 768, width, height, class: cls } = Astro.props;
+const meta = readMediaMeta(src);
+const loading = priority ? undefined : "lazy";
+const fetchpriority = priority ? "high" : undefined;
+const fallback = meta ? (meta.widths.find((w) => w >= fallbackWidth) ?? meta.widths.at(-1)!) : 0;
+---
+{meta ? (
+  <picture class={cls}>
+    <source type="image/avif" srcset={srcset(meta, "avif")} sizes={sizes} />
+    <img
+      src={variantUrl(meta, fallback, "webp")}
+      srcset={srcset(meta, "webp")}
+      sizes={sizes}
+      width={meta.width}
+      height={meta.height}
+      alt={alt}
+      loading={loading}
+      fetchpriority={fetchpriority}
+      decoding="async"
+    />
+  </picture>
+) : (
+  <img class={cls} src={src} alt={alt} width={width} height={height} loading={loading} fetchpriority={fetchpriority} decoding="async" />
+)}

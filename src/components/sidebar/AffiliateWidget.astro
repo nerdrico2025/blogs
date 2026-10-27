@@ -1,0 +1,10 @@
+---
+import site from "../../../site.config.ts";
+const w = site.sidebar.affiliate;
+---
+<div>
+  <span class="ad-label">Publicidade</span>
+  <a class="affiliate" href={w.href} rel="sponsored noopener">
+    <img src={w.src} srcset={w.src2x ? `${w.src} 1x, ${w.src2x} 2x` : undefined} width={w.width} height={w.height} alt={w.alt} loading="lazy" decoding="async" />
+  </a>
+</div>

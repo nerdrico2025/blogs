@@ -1,0 +1,66 @@
+---
+import site from "../../../site.config.ts";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import TwoColumn from "../layout/TwoColumn.astro";
+import ArticleHeader from "./ArticleHeader.astro";
+import Toc from "./Toc.astro";
+import CtaBox from "./CtaBox.astro";
+import ReadMore from "./ReadMore.astro";
+import RelatedPosts from "./RelatedPosts.astro";
+import AuthorBox from "./AuthorBox.astro";
+import PostNav from "./PostNav.astro";
+import ShareButtons from "./ShareButtons.astro";
+import { related, type PostView } from "../../lib/posts.ts";
+import { h2Offsets, placements, splitAt } from "../../lib/article.ts";
+import { absoluteUrl } from "../../lib/format.ts";
+import { articleSeo } from "../../lib/seo.ts";
+import { readMediaMeta, srcset } from "../../../shared/media.ts";
+
+interface Props {
+  post: PostView;
+  newer?: PostView;
+  older?: PostView;
+  all: PostView[];
+}
+const { post, newer, older, all } = Astro.props;
+const cfg = site.article;
+const html = post.entry.rendered?.html ?? "";
+const headings = (post.entry.rendered?.metadata?.headings ?? []) as { depth: number; slug: string; text: string }[];
+
+const suggestions = related(post, all, cfg.related.count);
+// "Leia também": um artigo da mesma categoria, de preferência fora dos relacionados do fim
+const sameCategory = all.filter((p) => p.slug !== post.slug && p.category.slug === post.category.slug);
+const readMorePost = sameCategory.find((p) => !suggestions.includes(p)) ?? sameCategory[0];
+
+const pos = placements(h2Offsets(html).length, cfg.cta.beforeH2, cfg.readMore.beforeH2);
+const inserts: { key: "cta" | "readMore"; before: number }[] = [];
+if (cfg.cta.enabled && pos.cta) inserts.push({ key: "cta", before: pos.cta });
+if (cfg.readMore.enabled && readMorePost && pos.readMore) inserts.push({ key: "readMore", before: pos.readMore });
+const slots = splitAt(html, inserts);
+
+const coverSizes = `(max-width: 544px) calc(100vw - 64px), (max-width: 921px) calc(100vw - 82px), ${site.theme.layout.container - site.theme.layout.sidebar - site.theme.layout.gap - 98}px`;
+const coverMeta = post.entry.data.cover ? readMediaMeta(post.entry.data.cover.src) : null;
+const preload = coverMeta ? { srcset: srcset(coverMeta, "avif"), sizes: coverSizes, type: "image/avif" } : undefined;
+---
+<BaseLayout seo={articleSeo(post)} preloadImage={preload}>
+  <div class="reading-progress" aria-hidden="true"></div>
+  <TwoColumn>
+    <article class="card article" data-pagefind-body>
+      <ArticleHeader post={post} coverSizes={coverSizes} />
+      <Toc headings={headings} />
+      <div class="prose">
+        {slots.map((s) => (
+          <>
+            <Fragment set:html={s.html} />
+            {s.after === "cta" && <CtaBox />}
+            {s.after === "readMore" && readMorePost && <ReadMore post={readMorePost} />}
+          </>
+        ))}
+      </div>
+      <RelatedPosts posts={suggestions} />
+      <AuthorBox author={post.author} />
+    </article>
+    <PostNav prev={older} next={newer} />
+    <ShareButtons url={absoluteUrl(post.url)} title={post.title} />
+  </TwoColumn>
+</BaseLayout>

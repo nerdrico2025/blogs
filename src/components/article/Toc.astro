@@ -1,0 +1,23 @@
+---
+import site from "../../../site.config.ts";
+import Icon from "../Icon.astro";
+
+interface Props {
+  headings: { depth: number; slug: string; text: string }[];
+}
+const items = Astro.props.headings.filter((h) => h.depth === 2 || h.depth === 3);
+const cfg = site.article.toc;
+---
+{cfg.enabled && items.filter((h) => h.depth === 2).length >= cfg.minHeadings && (
+  <details class="toc" open data-pagefind-ignore>
+    <summary>
+      <span>{cfg.title}</span>
+      <span class="toc-toggle" aria-hidden="true"><Icon name="chevron" /></span>
+    </summary>
+    <nav aria-label={cfg.title}>
+      <ol>
+        {items.map((h) => <li class={`h${h.depth}`}><a href={`#${h.slug}`}>{h.text}</a></li>)}
+      </ol>
+    </nav>
+  </details>
+)}

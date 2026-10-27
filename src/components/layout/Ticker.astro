@@ -1,0 +1,47 @@
+---
+import site from "../../../site.config.ts";
+import { tickerRates } from "../../lib/rates.ts";
+
+const { clocks } = site.ticker;
+const rates = site.ticker.enabled ? await tickerRates() : [];
+const items = [
+  ...rates.map((r) => ({ label: r.label, value: r.value, tz: "" })),
+  ...clocks.map((c) => ({ label: c.label, value: "--:--", tz: c.timezone })),
+];
+---
+{site.ticker.enabled && items.length > 0 && (
+  <div class="ticker" role="region" aria-label="Cotações e horários">
+    <div class="ticker-track">
+      {[0, 1].map((copy) => (
+        <div class="ticker-group" aria-hidden={copy === 1 ? "true" : undefined}>
+          {items.map((it, i) => (
+            <>
+              {i > 0 && <span class="ticker-dot">•</span>}
+              <span class="ticker-item">
+                <strong>{it.label}</strong>
+                <span data-tz={it.tz || undefined}>{it.value}</span>
+              </span>
+            </>
+          ))}
+          <span class="ticker-sep" aria-hidden="true">✈</span>
+        </div>
+      ))}
+    </div>
+  </div>
+)}
+{site.ticker.enabled && clocks.length > 0 && (
+  <script>
+    const nodes = document.querySelectorAll<HTMLElement>(".ticker [data-tz]");
+    const fmts = new Map<string, Intl.DateTimeFormat>();
+    const tick = () => {
+      const now = new Date();
+      nodes.forEach((n) => {
+        const tz = n.dataset.tz!;
+        if (!fmts.has(tz)) fmts.set(tz, new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: tz }));
+        n.textContent = fmts.get(tz)!.format(now);
+      });
+    };
+    tick();
+    setInterval(tick, 30_000);
+  </script>
+)}

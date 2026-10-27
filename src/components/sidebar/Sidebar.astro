@@ -1,0 +1,27 @@
+---
+import site from "../../../site.config.ts";
+import type { SidebarBlock } from "../../lib/config-schema.ts";
+import SearchWidget from "./SearchWidget.astro";
+import NewsletterWidget from "./NewsletterWidget.astro";
+import YoutubeWidget from "./YoutubeWidget.astro";
+import ToolsWidget from "./ToolsWidget.astro";
+import CalloutWidget from "./CalloutWidget.astro";
+import LatestWidget from "./LatestWidget.astro";
+import AffiliateWidget from "./AffiliateWidget.astro";
+
+const blocks = {
+  search: SearchWidget,
+  newsletter: NewsletterWidget,
+  youtube: YoutubeWidget,
+  tools: ToolsWidget,
+  callout: CalloutWidget,
+  latest: LatestWidget,
+  affiliate: AffiliateWidget,
+} satisfies Record<SidebarBlock, unknown>;
+
+const enabled = site.sidebar.order.filter((b) => site.sidebar[b].enabled);
+---
+{enabled.map((b) => {
+  const Block = blocks[b];
+  return <Block />;
+})}

@@ -1,0 +1,34 @@
+---
+import site from "../../site.config.ts";
+import BaseLayout from "../layouts/BaseLayout.astro";
+import TwoColumn from "../components/layout/TwoColumn.astro";
+import PostCard from "../components/post/PostCard.astro";
+import Icon from "../components/Icon.astro";
+import { getPosts } from "../lib/posts.ts";
+
+const latest = (await getPosts()).slice(0, 3);
+const seo = { title: "Página não encontrada", description: "A página que você procurou não existe ou mudou de endereço.", path: "/404/", noindex: true };
+---
+<BaseLayout seo={seo}>
+  <TwoColumn>
+    <section class="card article">
+      <span class="kicker">Erro 404</span>
+      <h1>Página não encontrada</h1>
+      <p style="margin-top:12px">O endereço pode ter mudado ou o artigo saiu do ar. Tente buscar pelo assunto ou escolha uma categoria.</p>
+      <form class="search-form" action="/search/" method="get" role="search" style="max-width:480px">
+        <label class="sr-only" for="q404">Buscar no blog</label>
+        <input id="q404" type="search" name="q" placeholder={site.sidebar.search.placeholder} />
+        <button type="submit" aria-label="Buscar"><Icon name="search" /></button>
+      </form>
+      <ul class="chips">
+        {site.categories.map((c) => <li><a href={`/category/${c.slug}/`}>{c.name}</a></li>)}
+      </ul>
+    </section>
+    {latest.length > 0 && (
+      <>
+        <h2 class="section-title">Artigos recentes</h2>
+        <div class="post-list">{latest.map((p) => <PostCard post={p} />)}</div>
+      </>
+    )}
+  </TwoColumn>
+</BaseLayout>

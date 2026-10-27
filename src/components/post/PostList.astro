@@ -1,0 +1,28 @@
+---
+import site from "../../../site.config.ts";
+import PostCard from "./PostCard.astro";
+import Pagination from "./Pagination.astro";
+import type { PostView } from "../../lib/posts.ts";
+
+interface Props {
+  posts: PostView[];
+  base: string;
+  page: number;
+  pages: number;
+  showBanner?: boolean;
+}
+const { posts, base, page, pages, showBanner = false } = Astro.props;
+const banner = site.home.banner;
+---
+{showBanner && banner.enabled && (
+  <div>
+    <span class="ad-label">Publicidade</span>
+    <a class="ad-banner" href={banner.href} rel="sponsored noopener">
+      <img src={banner.src} width={banner.width} height={banner.height} alt={banner.alt} decoding="async" />
+    </a>
+  </div>
+)}
+{posts.length > 0
+  ? <div class="post-list">{posts.map((p, i) => <PostCard post={p} priority={i === 0} />)}</div>
+  : <p class="card list-header">Nenhum artigo publicado ainda. Volte em breve!</p>}
+<Pagination base={base} page={page} pages={pages} />

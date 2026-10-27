@@ -1,0 +1,34 @@
+---
+import type { GetStaticPaths } from "astro";
+import site from "../../../site.config.ts";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import TwoColumn from "../../components/layout/TwoColumn.astro";
+import PostList from "../../components/post/PostList.astro";
+import { getPosts, paginate, type PostView } from "../../lib/posts.ts";
+import { pageUrl } from "../../lib/format.ts";
+import { webPage } from "../../lib/seo.ts";
+
+export const getStaticPaths = (async () => {
+  return paginate(await getPosts(), site.home.perPage)
+    .slice(1)
+    .map((p) => ({ params: { page: String(p.page) }, props: p }));
+}) satisfies GetStaticPaths;
+
+const { page, pages, items } = Astro.props as { page: number; pages: number; items: PostView[] };
+const path = pageUrl("/", page);
+const title = `Artigos, página ${page} de ${pages}`;
+const seo = {
+  title,
+  description: `${site.description} Página ${page} de ${pages}.`,
+  path,
+  prev: pageUrl("/", page - 1),
+  next: page < pages ? pageUrl("/", page + 1) : undefined,
+  graph: [webPage(path, title, site.description, "CollectionPage")],
+};
+---
+<BaseLayout seo={seo}>
+  <TwoColumn>
+    <h1 class="sr-only">Artigos, página {page}</h1>
+    <PostList posts={items} base="/" page={page} pages={pages} />
+  </TwoColumn>
+</BaseLayout>

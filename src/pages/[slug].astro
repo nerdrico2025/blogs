@@ -1,0 +1,33 @@
+---
+import type { GetStaticPaths } from "astro";
+import { getCollection } from "astro:content";
+import ArticleView from "../components/article/ArticleView.astro";
+import PageView from "../components/page/PageView.astro";
+import { getPosts } from "../lib/posts.ts";
+import { RESERVED_SLUGS } from "../lib/slugs.ts";
+
+export const getStaticPaths = (async () => {
+  const posts = await getPosts();
+  const pages = await getCollection("pages");
+  const taken = new Map<string, string>();
+  const claim = (slug: string, owner: string) => {
+    if (RESERVED_SLUGS.has(slug)) throw new Error(`Slug reservado: "${slug}" (${owner}).`);
+    if (taken.has(slug)) throw new Error(`Slug duplicado: "${slug}" (${taken.get(slug)} e ${owner}).`);
+    taken.set(slug, owner);
+  };
+  pages.forEach((p) => claim(p.id, `página ${p.id}`));
+  posts.forEach((p) => claim(p.slug, `post ${p.slug}`));
+  return [
+    ...posts.map((post, i) => ({
+      params: { slug: post.slug },
+      props: { kind: "post" as const, post, newer: posts[i - 1], older: posts[i + 1], all: posts },
+    })),
+    ...pages.map((page) => ({ params: { slug: page.id }, props: { kind: "page" as const, page } })),
+  ];
+}) satisfies GetStaticPaths;
+
+const props = Astro.props;
+---
+{props.kind === "post"
+  ? <ArticleView post={props.post} newer={props.newer} older={props.older} all={props.all} />
+  : <PageView page={props.page} />}

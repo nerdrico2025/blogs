@@ -1,0 +1,42 @@
+---
+import site from "../../../site.config.ts";
+import Icon from "../Icon.astro";
+import Picture from "../Picture.astro";
+import type { PostView } from "../../lib/posts.ts";
+import { formatDate, isoDate } from "../../lib/format.ts";
+
+interface Props {
+  post: PostView;
+  coverSizes: string;
+}
+const { post, coverSizes } = Astro.props;
+const cover = post.entry.data.cover;
+const wasUpdated = post.updated.getTime() - post.date.getTime() > 24 * 3600 * 1000;
+const notice = site.article.affiliateNotice;
+---
+<nav class="breadcrumbs" aria-label="Você está em" data-pagefind-ignore>
+  <ol>
+    <li><a href="/">Início</a></li>
+    <li><a href={`/category/${post.category.slug}/`}>{post.category.name}</a></li>
+    <li aria-current="page" class="sr-only">{post.title}</li>
+  </ol>
+</nav>
+<h1>{post.title}</h1>
+<div class="article-meta" data-pagefind-ignore>
+  <span class="by">Por {post.author.name} <span aria-hidden="true">/</span> <time datetime={isoDate(post.date)}>{formatDate(post.date)}</time></span>
+  <div class="meta-row">
+    {wasUpdated && (
+      <span class="updated"><Icon name="calendar" /> Atualizado em <strong><time datetime={isoDate(post.updated)}>{formatDate(post.updated)}</time></strong></span>
+    )}
+    <span class="pill"><Icon name="clock" /> {post.readingTime} min de leitura</span>
+  </div>
+</div>
+{notice.enabled && <p class="disclosure" data-pagefind-ignore><strong>Transparência:</strong> {notice.text}</p>}
+{cover && (
+  <figure class="article-cover">
+    <div class="img-box">
+      <Picture src={cover.src} alt={cover.alt} sizes={coverSizes} fallbackWidth={1024} priority />
+    </div>
+    {cover.caption && <figcaption>{cover.caption}</figcaption>}
+  </figure>
+)}

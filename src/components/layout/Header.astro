@@ -1,0 +1,31 @@
+---
+import site from "../../../site.config.ts";
+import Icon from "../Icon.astro";
+import Ticker from "./Ticker.astro";
+
+const path = Astro.url.pathname;
+---
+<Ticker />
+<header class="site-header">
+  <div class="container header-inner">
+    <a class="logo" href="/" aria-label={`${site.name}, página inicial`}>
+      <img src={site.logo.src} width={site.logo.width} height={site.logo.height} alt={site.logo.alt} />
+    </a>
+    <button class="menu-toggle" type="button" popovertarget="site-nav" aria-label="Abrir menu">
+      <Icon name="menu" />
+    </button>
+    <nav class="nav" id="site-nav" popover aria-label="Categorias">
+      <div class="nav-head">
+        <strong>Menu</strong>
+        <button class="menu-toggle" type="button" popovertarget="site-nav" popovertargetaction="hide" aria-label="Fechar menu">
+          <Icon name="close" />
+        </button>
+      </div>
+      <ul>
+        {site.nav.map((item) => (
+          <li><a href={item.href} aria-current={path.startsWith(item.href) ? "page" : undefined}>{item.label}</a></li>
+        ))}
+      </ul>
+    </nav>
+  </div>
+</header>

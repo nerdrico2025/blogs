@@ -1,0 +1,13 @@
+---
+import site from "../../../site.config.ts";
+const w = site.sidebar.tools;
+---
+<section class="card widget tools" aria-labelledby="w-tools">
+  <div class="tools-icon" aria-hidden="true">{w.icon}</div>
+  <h2 id="w-tools">{w.title}</h2>
+  <p>{w.text}</p>
+  <ul>
+    {w.items.map((it) => <li><span aria-hidden="true">{it.icon}</span>{it.label}</li>)}
+  </ul>
+  <a class="btn btn-ink btn-block" href={w.button.href}>{w.button.label}</a>
+</section>

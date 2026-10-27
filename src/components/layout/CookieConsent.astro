@@ -1,0 +1,129 @@
+---
+/**
+ * Consentimento de cookies (LGPD). Nada de analytics ou anúncios é carregado
+ * antes da escolha. A escolha fica no localStorage do leitor; o link
+ * "Preferências de cookies" do rodapé reabre o painel.
+ */
+import site from "../../../site.config.ts";
+
+const cfg = site.cookies;
+const { gaId, adsenseClient } = site.analytics;
+---
+{cfg.enabled && (
+  <div id="cc" class="cc" hidden data-ga={gaId || undefined} data-ads={adsenseClient || undefined}>
+    <div class="cc-inner">
+      <p>{cfg.text} <a href={cfg.policyHref}>Política de Cookies</a>.</p>
+      <div class="cc-actions">
+        <button type="button" class="cc-btn cc-ghost" data-cc-open>Preferências</button>
+        <button type="button" class="cc-btn cc-white" data-cc="reject">Rejeitar</button>
+        <button type="button" class="cc-btn cc-accept" data-cc="accept">Aceitar</button>
+      </div>
+    </div>
+  </div>
+  <dialog id="cc-prefs" class="cc-prefs" aria-labelledby="cc-prefs-title">
+    <form method="dialog">
+      <h2 id="cc-prefs-title">Preferências de cookies</h2>
+      <p>Escolha quais cookies permitir. Os necessários mantêm o site funcionando e não podem ser desligados.</p>
+      <label class="cc-opt">
+        <input type="checkbox" checked disabled />
+        <span><strong>Necessários</strong><small>Guardam a sua escolha sobre cookies.</small></span>
+      </label>
+      <label class="cc-opt">
+        <input type="checkbox" name="analytics" />
+        <span><strong>{cfg.categories.analytics.label}</strong><small>{cfg.categories.analytics.description}</small></span>
+      </label>
+      <label class="cc-opt">
+        <input type="checkbox" name="ads" />
+        <span><strong>{cfg.categories.ads.label}</strong><small>{cfg.categories.ads.description}</small></span>
+      </label>
+      <div class="cc-actions">
+        <button type="submit" class="cc-btn cc-dark" value="save">Salvar escolhas</button>
+        <button type="submit" class="cc-btn cc-accept" value="accept">Aceitar todos</button>
+      </div>
+    </form>
+  </dialog>
+)}
+
+<script>
+  type Consent = { analytics: boolean; ads: boolean; at: number };
+  const KEY = "cookie-consent.v1";
+  const root = document.getElementById("cc");
+  const prefs = document.getElementById("cc-prefs") as HTMLDialogElement | null;
+
+  function read(): Consent | null {
+    try {
+      const v = JSON.parse(localStorage.getItem(KEY) ?? "null");
+      return v && typeof v.analytics === "boolean" ? v : null;
+    } catch {
+      return null;
+    }
+  }
+
+  function addScript(src: string, attrs: Record<string, string> = {}) {
+    if (document.querySelector(`script[src="${src}"]`)) return;
+    const s = document.createElement("script");
+    s.async = true;
+    s.src = src;
+    for (const [k, v] of Object.entries(attrs)) s.setAttribute(k, v);
+    document.head.append(s);
+  }
+
+  function apply(c: Consent) {
+    const ga = root?.dataset.ga;
+    const ads = root?.dataset.ads;
+    const w = window as unknown as { dataLayer: unknown[]; gtag: (...a: unknown[]) => void };
+    w.dataLayer = w.dataLayer || [];
+    w.gtag = function () {
+      // eslint-disable-next-line prefer-rest-params
+      w.dataLayer.push(arguments);
+    };
+    w.gtag("consent", "default", {
+      analytics_storage: c.analytics ? "granted" : "denied",
+      ad_storage: c.ads ? "granted" : "denied",
+      ad_user_data: c.ads ? "granted" : "denied",
+      ad_personalization: c.ads ? "granted" : "denied",
+    });
+    if (c.analytics && ga) {
+      w.gtag("js", new Date());
+      w.gtag("config", ga);
+      addScript(`https://www.googletagmanager.com/gtag/js?id=${encodeURIComponent(ga)}`);
+    }
+    if (c.ads && ads) {
+      addScript(`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${encodeURIComponent(ads)}`, { crossorigin: "anonymous" });
+    }
+  }
+
+  function save(c: Omit<Consent, "at">) {
+    const value: Consent = { ...c, at: Date.now() };
+    try {
+      localStorage.setItem(KEY, JSON.stringify(value));
+    } catch {}
+    if (root) root.hidden = true;
+    apply(value);
+  }
+
+  function openPrefs() {
+    if (!prefs) return;
+    const c = read();
+    (prefs.querySelector('[name="analytics"]') as HTMLInputElement).checked = c?.analytics ?? false;
+    (prefs.querySelector('[name="ads"]') as HTMLInputElement).checked = c?.ads ?? false;
+    prefs.showModal();
+  }
+
+  const current = read();
+  if (current) apply(current);
+  else if (root) root.hidden = false;
+
+  root?.querySelector('[data-cc="accept"]')?.addEventListener("click", () => save({ analytics: true, ads: true }));
+  root?.querySelector('[data-cc="reject"]')?.addEventListener("click", () => save({ analytics: false, ads: false }));
+  document.querySelectorAll("[data-cc-open]").forEach((b) => b.addEventListener("click", openPrefs));
+  prefs?.addEventListener("close", () => {
+    if (prefs.returnValue === "accept") save({ analytics: true, ads: true });
+    else if (prefs.returnValue === "save") {
+      save({
+        analytics: (prefs.querySelector('[name="analytics"]') as HTMLInputElement).checked,
+        ads: (prefs.querySelector('[name="ads"]') as HTMLInputElement).checked,
+      });
+    }
+  });
+</script>

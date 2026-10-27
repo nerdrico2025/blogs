@@ -1,0 +1,14 @@
+---
+import type { PostView } from "../../lib/posts.ts";
+interface Props {
+  prev?: PostView;
+  next?: PostView;
+}
+const { prev, next } = Astro.props;
+---
+{(prev || next) && (
+  <nav class="post-nav" aria-label="Navegação entre artigos">
+    {prev && <a class="card prev" href={prev.url} rel="prev"><span class="kicker">← Anterior</span><strong>{prev.title}</strong></a>}
+    {next && <a class="card next" href={next.url} rel="next"><span class="kicker">Próximo →</span><strong>{next.title}</strong></a>}
+  </nav>
+)}

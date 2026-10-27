@@ -1,0 +1,39 @@
+---
+import site from "../../../site.config.ts";
+import Picture from "../Picture.astro";
+import { getPosts } from "../../lib/posts.ts";
+import { formatShortDate, isoDate } from "../../lib/format.ts";
+const w = site.sidebar.latest;
+const [first, ...rest] = (await getPosts()).slice(0, w.count);
+---
+{first && (
+  <section class="card widget" aria-labelledby="w-latest">
+    <span class="kicker">{w.kicker}</span>
+    <h2 id="w-latest">{w.title}</h2>
+    <a class="latest-featured" href={first.url}>
+      <div class="img-box">
+        {first.entry.data.cover && <Picture src={first.entry.data.cover.src} alt="" sizes={`${site.theme.layout.sidebar}px`} fallbackWidth={480} />}
+        <span class="badge">{w.badge}</span>
+      </div>
+      <strong>{first.title}</strong>
+      <time datetime={isoDate(first.date)}>{formatShortDate(first.date)}</time>
+    </a>
+    {rest.length > 0 && (
+      <ul class="latest-list">
+        {rest.map((p) => (
+          <li class="latest-item">
+            <a href={p.url}>
+              <div class="img-box">
+                {p.entry.data.cover && <Picture src={p.entry.data.cover.src} alt="" sizes="82px" fallbackWidth={150} />}
+              </div>
+              <div>
+                <strong>{p.title}</strong>
+                <time datetime={isoDate(p.date)}>{formatShortDate(p.date)}</time>
+              </div>
+            </a>
+          </li>
+        ))}
+      </ul>
+    )}
+  </section>
+)}

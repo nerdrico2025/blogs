@@ -1,0 +1,27 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import TwoColumn from "../components/layout/TwoColumn.astro";
+
+const seo = { title: "Buscar", description: "Busque artigos, roteiros e dicas no blog.", path: "/search/", noindex: true };
+---
+<BaseLayout seo={seo}>
+  <link slot="head" rel="stylesheet" href="/pagefind/pagefind-ui.css" />
+  <TwoColumn>
+    <section class="card article search-page">
+      <h1>Buscar no blog</h1>
+      <div id="search" style="margin-top:20px">
+        <noscript>A busca precisa de JavaScript. Você também pode navegar pelas categorias no menu.</noscript>
+      </div>
+    </section>
+  </TwoColumn>
+</BaseLayout>
+<script is:inline type="module">
+  try {
+    await import("/pagefind/pagefind-ui.js");
+    const ui = new window.PagefindUI({ element: "#search", showSubResults: true, showImages: true, resetStyles: false, autofocus: true });
+    const q = new URLSearchParams(location.search).get("q");
+    if (q) ui.triggerSearch(q);
+  } catch {
+    document.getElementById("search").textContent = "A busca fica disponível depois do build (npm run build).";
+  }
+</script>

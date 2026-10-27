@@ -1,0 +1,11 @@
+---
+import site from "../../../site.config.ts";
+const w = site.sidebar.callout;
+---
+<section class="callout-card" aria-labelledby="w-callout">
+  <div class="callout-card-icon" aria-hidden="true">{w.icon}</div>
+  <span class="kicker">{w.kicker}</span>
+  <h2 id="w-callout">{w.title}</h2>
+  <p>{w.text}</p>
+  <a class="btn btn-white btn-block" href={w.button.href}>{w.button.label} <span aria-hidden="true">→</span></a>
+</section>

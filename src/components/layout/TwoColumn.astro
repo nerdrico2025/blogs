@@ -1,0 +1,15 @@
+---
+/** Conteúdo principal à direita e sidebar à esquerda (no DOM, o conteúdo vem primeiro). */
+import Sidebar from "../sidebar/Sidebar.astro";
+---
+<div class="container page">
+  <div class="layout">
+    <main class="main" id="conteudo">
+      <slot />
+    </main>
+    <aside class="sidebar" aria-label="Barra lateral">
+      <Sidebar />
+    </aside>
+  </div>
+  <slot name="after" />
+</div>

@@ -1,0 +1,33 @@
+---
+import { pageUrl } from "../../lib/format.ts";
+
+interface Props {
+  base: string;
+  page: number;
+  pages: number;
+}
+const { base, page, pages } = Astro.props;
+
+/** 1 … (p-1) p (p+1) … N */
+function items(): (number | "gap")[] {
+  const set = new Set([1, pages, page - 1, page, page + 1].filter((n) => n >= 1 && n <= pages));
+  const sorted = [...set].sort((a, b) => a - b);
+  const out: (number | "gap")[] = [];
+  sorted.forEach((n, i) => {
+    if (i > 0 && n - sorted[i - 1]! > 1) out.push("gap");
+    out.push(n);
+  });
+  return out;
+}
+---
+{pages > 1 && (
+  <nav class="pagination" aria-label="Paginação">
+    {page > 1 && <a href={pageUrl(base, page - 1)} rel="prev">← Anterior</a>}
+    {items().map((it) =>
+      it === "gap" ? <span class="gap" aria-hidden="true">…</span>
+      : it === page ? <span aria-current="page">{it}</span>
+      : <a href={pageUrl(base, it)} aria-label={`Página ${it}`}>{it}</a>
+    )}
+    {page < pages && <a href={pageUrl(base, page + 1)} rel="next">Próximo →</a>}
+  </nav>
+)}

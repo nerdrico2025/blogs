@@ -1,0 +1,12 @@
+---
+import site from "../../../site.config.ts";
+import Icon from "../Icon.astro";
+const w = site.sidebar.newsletter;
+---
+<section class="card widget newsletter" aria-labelledby="w-news">
+  <div class="newsletter-icon"><Icon name="mail" /></div>
+  <h2 id="w-news">{w.title}</h2>
+  <p>{w.text}</p>
+  <a class="btn btn-accent btn-block" href={w.button.href} rel="noopener">{w.button.label}</a>
+  <small>{w.note}</small>
+</section>

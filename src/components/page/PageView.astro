@@ -1,0 +1,39 @@
+---
+import type { CollectionEntry } from "astro:content";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import TwoColumn from "../layout/TwoColumn.astro";
+import { formatDate, isoDate } from "../../lib/format.ts";
+import { breadcrumb, breadcrumbRef, webPage } from "../../lib/seo.ts";
+import { fillPlaceholders } from "../../lib/placeholders.ts";
+
+interface Props {
+  page: CollectionEntry<"pages">;
+}
+const { page } = Astro.props;
+const path = `/${page.id}/`;
+const { updated, schemaType } = page.data;
+const title = fillPlaceholders(page.data.title);
+const description = fillPlaceholders(page.data.description);
+const html = fillPlaceholders(page.rendered?.html ?? "");
+const seo = {
+  title,
+  description,
+  path,
+  graph: [
+    webPage(path, title, description, schemaType, { breadcrumb: breadcrumbRef(path) }),
+    breadcrumb(path, [{ name: title, path }]),
+  ],
+};
+---
+<BaseLayout seo={seo}>
+  <TwoColumn>
+    <article class="card article">
+      <nav class="breadcrumbs" aria-label="Você está em">
+        <ol><li><a href="/">Início</a></li><li aria-current="page">{title}</li></ol>
+      </nav>
+      <h1>{title}</h1>
+      {updated && <p class="updated" style="margin-top:12px">Atualizado em <strong><time datetime={isoDate(updated)}>{formatDate(updated)}</time></strong></p>}
+      <div class="prose" set:html={html} />
+    </article>
+  </TwoColumn>
+</BaseLayout>

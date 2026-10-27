@@ -1,0 +1,50 @@
+---
+import type { GetStaticPaths } from "astro";
+import site from "../../../../site.config.ts";
+import BaseLayout from "../../../layouts/BaseLayout.astro";
+import TwoColumn from "../../../components/layout/TwoColumn.astro";
+import PostList from "../../../components/post/PostList.astro";
+import { getPostsByCategory, paginate, type PostView } from "../../../lib/posts.ts";
+import type { Category } from "../../../lib/config-schema.ts";
+import { pageUrl } from "../../../lib/format.ts";
+import { breadcrumb, breadcrumbRef, webPage } from "../../../lib/seo.ts";
+
+export const getStaticPaths = (async () => {
+  const paths = [];
+  for (const category of site.categories) {
+    for (const p of paginate(await getPostsByCategory(category.slug), site.home.perPage)) {
+      paths.push({
+        params: { slug: category.slug, page: p.page === 1 ? undefined : `page/${p.page}` },
+        props: { ...p, category },
+      });
+    }
+  }
+  return paths;
+}) satisfies GetStaticPaths;
+
+const { page, pages, items, category } = Astro.props as { page: number; pages: number; items: PostView[]; category: Category };
+const base = `/category/${category.slug}/`;
+const title = page > 1 ? `${category.name}, página ${page}` : category.name;
+const path = pageUrl(base, page);
+const seo = {
+  title,
+  description: page > 1 ? `${category.description} Página ${page} de ${pages}.` : category.description,
+  path,
+  prev: page > 1 ? pageUrl(base, page - 1) : undefined,
+  next: page < pages ? pageUrl(base, page + 1) : undefined,
+  graph: [
+    webPage(path, title, category.description, "CollectionPage", { breadcrumb: breadcrumbRef(path) }),
+    breadcrumb(path, [{ name: category.name, path: base }]),
+  ],
+};
+---
+<BaseLayout seo={seo}>
+  <TwoColumn>
+    <header class="card list-header">
+      <span class="kicker">Categoria</span>
+      <h1>{category.name}</h1>
+      <p>{category.description}</p>
+    </header>
+    <PostList posts={items} base={base} page={page} pages={pages} />
+  </TwoColumn>
+</BaseLayout>

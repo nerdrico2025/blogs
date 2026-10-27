@@ -1,0 +1,96 @@
+---
+import site from "../../site.config.ts";
+import Header from "../components/layout/Header.astro";
+import Footer from "../components/layout/Footer.astro";
+import CookieConsent from "../components/layout/CookieConsent.astro";
+import { absoluteUrl } from "../lib/format.ts";
+import { baseGraph, jsonLd, type SeoProps } from "../lib/seo.ts";
+import "../styles/global.css";
+import fontUrl from "../assets/fonts/inter-latin-var.woff2?url";
+
+interface Props {
+  seo: SeoProps;
+  /** Preload da imagem LCP. */
+  preloadImage?: { srcset: string; sizes: string; type: string };
+}
+
+const { seo, preloadImage } = Astro.props;
+const c = site.theme.colors;
+const l = site.theme.layout;
+const vars = `:root{--c-accent:${c.accent};--c-accent-hover:${c.accentHover};--c-heading:${c.heading};--c-text:${c.text};--c-muted:${c.muted};--c-bg:${c.bg};--c-card:${c.card};--c-border:${c.border};--c-soft:${c.soft};--c-ink:${c.ink};--c-youtube:${c.youtube};--c-callout-from:${c.calloutFrom};--c-callout-to:${c.calloutTo};--c-callout-button-text:${c.calloutButtonText};--c-club:${c.club};--c-placeholder:${c.imagePlaceholder};--c-cookie-bg:${c.cookieBg};--c-cookie-accept:${c.cookieAccept};--font:${site.theme.fontFamily};--container:${l.container}px;--sidebar:${l.sidebar}px;--gap:${l.gap}px}`;
+
+const fullTitle = seo.title === site.name ? `${site.name} | ${site.tagline}` : `${seo.title} | ${site.name}`;
+const canonical = absoluteUrl(seo.path);
+const image = seo.image ?? site.seo.defaultImage;
+const imageUrl = absoluteUrl(image.src);
+const imageType = image.src.endsWith(".png") ? "image/png" : image.src.endsWith(".webp") ? "image/webp" : "image/jpeg";
+const robots = seo.noindex
+  ? "noindex, follow"
+  : "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1";
+const graph = [...baseGraph(), ...(seo.graph ?? [])];
+---
+<!doctype html>
+<html lang={site.lang}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{fullTitle}</title>
+    <meta name="description" content={seo.description} />
+    <link rel="canonical" href={canonical} />
+    <meta name="robots" content={robots} />
+    {seo.prev && <link rel="prev" href={absoluteUrl(seo.prev)} />}
+    {seo.next && <link rel="next" href={absoluteUrl(seo.next)} />}
+    <meta name="theme-color" content={c.card} />
+    <link rel="icon" href={site.favicon} type="image/svg+xml" />
+    <link rel="alternate" type="application/rss+xml" title={site.name} href="/feed.xml" />
+    <link rel="preload" href={fontUrl} as="font" type="font/woff2" crossorigin />
+    {preloadImage && <link rel="preload" as="image" imagesrcset={preloadImage.srcset} imagesizes={preloadImage.sizes} type={preloadImage.type} fetchpriority="high" />}
+
+    <meta property="og:locale" content={site.locale} />
+    <meta property="og:site_name" content={site.name} />
+    <meta property="og:type" content={seo.type ?? "website"} />
+    <meta property="og:title" content={seo.title} />
+    <meta property="og:description" content={seo.description} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:image" content={imageUrl} />
+    <meta property="og:image:secure_url" content={imageUrl} />
+    <meta property="og:image:width" content={String(image.width)} />
+    <meta property="og:image:height" content={String(image.height)} />
+    <meta property="og:image:alt" content={image.alt} />
+    <meta property="og:image:type" content={imageType} />
+    {seo.article && (
+      <>
+        <meta property="article:published_time" content={seo.article.published.toISOString()} />
+        <meta property="article:modified_time" content={seo.article.modified.toISOString()} />
+        <meta property="og:updated_time" content={seo.article.modified.toISOString()} />
+        <meta property="article:section" content={seo.article.section} />
+        <meta property="article:author" content={seo.article.author} />
+        {seo.article.tags.map((t) => <meta property="article:tag" content={t} />)}
+      </>
+    )}
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={seo.title} />
+    <meta name="twitter:description" content={seo.description} />
+    <meta name="twitter:image" content={imageUrl} />
+    <meta name="twitter:image:alt" content={image.alt} />
+    {site.seo.twitterHandle && <meta name="twitter:site" content={site.seo.twitterHandle} />}
+    {seo.article && (
+      <>
+        <meta name="twitter:label1" content="Escrito por" />
+        <meta name="twitter:data1" content={seo.article.author} />
+      </>
+    )}
+    {site.analytics.adsenseClient && <meta name="google-adsense-account" content={site.analytics.adsenseClient} />}
+
+    <style is:inline set:html={vars}></style>
+    <script is:inline type="application/ld+json" set:html={jsonLd(graph)}></script>
+    <slot name="head" />
+  </head>
+  <body>
+    <a class="skip-link" href="#conteudo">Pular para o conteúdo</a>
+    <Header />
+    <slot />
+    <Footer />
+    <CookieConsent />
+  </body>
+</html>

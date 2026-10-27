@@ -1,0 +1,25 @@
+# Dependências e builds
+node_modules/
+dist/
+.astro/
+.cache/
+
+# Segredos
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+id_rsa*
+id_ed25519*
+
+# Dados de cada blog (ficam no volume /data em produção; .local/ em desenvolvimento)
+.local/
+content/
+uploads/
+data/
+releases/
+backups/
+current
+
+.DS_Store

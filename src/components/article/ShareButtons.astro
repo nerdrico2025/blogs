@@ -1,0 +1,48 @@
+---
+import site from "../../../site.config.ts";
+import Icon from "../Icon.astro";
+import type { ShareNetwork } from "../../lib/config-schema.ts";
+interface Props {
+  url: string;
+  title: string;
+}
+const { url, title } = Astro.props;
+const u = encodeURIComponent(url);
+const t = encodeURIComponent(title);
+const links: Record<Exclude<ShareNetwork, "copy">, { label: string; href: string }> = {
+  whatsapp: { label: "WhatsApp", href: `https://wa.me/?text=${t}%20${u}` },
+  facebook: { label: "Facebook", href: `https://www.facebook.com/sharer/sharer.php?u=${u}` },
+  x: { label: "X", href: `https://x.com/intent/post?text=${t}&url=${u}` },
+  linkedin: { label: "LinkedIn", href: `https://www.linkedin.com/sharing/share-offsite/?url=${u}` },
+  telegram: { label: "Telegram", href: `https://t.me/share/url?url=${u}&text=${t}` },
+};
+const networks = site.article.share;
+---
+{networks.length > 0 && (
+  <div class="card share">
+    <span>Compartilhe:</span>
+    <ul>
+      {networks.map((n) => n === "copy" ? (
+        <li><button type="button" data-copy={url} aria-label="Copiar link"><Icon name="link" /></button></li>
+      ) : (
+        <li><a href={links[n].href} target="_blank" rel="noopener" aria-label={`Compartilhar no ${links[n].label}`}><Icon name={n} /></a></li>
+      ))}
+    </ul>
+    <div class="toast" role="status" aria-live="polite"></div>
+  </div>
+)}
+<script>
+  document.querySelectorAll<HTMLButtonElement>("[data-copy]").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const toast = btn.closest(".share")?.querySelector<HTMLElement>(".toast");
+      try {
+        await navigator.clipboard.writeText(btn.dataset.copy!);
+        if (toast) toast.textContent = "Link copiado";
+      } catch {
+        if (toast) toast.textContent = "Não foi possível copiar";
+      }
+      toast?.classList.add("show");
+      setTimeout(() => toast?.classList.remove("show"), 2000);
+    });
+  });
+</script>

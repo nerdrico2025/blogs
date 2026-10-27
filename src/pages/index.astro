@@ -1,0 +1,23 @@
+---
+import site from "../../site.config.ts";
+import BaseLayout from "../layouts/BaseLayout.astro";
+import TwoColumn from "../components/layout/TwoColumn.astro";
+import PostList from "../components/post/PostList.astro";
+import { getPosts, paginate } from "../lib/posts.ts";
+import { webPage } from "../lib/seo.ts";
+
+const [first] = paginate(await getPosts(), site.home.perPage);
+const seo = {
+  title: site.name,
+  description: site.description,
+  path: "/",
+  next: first!.pages > 1 ? "/page/2/" : undefined,
+  graph: [webPage("/", site.name, site.description, "CollectionPage")],
+};
+---
+<BaseLayout seo={seo}>
+  <TwoColumn>
+    <h1 class="sr-only">{site.name}: {site.tagline}</h1>
+    <PostList posts={first!.items} base="/" page={1} pages={first!.pages} showBanner />
+  </TwoColumn>
+</BaseLayout>

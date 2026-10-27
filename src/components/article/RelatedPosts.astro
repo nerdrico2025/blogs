@@ -1,0 +1,28 @@
+---
+import site from "../../../site.config.ts";
+import Picture from "../Picture.astro";
+import type { PostView } from "../../lib/posts.ts";
+interface Props {
+  posts: PostView[];
+}
+const { posts } = Astro.props;
+const cfg = site.article.related;
+---
+{posts.length > 0 && (
+  <section class="related" aria-labelledby="related-title" data-pagefind-ignore>
+    <span class="kicker">{cfg.kicker}</span>
+    <h2 id="related-title">{cfg.title}</h2>
+    <div class="related-grid">
+      {posts.map((p) => (
+        <article class="related-card">
+          <div class="img-box">
+            {p.entry.data.cover && <Picture src={p.entry.data.cover.src} alt="" sizes="(max-width: 544px) calc(100vw - 64px), (max-width: 768px) 45vw, 260px" fallbackWidth={480} />}
+          </div>
+          <span class="kicker">{p.category.name}</span>
+          <h3><a href={p.url}>{p.title}</a></h3>
+          <span class="more" aria-hidden="true">{cfg.linkLabel} →</span>
+        </article>
+      ))}
+    </div>
+  </section>
+)}

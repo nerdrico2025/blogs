@@ -1,0 +1,15 @@
+---
+import site from "../../../site.config.ts";
+import type { PostView } from "../../lib/posts.ts";
+interface Props {
+  post: PostView;
+}
+const { post } = Astro.props;
+---
+<a class="read-more" href={post.url} data-pagefind-ignore>
+  <span class="read-more-text">
+    <span class="kicker">{site.article.readMore.label}</span>
+    <strong>{post.title}</strong>
+  </span>
+  <span class="read-more-arrow" aria-hidden="true">→</span>
+</a>
