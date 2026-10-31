@@ -2,6 +2,7 @@ import { getCollection, type CollectionEntry } from "astro:content";
 import site from "../../site.config.ts";
 import type { Author, Category } from "./config-schema.ts";
 import type { FaqItem } from "../markdown/rehype-blog.ts";
+import { findCategory } from "../../shared/settings.ts";
 
 export type Post = CollectionEntry<"posts">;
 
@@ -30,7 +31,7 @@ export function isVisible(p: Post, now = BUILD_TIME): boolean {
 }
 
 export function categoryBySlug(slug: string): Category | undefined {
-  return site.categories.find((c) => c.slug === slug);
+  return findCategory(site.categories, slug);
 }
 
 export function postUrl(slug: string): string {

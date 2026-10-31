@@ -9,6 +9,7 @@ import { mkdir } from "node:fs/promises";
 import path from "node:path";
 import fastifyStatic from "@fastify/static";
 import type { FastifyInstance, FastifyReply } from "fastify";
+import site from "../site.config.ts";
 import type { ApiEnv } from "./env.ts";
 
 const YEAR = "public, max-age=31536000, immutable";
@@ -46,7 +47,9 @@ export function loadRedirects(file: string): Map<string, string> {
   return map;
 }
 
-export async function registerStatic(app: FastifyInstance, env: ApiEnv): Promise<void> {
+const SETUP_PAGE = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex, nofollow"><title>Em configuração</title><style>body{margin:0;min-height:100vh;display:grid;place-items:center;font-family:system-ui,sans-serif;background:#f0f5fa;color:#334155;text-align:center;padding:24px}h1{color:#1e293b;margin:0 0 8px}</style></head><body><main><h1>Em configuração</h1><p>Este blog estará no ar em breve.</p></main></body></html>`;
+
+export async function registerStatic(app: FastifyInstance, env: ApiEnv, isConfigured: () => boolean = () => true): Promise<void> {
   await mkdir(env.uploadsDir, { recursive: true });
   const redirects = loadRedirects(path.join(path.dirname(env.pagesDir), "redirects.txt"));
 
@@ -62,6 +65,15 @@ export async function registerStatic(app: FastifyInstance, env: ApiEnv): Promise
   app.addHook("onRequest", async (req, reply) => {
     if (req.method !== "GET" && req.method !== "HEAD") return;
     const p = decodeURIComponent(req.url.split("?")[0]!);
+    if (!isConfigured() && !/^\/(admin|health|wp-json)(\/|$)/.test(p)) {
+      return reply.code(503).type("text/html; charset=utf-8").header("Retry-After", "3600").header("X-Robots-Tag", "noindex, nofollow").send(SETUP_PAGE);
+    }
+    // Slug de categoria renomeado no /admin
+    const renamed = p.match(/^\/category\/([^/]+)(\/.*)?$/);
+    if (renamed) {
+      const cat = site.categories.find((c) => c.aliases?.includes(renamed[1]!));
+      if (cat) return reply.redirect(`/category/${cat.slug}${renamed[2] ?? "/"}`, 301);
+    }
     // Caminhos do WordPress que não existem aqui e arquivos ocultos
     if (BLOCKED.test(p) && !p.startsWith("/.well-known/")) return notFoundPage(reply);
     // Migração: lista do blog, com ou sem barra no fim
@@ -83,6 +95,16 @@ export async function registerStatic(app: FastifyInstance, env: ApiEnv): Promise
     redirect: false,
     allowedPath: (p) => !p.endsWith(".json"),
     setHeaders: (reply) => void reply.header("Cache-Control", YEAR),
+  });
+
+  await mkdir(env.assetsDir, { recursive: true });
+  await app.register(fastifyStatic, {
+    root: env.assetsDir,
+    prefix: "/assets/",
+    decorateReply: false,
+    index: false,
+    redirect: false,
+    setHeaders: (reply) => void reply.header("Cache-Control", "public, max-age=86400"),
   });
 
   await app.register(fastifyStatic, {

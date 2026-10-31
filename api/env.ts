@@ -5,7 +5,8 @@
 import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
 import path from "node:path";
-import { localDataDir, siteDir, siteId } from "../src/lib/site-id.ts";
+import { assetsRoot, settingsFile } from "../shared/settings.ts";
+import { hasSiteFolder, localDataDir, siteDir, siteId } from "../src/lib/site-id.ts";
 
 if (existsSync(".env")) process.loadEnvFile(".env");
 
@@ -38,6 +39,16 @@ export interface ApiEnv {
   pagesDir: string;
   uploadsDir: string;
   stateFile: string;
+  settingsFile: string;
+  secretsFile: string;
+  assetsDir: string;
+  /** Painel /admin (têm prioridade sobre o secrets.json). */
+  adminUser: string;
+  adminPasswordHash: string;
+  /** Vazio = assistente /admin/setup desligado. */
+  setupToken: string;
+  anthropicApiKey: string;
+  aiModel: string;
   buildCacheDir: string;
   backupDir: string;
   /** "release": build em pasta nova + troca de symlink; "none": não faz build (testes). */
@@ -99,13 +110,23 @@ export function loadEnv(overrides: Partial<ApiEnv> = {}): ApiEnv {
     site,
     host: process.env.HOST ?? process.env.API_HOST ?? "127.0.0.1",
     port: num("PORT", num("API_PORT", 8787)),
-    user: overrides.user ?? required("WP_USER"),
-    passwordHash: overrides.passwordHash ?? required("WP_APP_PASSWORD_HASH"),
+    // Sem as variáveis, a senha do Wordbee é a do secrets.json (gerada pelo assistente ou no /admin)
+    user: process.env.WP_USER ?? (process.env.WP_APP_PASSWORD_HASH ? required("WP_USER") : "wordbee"),
+    passwordHash: process.env.WP_APP_PASSWORD_HASH ?? "",
     projectDir,
     contentDir: path.resolve(process.env.CONTENT_DIR ?? path.join(local, "content/posts")),
-    pagesDir: path.resolve(process.env.PAGES_DIR ?? path.join(siteDir(projectDir), "pages")),
+    // Blog sem pasta em sites/: as páginas fixas ficam no volume, ao lado do settings.json
+    pagesDir: path.resolve(process.env.PAGES_DIR ?? (hasSiteFolder(projectDir) ? path.join(siteDir(projectDir), "pages") : path.join(path.dirname(settingsFile()), "pages"))),
     uploadsDir: path.resolve(process.env.UPLOADS_DIR ?? path.join(local, "uploads")),
     stateFile: path.resolve(process.env.STATE_FILE ?? path.join(local, "data/api-state.json")),
+    settingsFile: settingsFile(),
+    secretsFile: path.resolve(process.env.SECRETS_FILE ?? path.join(path.dirname(settingsFile()), "secrets.json")),
+    assetsDir: assetsRoot(),
+    adminUser: process.env.ADMIN_USER ?? "",
+    adminPasswordHash: process.env.ADMIN_PASSWORD_HASH ?? "",
+    setupToken: process.env.SETUP_TOKEN ?? "",
+    anthropicApiKey: process.env.ANTHROPIC_API_KEY ?? "",
+    aiModel: process.env.AI_MODEL || "claude-sonnet-5-5",
     buildCacheDir: path.resolve(process.env.BUILD_CACHE_DIR ?? path.join(local, "data/build-cache")),
     backupDir: path.resolve(process.env.BACKUP_DIR ?? path.join(local, "backups")),
     buildMode: process.env.BUILD_MODE === "none" ? "none" : "release",

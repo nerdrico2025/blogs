@@ -11,6 +11,7 @@ import YAML from "yaml";
 import site from "../site.config.ts";
 import { RESERVED_SLUGS } from "../src/lib/slugs.ts";
 import { processImage, safeBaseName, type MediaMeta } from "../shared/media.ts";
+import { findCategory } from "../shared/settings.ts";
 import type { ApiEnv } from "./env.ts";
 import { badParam, WpError } from "./errors.ts";
 import { htmlToMarkdown, plainText, truncate } from "./html-to-md.ts";
@@ -111,9 +112,12 @@ export class Store {
       });
       this.state.nextPostId = Math.max(this.state.nextPostId, id + 1);
     }
-    if (existsSync(this.env.pagesDir)) {
-      for (const f of await readdir(this.env.pagesDir)) if (f.endsWith(".md")) this.pageSlugs.add(f.replace(/\.md$/, ""));
-    }
+    await this.reloadPages();
+  }
+
+  async reloadPages(): Promise<void> {
+    if (!existsSync(this.env.pagesDir)) return;
+    for (const f of await readdir(this.env.pagesDir)) if (f.endsWith(".md")) this.pageSlugs.add(f.replace(/\.md$/, ""));
   }
 
   /** Executa operações de escrita uma de cada vez. */
@@ -133,7 +137,7 @@ export class Store {
 
   countByCategory(slug: string): number {
     let n = 0;
-    for (const p of this.posts.values()) if (p.category === slug && p.status === "publish") n++;
+    for (const p of this.posts.values()) if (findCategory(site.categories, p.category)?.slug === slug && p.status === "publish") n++;
     return n;
   }
 

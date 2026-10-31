@@ -17,7 +17,7 @@ interface Props {
 const { seo, preloadImage } = Astro.props;
 const c = site.theme.colors;
 const l = site.theme.layout;
-const vars = `:root{--c-accent:${c.accent};--c-accent-hover:${c.accentHover};--c-heading:${c.heading};--c-text:${c.text};--c-muted:${c.muted};--c-bg:${c.bg};--c-card:${c.card};--c-border:${c.border};--c-soft:${c.soft};--c-ink:${c.ink};--c-youtube:${c.youtube};--c-callout-from:${c.calloutFrom};--c-callout-to:${c.calloutTo};--c-callout-button-text:${c.calloutButtonText};--c-club:${c.club};--c-placeholder:${c.imagePlaceholder};--c-cookie-bg:${c.cookieBg};--c-cookie-accept:${c.cookieAccept};--font:${site.theme.fontFamily};--container:${l.container}px;--sidebar:${l.sidebar}px;--gap:${l.gap}px}`;
+const vars = `:root{--c-accent:${c.accent};--c-accent-hover:${c.accentHover};--c-highlight:${site.theme.highlight ?? c.accent};${site.theme.highlight ? `--c-kicker:${site.theme.highlight};` : ""}--c-heading:${c.heading};--c-text:${c.text};--c-muted:${c.muted};--c-bg:${c.bg};--c-card:${c.card};--c-border:${c.border};--c-soft:${c.soft};--c-ink:${c.ink};--c-youtube:${c.youtube};--c-callout-from:${c.calloutFrom};--c-callout-to:${c.calloutTo};--c-callout-button-text:${c.calloutButtonText};--c-club:${c.club};--c-placeholder:${c.imagePlaceholder};--c-cookie-bg:${c.cookieBg};--c-cookie-accept:${c.cookieAccept};--font:${site.theme.fontFamily};--container:${l.container}px;--sidebar:${l.sidebar}px;--gap:${l.gap}px}`;
 
 const fullTitle = seo.title === site.name ? `${site.name} | ${site.tagline}` : `${seo.title} | ${site.name}`;
 const canonical = absoluteUrl(seo.path);
@@ -42,7 +42,7 @@ const graph = [...baseGraph(), ...(seo.graph ?? [])];
     {seo.prev && <link rel="prev" href={absoluteUrl(seo.prev)} />}
     {seo.next && <link rel="next" href={absoluteUrl(seo.next)} />}
     <meta name="theme-color" content={c.card} />
-    <link rel="icon" href={site.favicon} type="image/svg+xml" />
+    <link rel="icon" href={site.favicon} type={site.favicon.endsWith(".svg") ? "image/svg+xml" : "image/png"} />
     <link rel="alternate" type="application/rss+xml" title={site.name} href="/feed.xml" />
     <link rel="preload" href={fontUrl} as="font" type="font/woff2" crossorigin />
     {preloadImage && <link rel="preload" as="image" imagesrcset={preloadImage.srcset} imagesizes={preloadImage.sizes} type={preloadImage.type} fetchpriority="high" />}

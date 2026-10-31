@@ -75,7 +75,7 @@ button, input { font: inherit; }
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: #666;
+  color: var(--c-kicker, #666);
   margin-bottom: 6px;
 }
 
@@ -204,7 +204,7 @@ button, input { font: inherit; }
 .post-card:hover { box-shadow: var(--shadow-strong); }
 .post-card .img-box { aspect-ratio: 16 / 9; border-radius: var(--radius-md); }
 .post-card-body { display: flex; flex-direction: column; justify-content: center; gap: 8px; padding: 4px 8px 4px 0; min-width: 0; }
-.post-cat { font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--c-accent); text-decoration: none; position: relative; z-index: 1; }
+.post-cat { font-size: 12px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--c-highlight); text-decoration: none; position: relative; z-index: 1; }
 .post-card h2 { font-size: 20px; font-weight: 600; line-height: 1.3; }
 .post-card h2 a { color: var(--c-heading); text-decoration: none; }
 .post-card h2 a::after { content: ""; position: absolute; inset: 0; border-radius: var(--radius); }

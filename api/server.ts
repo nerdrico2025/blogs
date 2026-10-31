@@ -10,13 +10,17 @@
 import Fastify, { type FastifyInstance, type FastifyRequest } from "fastify";
 import rateLimit from "@fastify/rate-limit";
 import site from "../site.config.ts";
+import { adminCredentials, registerAdmin } from "./admin.ts";
 import { Authenticator } from "./auth.ts";
 import { clientIp } from "./client-ip.ts";
 import { registerStatic } from "./static.ts";
 import { BuildQueue } from "./build-queue.ts";
 import type { ApiEnv } from "./env.ts";
 import { badParam, WpError } from "./errors.ts";
+import { SecretStore } from "./secrets.ts";
+import { SettingsStore } from "./settings-store.ts";
 import { Store, type PostRecord } from "./store.ts";
+import { findCategory } from "../shared/settings.ts";
 
 const IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const WP = "/wp-json/wp/v2";
@@ -43,7 +47,7 @@ function filenameFrom(header: string | undefined): string {
 }
 
 function postJson(post: PostRecord, store: Store) {
-  const category = site.categories.find((c) => c.slug === post.category);
+  const category = findCategory(site.categories, post.category);
   return {
     id: post.id,
     date: post.date,
@@ -76,7 +80,19 @@ export async function buildApp(env: ApiEnv, opts: { logger?: boolean } = {}): Pr
   const store = new Store(env);
   await store.init();
   const builds = new BuildQueue(env, app.log);
-  const auth = new Authenticator(env.user, env.passwordHash);
+  const settings = new SettingsStore(env.settingsFile, env.projectDir);
+  const secrets = new SecretStore(env.secretsFile);
+  builds.setGate(() => settings.isConfigured());
+  // WP_USER e WP_APP_PASSWORD_HASH têm prioridade sobre a senha gerada
+  const auth = new Authenticator(() =>
+    env.passwordHash
+      ? { user: env.user, passwordHash: env.passwordHash }
+      : { user: secrets.data.wordbeeUser ?? "wordbee", passwordHash: secrets.data.wordbeePasswordHash ?? "" }
+  );
+  if (settings.isConfigured() && !env.passwordHash && !secrets.data.wordbeePasswordHash) {
+    app.log.warn("nenhuma senha do Wordbee definida: use WP_APP_PASSWORD_HASH ou gere uma no /admin");
+  }
+  if (!adminCredentials(env, secrets).passwordHash && settings.isConfigured()) app.log.info("/admin desligado: defina ADMIN_USER e ADMIN_PASSWORD_HASH");
 
   // Rate limit só nas rotas da API (o site estático não entra na conta)
   await app.register(rateLimit, {
@@ -119,11 +135,18 @@ export async function buildApp(env: ApiEnv, opts: { logger?: boolean } = {}): Pr
   });
 
   const limited = { rateLimit: { max: env.rateLimitPerMinute, timeWindow: "1 minute" } };
-  const requireAuth = async (req: FastifyRequest) => auth.check(req.headers.authorization, clientIp(req));
-  /** Rotas públicas no WP: sem credencial passam; credencial errada dá 401, como no WP. */
-  const optionalAuth = async (req: FastifyRequest) => {
-    if (req.headers.authorization) auth.check(req.headers.authorization, clientIp(req));
+  /** Até o assistente terminar, os endpoints do Wordbee respondem 503. */
+  const requireConfigured = async () => {
+    if (!settings.isConfigured()) throw new WpError(503, "rest_site_not_configured", "O blog ainda não foi configurado. Conclua o assistente em /admin/setup.");
   };
+  const requireAuth = [requireConfigured, async (req: FastifyRequest) => auth.check(req.headers.authorization, clientIp(req))];
+  /** Rotas públicas no WP: sem credencial passam; credencial errada dá 401, como no WP. */
+  const optionalAuth = [
+    requireConfigured,
+    async (req: FastifyRequest) => {
+      if (req.headers.authorization) auth.check(req.headers.authorization, clientIp(req));
+    },
+  ];
 
   app.get("/health", async (_req, reply) => {
     reply.header("Cache-Control", "no-store");
@@ -131,6 +154,7 @@ export async function buildApp(env: ApiEnv, opts: { logger?: boolean } = {}): Pr
       status: "ok",
       site: env.site,
       posts: store.postCount,
+      configured: settings.isConfigured(),
       build: builds.getStatus(),
     };
   });
@@ -230,7 +254,8 @@ export async function buildApp(env: ApiEnv, opts: { logger?: boolean } = {}): Pr
     return reply.status(created ? 201 : 200).send(postJson(post, store));
   });
 
-  if (env.serveStatic) await registerStatic(app, env);
+  await registerAdmin(app, { env, store, builds, settings, secrets });
+  if (env.serveStatic) await registerStatic(app, env, () => settings.isConfigured());
 
   return { app, store, builds };
 }

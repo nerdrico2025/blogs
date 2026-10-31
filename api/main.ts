@@ -22,4 +22,5 @@ scheduler?.start();
 app.log.info({ site: env.site, s3Backup: Boolean(env.s3) }, "blog no ar");
 
 // Sem release publicado ainda (primeira subida do container): publica um
+// (a fila ignora o pedido enquanto o assistente não terminar)
 if (!existsSync(env.currentLink)) builds.request("primeira publicação");

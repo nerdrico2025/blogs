@@ -45,6 +45,7 @@ export class BuildQueue {
   private readonly env: ApiEnv;
   private readonly log: FastifyBaseLogger;
   private readonly lock: GlobalBuildLock | null;
+  private gate: () => boolean = () => true;
 
   constructor(env: ApiEnv, log: FastifyBaseLogger) {
     this.env = env;
@@ -61,13 +62,18 @@ export class BuildQueue {
       : null;
   }
 
+  /** Enquanto o blog não estiver configurado, pedidos de build (agendador, /internal) são ignorados. */
+  setGate(gate: () => boolean): void {
+    this.gate = gate;
+  }
+
   getStatus(): BuildStatus {
     return { ...this.status, pending: this.dirty || this.timer !== null };
   }
 
   /** Pede um build. Espera `buildDebounceMs` sem novos pedidos (no máximo `buildMaxWaitMs`). */
   request(reason: string): void {
-    if (this.env.buildMode === "none") return;
+    if (this.env.buildMode === "none" || !this.gate()) return;
     if (this.retryTimer) {
       clearTimeout(this.retryTimer);
       this.retryTimer = null;
@@ -141,6 +147,9 @@ export class BuildQueue {
       SITE: this.env.site,
       CONTENT_DIR: this.env.contentDir,
       UPLOADS_DIR: this.env.uploadsDir,
+      PAGES_DIR: this.env.pagesDir,
+      SETTINGS_FILE: this.env.settingsFile,
+      ASSETS_DIR: this.env.assetsDir,
       BUILD_CACHE_DIR: this.env.buildCacheDir,
       ASTRO_TELEMETRY_DISABLED: "1",
     };

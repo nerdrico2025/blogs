@@ -1,4 +1,5 @@
-# Imagem única para todos os blogs. O blog é escolhido por SITE (pasta sites/<SITE>/) e SITE_URL.
+# Imagem única para todos os blogs. O blog é escolhido por SITE (pasta sites/<SITE>/) e SITE_URL;
+# com SITE vazio, ele é criado pelo assistente /admin/setup.
 # Um volume por blog em /data guarda posts, imagens, estado, releases e backups.
 
 FROM node:22-bookworm-slim AS deps
@@ -12,7 +13,10 @@ ENV NODE_ENV=production \
     HOST=0.0.0.0 \
     PORT=8080 \
     TRUST_PROXY=1 \
-    SITE=exemplo \
+    SITE= \
+    SETTINGS_FILE=/data/settings.json \
+    SECRETS_FILE=/data/secrets.json \
+    ASSETS_DIR=/data/assets \
     CONTENT_DIR=/data/content/posts \
     UPLOADS_DIR=/data/uploads \
     STATE_FILE=/data/data/api-state.json \
