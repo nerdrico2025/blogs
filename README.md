@@ -98,7 +98,7 @@ Login próprio, com bloqueio depois de 5 tentativas erradas. Cada "Salvar" valid
 forma atômica e pede um build (respeitando a trava global); o estado aparece no topo da tela. Campo vazio = vale o
 `site.config.ts`.
 
-- **Marca:** nome, logotipo e favicon (otimizados em `/data/assets`) e 3 cores, com aviso de contraste baixo.
+- **Marca:** nome, logotipo e favicon (otimizados em `/data/assets`) e 3 cores, com prévia e aviso de contraste baixo. Principal: links, botões, foco, menu ativo, sumário e "Aceitar" dos cookies. Destaque: etiquetas, autor, títulos pequenos e "Leia também". Cartão: cartão da lateral, CTA e clube.
 - **Rastreamento:** ID do Tag Manager e códigos livres. Só carregam depois do aceite de estatísticas no banner.
 - **Anúncios:** script da rede, `ads.txt` e 8 posições (topo, antes, dentro e depois do conteúdo, lateral no topo
   e no fim, rodapé e fixo no celular), cada uma com código, dispositivos, tipos de página, categorias e altura

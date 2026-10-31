@@ -71,14 +71,33 @@ describe("cores salvas no painel chegam ao site publicado", () => {
     assert.ok(release().startsWith(path.join(tmp, "releases")), "publicou uma release do volume");
 
     const html = page();
-    for (const v of ["--c-accent:#a11d33", "--c-button:#a11d33", "--c-highlight:#7a3e9d", "--c-kicker:#7a3e9d", "--c-callout-from:#b4540a", "--c-callout-button-text:#b4540a"]) assert.ok(html.includes(v), v);
-    for (const old of ["#1363df", "#174c3c"]) assert.ok(!html.includes(old), `cor padrão ${old} não sobra`);
-    // Componentes que o visitante vê consomem as variáveis
-    assert.match(html, /\.btn-ink\{background:var\(--c-button,\s*var\(--c-ink\)\)/);
-    assert.match(html, /\.post-cat\{[^}]*color:var\(--c-highlight\)/);
-    assert.match(html, /\.callout-card\{[^}]*var\(--c-callout-from\)/);
-    assert.match(html, /class="btn btn-ink btn-block"/, "o botão da lateral está na página");
-    assert.match(html, /class="callout-card/, "o cartão de chamada está na página");
+    const cssVar = (name: string) => new RegExp(`[;{]--${name}:([^;}]+)`).exec(html)?.[1];
+    assert.equal(cssVar("cor-principal"), "#a11d33");
+    assert.equal(cssVar("cor-destaque"), "#7a3e9d");
+    assert.equal(cssVar("cor-cartao"), "#b4540a");
+    for (const old of ["#1363df", "#174c3c", "#ffcd2a"]) assert.ok(!html.includes(old), `cor padrão ${old} não sobra`);
+
+    /** Os elementos estão na página publicada e a regra de cada um consome a variável certa. */
+    const rule = (selector: string) => {
+      const start = html.indexOf(`${selector}{`);
+      assert.ok(start >= 0, `regra ${selector}`);
+      return html.slice(start, html.indexOf("}", start));
+    };
+    const assertPrimaryButton = (css: string) => {
+      assert.match(css, /background:var\(--cor-principal\)/);
+      assert.match(css, /[;{]color:var\(--cor-principal-texto\)/);
+    };
+    assert.match(html, /class="post-cat"|<a[^>]*class="kicker"|class="kicker"/, "etiqueta");
+    assert.match(rule(".kicker"), /color:var\(--cor-destaque-legivel\)/);
+    assert.match(rule(".post-cat"), /color:var\(--cor-destaque-legivel\)/);
+    assert.match(html, /class="search-form"/, "busca");
+    assertPrimaryButton(rule(".search-form button"));
+    assert.match(html, /class="btn btn-accent btn-block"[^>]*>Ver todos os recursos/, "Ver todos os recursos");
+    assertPrimaryButton(rule(".btn-accent"));
+    assert.match(html, /cc-accept/, "aceitar cookies");
+    assertPrimaryButton(rule(".cc-accept"));
+    assert.match(html, /class="callout-card/, "cartão da lateral");
+    assert.match(rule(".callout-card"), /var\(--cor-cartao\) 0%/);
   });
 
   test("uma nova cor gera outra release e substitui a anterior", { timeout: 180_000 }, async () => {
@@ -86,11 +105,11 @@ describe("cores salvas no painel chegam ao site publicado", () => {
     await ctx.app.inject({ method: "POST", url: "/admin/api/brand", headers: { cookie }, payload: { name: "", colors: { primary: "#0b6e4f", highlight: "#7a3e9d", callout: "#b4540a" } } });
     await ctx.builds.drain();
     assert.notEqual(release(), before);
-    assert.ok(page().includes("--c-accent:#0b6e4f"));
+    assert.ok(page().includes("--cor-principal:#0b6e4f"));
     assert.ok(!page().includes("#a11d33"));
     const res = await ctx.app.inject({ url: "/" });
     assert.equal(res.headers["cache-control"], "public, max-age=0, must-revalidate", "o HTML sempre revalida");
-    assert.ok(res.body.includes("--c-accent:#0b6e4f"), "o servidor entrega a release nova");
+    assert.ok(res.body.includes("--cor-principal:#0b6e4f"), "o servidor entrega a release nova");
   });
 });
 

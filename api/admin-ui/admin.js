@@ -156,6 +156,13 @@ function setColorError(f, invalid) {
   if (invalid) show(f.error, HEX_ERROR, "err");
   else f.error.replaceChildren();
 }
+/** Código ainda inválido no texto: a prévia fica na última cor válida, como o seletor. */
+function renderPreview() {
+  const [primary, highlight, callout] = COLOR_FIELDS.map((f) => (normalizeHex(f.text.value) || f.picker.value).toLowerCase());
+  const end = shadeHex(callout, 0.15);
+  const vars = { "pv-btn": primary, "pv-btn-text": textOnHex(primary), "pv-tag": readableHex(highlight), "pv-card": callout, "pv-card-end": end, "pv-card-text": textOnHex(callout, end) };
+  for (const [name, value] of Object.entries(vars)) $("brand-preview").style.setProperty(`--${name}`, value);
+}
 /** Ao sair do campo e ao salvar. Código inválido fica no texto para ser corrigido; o seletor mantém a última cor válida. */
 function commitColor(f) {
   const hex = normalizeHex(f.text.value);
@@ -163,14 +170,17 @@ function commitColor(f) {
   if (!hex) return false;
   f.text.value = hex;
   f.picker.value = hex.toLowerCase();
+  renderPreview();
   return true;
 }
 for (const f of COLOR_FIELDS) {
   f.picker.addEventListener("input", () => {
     f.text.value = f.picker.value.toUpperCase();
     setColorError(f, false);
+    renderPreview();
   });
   f.text.addEventListener("input", () => {
+    renderPreview();
     const hex = normalizeHex(f.text.value);
     if (hex) setColorError(f, false);
     // 3 dígitos podem ser o começo de um código de 6: só valem ao sair do campo
@@ -191,6 +201,7 @@ function fill() {
     f.text.value = f.picker.value.toUpperCase();
     setColorError(f, false);
   }
+  renderPreview();
   if (state.warnings.length) show($("contrast"), state.warnings, "warn");
   else $("contrast").replaceChildren();
   $("t-gtm").value = state.tracking.gtmId;

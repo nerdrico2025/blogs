@@ -52,13 +52,11 @@ export interface SiteConfig {
   theme: {
     colors: Record<
       | "accent" | "accentHover" | "heading" | "text" | "muted" | "bg" | "card" | "border" | "soft" | "ink"
-      | "youtube" | "calloutFrom" | "calloutTo" | "calloutButtonText" | "club" | "imagePlaceholder" | "cookieBg" | "cookieAccept",
+      | "youtube" | "calloutFrom" | "calloutTo" | "imagePlaceholder" | "cookieBg",
       string
     >;
     /** Cor de destaque (etiquetas e títulos pequenos). Sem valor, usa accent. */
     highlight?: string;
-    /** Cor principal escolhida no painel: também pinta os botões escuros. Sem valor, eles usam ink. */
-    button?: string;
     fontFamily: string;
     layout: { container: number; sidebar: number; gap: number };
   };
