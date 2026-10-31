@@ -8,7 +8,10 @@ import site from "../../../site.config.ts";
 
 const cfg = site.cookies;
 const { gaId, adsenseClient } = site.analytics;
+const t = site.tracking;
+const hasCode = Boolean(t?.gtmId || t?.headCode || t?.bodyCode || site.ads?.headScript);
 ---
+{hasCode && <div id="cc-code" hidden data-gtm={t?.gtmId || undefined} data-head={t?.headCode || undefined} data-body={t?.bodyCode || undefined} data-ads-head={site.ads?.headScript || undefined}></div>}
 {cfg.enabled && (
   <div id="cc" class="cc" hidden data-ga={gaId || undefined} data-ads={adsenseClient || undefined}>
     <div class="cc-inner">
@@ -68,6 +71,52 @@ const { gaId, adsenseClient } = site.analytics;
     document.head.append(s);
   }
 
+  /** Scripts criados por innerHTML não rodam; por isso cada um é recriado. */
+  function activate(code: string, target: Element) {
+    const tpl = document.createElement("template");
+    tpl.innerHTML = code;
+    tpl.content.querySelectorAll("script").forEach((old) => {
+      const s = document.createElement("script");
+      for (const a of old.attributes) s.setAttribute(a.name, a.value);
+      s.text = old.text;
+      old.replaceWith(s);
+    });
+    target.append(tpl.content);
+  }
+
+  const done = new Set<string>();
+  function once(key: string, fn: () => void) {
+    if (done.has(key)) return;
+    done.add(key);
+    fn();
+  }
+
+  function applyCode(c: Consent) {
+    const code = document.getElementById("cc-code")?.dataset ?? {};
+    const w = window as unknown as { dataLayer: unknown[] };
+    if (c.analytics) {
+      once("tracking", () => {
+        if (code.gtm) {
+          w.dataLayer.push({ "gtm.start": Date.now(), event: "gtm.js" });
+          addScript(`https://www.googletagmanager.com/gtm.js?id=${encodeURIComponent(code.gtm)}`);
+        }
+        if (code.head) activate(code.head, document.head);
+        if (code.body) activate(code.body, document.body);
+      });
+    }
+    document.documentElement.classList.toggle("no-ads", !c.ads);
+    if (!c.ads) return;
+    once("ads", () => {
+      if (code.adsHead) activate(code.adsHead, document.head);
+      document.querySelectorAll<HTMLElement>(".ad-slot[data-ad-code]").forEach((slot) => {
+        // Posição de outro dispositivo fica escondida e não carrega
+        if (getComputedStyle(slot).display === "none") return;
+        const target = slot.querySelector(".ad-code");
+        if (target) activate(slot.dataset.adCode ?? "", target);
+      });
+    });
+  }
+
   function apply(c: Consent) {
     const ga = root?.dataset.ga;
     const ads = root?.dataset.ads;
@@ -91,6 +140,7 @@ const { gaId, adsenseClient } = site.analytics;
     if (c.ads && ads) {
       addScript(`https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=${encodeURIComponent(ads)}`, { crossorigin: "anonymous" });
     }
+    applyCode(c);
   }
 
   function save(c: Omit<Consent, "at">) {
@@ -109,6 +159,8 @@ const { gaId, adsenseClient } = site.analytics;
     (prefs.querySelector('[name="ads"]') as HTMLInputElement).checked = c?.ads ?? false;
     prefs.showModal();
   }
+
+  document.querySelectorAll(".ad-close").forEach((b) => b.addEventListener("click", () => b.closest(".ad-slot")?.remove()));
 
   const current = read();
   if (current) apply(current);

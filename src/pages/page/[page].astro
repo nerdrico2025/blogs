@@ -14,6 +14,7 @@ export const getStaticPaths = (async () => {
     .map((p) => ({ params: { page: String(p.page) }, props: p }));
 }) satisfies GetStaticPaths;
 
+Astro.locals.ad = { type: "home" };
 const { page, pages, items } = Astro.props as { page: number; pages: number; items: PostView[] };
 const path = pageUrl("/", page);
 const title = `Artigos, página ${page} de ${pages}`;

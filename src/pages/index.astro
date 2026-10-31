@@ -6,6 +6,7 @@ import PostList from "../components/post/PostList.astro";
 import { getPosts, paginate } from "../lib/posts.ts";
 import { webPage } from "../lib/seo.ts";
 
+Astro.locals.ad = { type: "home" };
 const [first] = paginate(await getPosts(), site.home.perPage);
 const seo = {
   title: site.name,

@@ -537,3 +537,16 @@ button, input { font: inherit; }
 }
 #search { min-height: 64px; }
 .search-page { min-height: 100svh; }
+
+/* Posições de anúncio (o espaço fica reservado antes do carregamento) */
+.ad-slot { display: block; margin: 24px auto; text-align: center; overflow: hidden; }
+.ad-slot .ad-label { margin-bottom: 4px; text-align: center; }
+.ad-header, .ad-footer { max-width: var(--container); padding: 0 var(--gutter); }
+.no-ads .ad-slot { display: none; }
+.ad-mobileSticky {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; margin: 0; padding: 4px 8px;
+  background: var(--c-card); box-shadow: 0 -2px 12px rgba(15, 23, 42, .15);
+}
+.ad-close { position: absolute; top: 2px; right: 6px; border: 0; background: none; font-size: 20px; line-height: 1; cursor: pointer; color: var(--c-text); }
+@media (min-width: 922px) { .ad-mobile { display: none; } }
+@media (max-width: 921px) { .ad-desktop { display: none; } }

@@ -3,6 +3,7 @@ import site from "../../site.config.ts";
 import Header from "../components/layout/Header.astro";
 import Footer from "../components/layout/Footer.astro";
 import CookieConsent from "../components/layout/CookieConsent.astro";
+import AdSlot from "../components/AdSlot.astro";
 import { absoluteUrl } from "../lib/format.ts";
 import { baseGraph, jsonLd, type SeoProps } from "../lib/seo.ts";
 import "../styles/global.css";
@@ -84,14 +85,18 @@ const graph = [...baseGraph(), ...(seo.graph ?? [])];
     {site.analytics.adsenseClient && <meta name="google-adsense-account" content={site.analytics.adsenseClient} />}
 
     <style is:inline set:html={vars}></style>
+    {site.ads && <script is:inline>try{var c=JSON.parse(localStorage.getItem("cookie-consent.v1"));if(c&&c.ads===false)document.documentElement.classList.add("no-ads")}catch(e){}</script>}
     <script is:inline type="application/ld+json" set:html={jsonLd(graph)}></script>
     <slot name="head" />
   </head>
   <body>
     <a class="skip-link" href="#conteudo">Pular para o conteúdo</a>
     <Header />
+    <AdSlot position="header" />
     <slot />
+    <AdSlot position="footer" />
     <Footer />
+    <AdSlot position="mobileSticky" />
     <CookieConsent />
   </body>
 </html>

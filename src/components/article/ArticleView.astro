@@ -10,9 +10,11 @@ import RelatedPosts from "./RelatedPosts.astro";
 import AuthorBox from "./AuthorBox.astro";
 import PostNav from "./PostNav.astro";
 import ShareButtons from "./ShareButtons.astro";
+import AdSlot from "../AdSlot.astro";
 import { related, type PostView } from "../../lib/posts.ts";
 import { h2Offsets, placements, splitAt } from "../../lib/article.ts";
 import { absoluteUrl } from "../../lib/format.ts";
+import { activeSlot, insertInContent } from "../../lib/ads.ts";
 import { articleSeo } from "../../lib/seo.ts";
 import { bestFormat, readMediaMeta, srcset } from "../../../shared/media.ts";
 
@@ -24,7 +26,9 @@ interface Props {
 }
 const { post, newer, older, all } = Astro.props;
 const cfg = site.article;
-const html = post.entry.rendered?.html ?? "";
+Astro.locals.ad = { type: "article", categoryId: post.category.id };
+const inContent = activeSlot("inContent", Astro.locals.ad);
+const html = inContent ? insertInContent(post.entry.rendered?.html ?? "", inContent) : (post.entry.rendered?.html ?? "");
 const headings = (post.entry.rendered?.metadata?.headings ?? []) as { depth: number; slug: string; text: string }[];
 
 const suggestions = related(post, all, cfg.related.count);
@@ -47,6 +51,7 @@ const preload = coverMeta ? { srcset: srcset(coverMeta, bestFormat(coverMeta)), 
   <TwoColumn>
     <article class="card article" data-pagefind-body>
       <ArticleHeader post={post} coverSizes={coverSizes} />
+      <AdSlot position="beforeContent" />
       <Toc headings={headings} />
       <div class="prose">
         {slots.map((s) => (
@@ -57,6 +62,8 @@ const preload = coverMeta ? { srcset: srcset(coverMeta, bestFormat(coverMeta)), 
           </>
         ))}
       </div>
+      {/* Sem relacionados, o anúncio ficaria colado no cartão do autor */}
+      {(suggestions.length > 0 || !cfg.authorBox.enabled) && <AdSlot position="afterContent" />}
       <RelatedPosts posts={suggestions} />
       <AuthorBox author={post.author} />
     </article>

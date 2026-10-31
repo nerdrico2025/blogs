@@ -1,0 +1,12 @@
+---
+/** Uma posição de anúncio, se estiver ativa para esta página (Astro.locals.ad). */
+import { activeSlot, adHtml } from "../lib/ads.ts";
+import type { AdPosition } from "../../shared/settings.ts";
+
+interface Props {
+  position: AdPosition;
+}
+const { position } = Astro.props;
+const slot = activeSlot(position, Astro.locals.ad);
+---
+{slot && <Fragment set:html={adHtml(position, slot)} />}
