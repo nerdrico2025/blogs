@@ -27,7 +27,7 @@ import type { Store } from "./store.ts";
 const COOKIE = "blog_admin";
 const SESSION_MS = 12 * 3600 * 1000;
 const UI = path.join(path.dirname(fileURLToPath(import.meta.url)), "admin-ui");
-const UI_FILES: Record<string, string> = { "admin.css": "text/css", "admin.js": "text/javascript", "setup.js": "text/javascript" };
+const UI_FILES: Record<string, string> = { "admin.css": "text/css", "admin.js": "text/javascript", "color.js": "text/javascript", "setup.js": "text/javascript" };
 const digest = (s: string) => createHash("sha256").update(s).digest();
 const WORDBEE_USER = "wordbee";
 
