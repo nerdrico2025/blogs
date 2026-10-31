@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { describe, test } from "node:test";
 import vm from "node:vm";
-import { brandVars, contrastRatio, ensureReadable, shade, textOn } from "../shared/settings.ts";
+import { DEFAULT_HEADER_COLOR, brandVars, contrastRatio, ensureReadable, headerColors, headerLogo, shade, textOn } from "../shared/settings.ts";
 
 // O arquivo é um script comum de navegador; aqui roda exatamente o texto que o painel carrega
 const scope: {
@@ -10,6 +10,7 @@ const scope: {
   shadeHex?: (hex: string, amount: number) => string;
   textOnHex?: (...backgrounds: string[]) => string;
   readableHex?: (hex: string) => string;
+  headerColorsHex?: (hex: string) => { text: string; hover: string; border: string };
 } = {};
 vm.runInNewContext(readFileSync(new URL("./admin-ui/color.js", import.meta.url), "utf8"), scope);
 const normalizeHex = scope.normalizeHex!;
@@ -69,5 +70,54 @@ describe("cor do texto e versões derivadas", () => {
     assert.match(vars, /--cor-cartao-texto:#000000/);
     assert.doesNotMatch(vars, /--cor-principal-legivel:#ffee00/);
     assert.doesNotMatch(vars, /--cor-destaque-legivel:#ffee00/);
+  });
+});
+
+describe("cor do cabeçalho", () => {
+  const theme = (header?: string) => ({ colors: { accent: "#1363df", accentHover: "#0e4fb3", calloutFrom: "#174c3c", calloutTo: "#267858" }, header });
+  const channels = [0, 51, 102, 119, 128, 153, 204, 255].map((v) => v.toString(16).padStart(2, "0"));
+  const grid = channels.flatMap((r) => channels.flatMap((g) => channels.map((b) => `#${r}${g}${b}`)));
+
+  test("normalização do código do campo", () => {
+    assert.equal(normalizeHex("ebb038"), "#EBB038");
+    assert.equal(normalizeHex("#fff"), "#FFFFFF");
+    assert.equal(normalizeHex("#EBB03"), null);
+  });
+  test("texto calculado pelo contraste", () => {
+    assert.equal(headerColors("#ffffff").text, "#000000");
+    assert.equal(headerColors("#ebb038").text, "#000000");
+    assert.equal(headerColors("#0b1f3a").text, "#ffffff");
+    assert.equal(headerColors("#000000").text, "#ffffff");
+  });
+  test("em qualquer fundo, texto legível também no hover; hover e borda diferem do fundo", () => {
+    for (const c of grid) {
+      const h = headerColors(c);
+      assert.ok(contrastRatio(h.text, c) >= 4.5, `texto ${c}`);
+      assert.ok(contrastRatio(h.text, h.hover) >= 4.5, `hover ${c} ${h.hover}`);
+      assert.notEqual(h.hover, c);
+      assert.notEqual(h.border, c);
+    }
+  });
+  test("a prévia faz as mesmas contas", () => {
+    for (const c of grid) assert.deepEqual({ ...scope.headerColorsHex!(c) }, headerColors(c), c);
+  });
+  test("variáveis: padrão branco e fundo escolhido", () => {
+    const standard = brandVars({ theme: theme() } as never);
+    assert.match(standard, /--cor-cabecalho:#ffffff/);
+    assert.match(standard, /--cor-cabecalho-texto:#000000/);
+    assert.match(standard, /--cor-cabecalho-hover-texto:#1363df/, "no branco, o menu ativo segue a cor principal");
+    const navy = brandVars({ theme: theme("#0b1f3a") } as never);
+    assert.match(navy, /--cor-cabecalho:#0b1f3a/);
+    assert.match(navy, /--cor-cabecalho-texto:#ffffff/);
+    assert.match(navy, /--cor-cabecalho-hover-texto:#ffffff/);
+    assert.equal(DEFAULT_HEADER_COLOR, "#ffffff");
+  });
+  test("versão clara do logotipo só sobre fundo escuro", () => {
+    const logo = { src: "/normal", width: 1, height: 1, alt: "" };
+    const logoDark = { src: "/clara", width: 1, height: 1, alt: "" };
+    assert.equal(headerLogo({ theme: theme("#000000"), logo, logoDark } as never).src, "/clara");
+    assert.equal(headerLogo({ theme: theme("#ebb038"), logo, logoDark } as never).src, "/normal");
+    assert.equal(headerLogo({ theme: theme(), logo, logoDark } as never).src, "/normal");
+    assert.equal(headerLogo({ theme: theme("#000000"), logo } as never).src, "/normal", "sem versão clara, não troca");
   });
 });

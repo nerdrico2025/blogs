@@ -2,14 +2,16 @@
 import site from "../../../site.config.ts";
 import Icon from "../Icon.astro";
 import Ticker from "./Ticker.astro";
+import { headerLogo } from "../../../shared/settings.ts";
 
 const path = Astro.url.pathname;
+const logo = headerLogo(site);
 ---
 <Ticker />
 <header class="site-header">
   <div class="container header-inner">
     <a class="logo" href="/" aria-label={`${site.name}, página inicial`}>
-      <img src={site.logo.src} width={site.logo.width} height={site.logo.height} alt={site.logo.alt} />
+      <img src={logo.src} width={logo.width} height={logo.height} alt={logo.alt} />
     </a>
     <button class="menu-toggle" type="button" popovertarget="site-nav" aria-label="Abrir menu">
       <Icon name="menu" />

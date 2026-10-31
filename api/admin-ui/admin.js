@@ -149,7 +149,7 @@ function catRow(c) {
 }
 
 const HEX_ERROR = "Use 6 letras ou números de 0 a 9 e A a F, por exemplo #1E5AA8";
-const COLOR_FIELDS = [["c-primary", "primary"], ["c-highlight", "highlight"], ["c-callout", "callout"]].map(([id, key]) => ({ picker: $(id), text: $(`${id}-hex`), error: $(`${id}-err`), saved: () => state.colors[key].toLowerCase() }));
+const COLOR_FIELDS = [["c-primary", "primary"], ["c-highlight", "highlight"], ["c-callout", "callout"], ["c-header", "header"]].map(([id, key]) => ({ picker: $(id), text: $(`${id}-hex`), error: $(`${id}-err`), saved: () => state.colors[key].toLowerCase() }));
 
 function setColorError(f, invalid) {
   f.text.setAttribute("aria-invalid", String(invalid));
@@ -158,10 +158,22 @@ function setColorError(f, invalid) {
 }
 /** Código ainda inválido no texto: a prévia fica na última cor válida, como o seletor. */
 function renderPreview() {
-  const [primary, highlight, callout] = COLOR_FIELDS.map((f) => (normalizeHex(f.text.value) || f.picker.value).toLowerCase());
+  const [primary, highlight, callout, header] = COLOR_FIELDS.map((f) => (normalizeHex(f.text.value) || f.picker.value).toLowerCase());
   const end = shadeHex(callout, 0.15);
   const vars = { "pv-btn": primary, "pv-btn-text": textOnHex(primary), "pv-tag": readableHex(highlight), "pv-card": callout, "pv-card-end": end, "pv-card-text": textOnHex(callout, end) };
+  const hc = headerColorsHex(header);
+  const isDefaultHeader = header === "#ffffff";
+  Object.assign(vars, { "pv-header": header, "pv-header-text": hc.text, "pv-header-border": hc.border, "pv-header-hover": isDefaultHeader ? shadeHex(primary, 0.92) : hc.hover, "pv-header-hover-text": isDefaultHeader ? readableHex(primary) : hc.text });
   for (const [name, value] of Object.entries(vars)) $("brand-preview").style.setProperty(`--${name}`, value);
+  // state ainda vazio antes do primeiro carregamento
+  if (!state) return;
+  const dark = hc.text === "#ffffff";
+  const logo = dark && state.logoDark ? state.logoDark : state.logo;
+  if ($("pv-logo").getAttribute("src") !== logo) $("pv-logo").src = logo;
+  const warning = $("c-header-warning");
+  if (dark && !state.logoDark) {
+    if (!warning.firstChild) show(warning, "O fundo está escuro. Se o logotipo ficar difícil de ler, envie uma versão clara", "warn");
+  } else warning.replaceChildren();
 }
 /** Ao sair do campo e ao salvar. Código inválido fica no texto para ser corrigido; o seletor mantém a última cor válida. */
 function commitColor(f) {
@@ -197,6 +209,10 @@ function fill() {
   $("c-primary").value = state.colors.primary;
   $("c-highlight").value = state.colors.highlight;
   $("c-callout").value = state.colors.callout;
+  $("c-header").value = state.colors.header;
+  $("b-logo-dark-box").hidden = !state.logoDark;
+  if (state.logoDark) $("b-logo-dark-preview").src = state.logoDark;
+  state.categories.slice(0, 3).forEach((c, i) => ($(`pv-item-${i}`).textContent = c.name));
   for (const f of COLOR_FIELDS) {
     f.text.value = f.picker.value.toUpperCase();
     setColorError(f, false);
@@ -266,7 +282,7 @@ $("f-brand").onsubmit = (e) => {
   e.preventDefault();
   const invalid = COLOR_FIELDS.filter((f) => !commitColor(f));
   if (invalid.length) return invalid[0].text.focus();
-  saved(post("/admin/api/brand", { name: $("b-name").value, colors: { primary: $("c-primary").value, highlight: $("c-highlight").value, callout: $("c-callout").value } }));
+  saved(post("/admin/api/brand", { name: $("b-name").value, colors: { primary: $("c-primary").value, highlight: $("c-highlight").value, callout: $("c-callout").value, header: $("c-header").value } }));
 };
 const IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp", "image/svg+xml"];
 const LOGO_MAX_BYTES = 200 * 1024;
@@ -330,6 +346,12 @@ function upload(input, url, info, maxBytes, warningFor) {
   };
 }
 upload($("b-logo"), "/admin/api/logo", $("b-logo-info"), LOGO_MAX_BYTES, logoWarning);
+upload($("b-logo-dark"), "/admin/api/logo-dark", $("b-logo-dark-info"), LOGO_MAX_BYTES, logoWarning);
+$("c-header-reset").onclick = () => {
+  const f = COLOR_FIELDS[3];
+  f.text.value = "#FFFFFF";
+  commitColor(f);
+};
 upload($("b-favicon"), "/admin/api/favicon", $("b-favicon-info"), Infinity, faviconWarning);
 $("f-tracking").onsubmit = (e) => {
   e.preventDefault();

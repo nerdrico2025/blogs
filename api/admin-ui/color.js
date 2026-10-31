@@ -29,6 +29,16 @@ function textOnHex(...backgrounds) {
   const worst = (text) => Math.min(...backgrounds.map((bg) => hexContrast(text, bg)));
   return worst("#ffffff") >= worst("#000000") ? "#ffffff" : "#000000";
 }
+function mixHex(from, to, amount) {
+  const [a, b] = [hexChannels(from), hexChannels(to)];
+  return hexFromChannels(a.map((v, i) => v + (b[i] - v) * amount));
+}
+/** Texto, hover e borda do cabeçalho. */
+function headerColorsHex(background) {
+  const text = textOnHex(background);
+  const away = text === "#ffffff" ? "#000000" : "#ffffff";
+  return { text, hover: mixHex(background, hexContrast(text, background) >= 7 ? text : away, 0.16), border: mixHex(background, text, 0.15) };
+}
 /** A cor como texto sobre fundo claro: escurece até 4,5:1. */
 function readableHex(hex) {
   let c = hex;

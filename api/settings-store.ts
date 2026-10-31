@@ -50,9 +50,9 @@ export class SettingsStore {
   }
 }
 
-export function parseColors(b: Record<string, unknown>): { primary?: string; highlight?: string; callout?: string } {
+export function parseColors(b: Record<string, unknown>): { primary?: string; highlight?: string; callout?: string; header?: string } {
   const out: Record<string, string> = {};
-  for (const key of ["primary", "highlight", "callout"]) {
+  for (const key of ["primary", "highlight", "callout", "header"]) {
     const v = b[key];
     if (v === "" || v === undefined || v === null) continue;
     if (!isHex(v)) throw invalid(`Cor inválida: ${String(v)} (use o formato #1363df).`);

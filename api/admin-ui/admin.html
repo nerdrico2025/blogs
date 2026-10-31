@@ -26,17 +26,21 @@
     <label for="b-name">Nome do blog</label><input id="b-name" maxlength="80">
     <label>Logotipo</label><img class="preview" id="b-logo-preview" alt="Logotipo atual"><input type="file" id="b-logo" accept="image/png,image/jpeg,image/webp,image/svg+xml">
     <p class="hint">Use PNG com fundo transparente ou SVG, horizontal, em torno de 400 × 100 px (proporção 4:1), até 200 KB.</p><div id="b-logo-info" aria-live="polite"></div>
+    <label for="b-logo-dark">Logotipo para fundo escuro (versão clara)</label><div class="logo-dark-box" id="b-logo-dark-box" hidden><img class="preview" id="b-logo-dark-preview" alt="Logotipo para fundo escuro atual"></div><input type="file" id="b-logo-dark" accept="image/png,image/jpeg,image/webp,image/svg+xml">
+    <p class="hint">Opcional. Use PNG com fundo transparente ou SVG, horizontal, em torno de 400 × 100 px (proporção 4:1), até 200 KB.</p><div id="b-logo-dark-info" aria-live="polite"></div>
     <label>Favicon (o ícone da aba do navegador)</label><img class="preview" id="b-favicon-preview" alt="Favicon atual"><input type="file" id="b-favicon" accept="image/png,image/jpeg,image/webp,image/svg+xml">
     <p class="hint">Use PNG ou SVG quadrado, de 512 × 512 px, com figura simples e sem texto pequeno.</p><div id="b-favicon-info" aria-live="polite"></div>
     <div class="row colors">
       <div><label for="c-primary">Cor principal</label><div class="color-pair"><input type="color" id="c-primary" aria-label="Cor principal: seletor de cor"><input type="text" id="c-primary-hex" aria-label="Cor principal: código hexadecimal" aria-describedby="c-primary-err" placeholder="#1E5AA8" autocapitalize="characters" autocomplete="off" autocorrect="off" spellcheck="false"></div><p class="hint">Links e botões</p><div id="c-primary-err" aria-live="polite"></div></div>
       <div><label for="c-highlight">Cor de destaque</label><div class="color-pair"><input type="color" id="c-highlight" aria-label="Cor de destaque: seletor de cor"><input type="text" id="c-highlight-hex" aria-label="Cor de destaque: código hexadecimal" aria-describedby="c-highlight-err" placeholder="#1E5AA8" autocapitalize="characters" autocomplete="off" autocorrect="off" spellcheck="false"></div><p class="hint">Etiquetas e títulos pequenos</p><div id="c-highlight-err" aria-live="polite"></div></div>
       <div><label for="c-callout">Cartão de chamada</label><div class="color-pair"><input type="color" id="c-callout" aria-label="Cartão de chamada: seletor de cor"><input type="text" id="c-callout-hex" aria-label="Cartão de chamada: código hexadecimal" aria-describedby="c-callout-err" placeholder="#1E5AA8" autocapitalize="characters" autocomplete="off" autocorrect="off" spellcheck="false"></div><p class="hint">Fundo do cartão na lateral</p><div id="c-callout-err" aria-live="polite"></div></div>
+      <div><label for="c-header">Cor de fundo do cabeçalho</label><div class="color-pair"><input type="color" id="c-header" aria-label="Cor de fundo do cabeçalho: seletor de cor"><input type="text" id="c-header-hex" aria-label="Cor de fundo do cabeçalho: código hexadecimal" aria-describedby="c-header-err" placeholder="#FFFFFF" autocapitalize="characters" autocomplete="off" autocorrect="off" spellcheck="false"></div><p class="hint">Fundo da faixa do logotipo e do menu</p><div id="c-header-err" aria-live="polite"></div><p><button type="button" class="ghost" id="c-header-reset">Voltar ao padrão</button></p><div id="c-header-warning" aria-live="polite"></div></div>
       <div class="brand-preview" id="brand-preview" role="group" aria-label="Prévia das cores escolhidas">
         <span class="preview-title">Prévia</span>
         <span class="pv-tag">Etiqueta</span>
         <span class="pv-btn">Botão</span>
         <span class="pv-card">Cartão</span>
+        <div class="pv-header" aria-hidden="true"><img id="pv-logo" alt=""><span class="pv-menu"><span class="pv-active" id="pv-item-0"></span><span id="pv-item-1"></span><span id="pv-item-2"></span></span></div>
       </div>
     </div>
     <div id="contrast"></div>

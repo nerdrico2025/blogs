@@ -46,6 +46,8 @@ export interface SiteConfig {
   locale: string;
   timezone: string;
   logo: ImageRef;
+  /** Versão clara do logotipo, para o cabeçalho com fundo escuro. */
+  logoDark?: ImageRef;
   favicon: string;
   /** Ícones gerados no painel (/favicon.ico e outros). Sem valor, vale só `favicon`. */
   faviconSet?: { version: string; svg: boolean };
@@ -57,6 +59,8 @@ export interface SiteConfig {
     >;
     /** Cor de destaque (etiquetas e títulos pequenos). Sem valor, usa accent. */
     highlight?: string;
+    /** Fundo do cabeçalho. Sem valor, branco. */
+    header?: string;
     fontFamily: string;
     layout: { container: number; sidebar: number; gap: number };
   };
