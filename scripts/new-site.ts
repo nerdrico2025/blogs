@@ -2,13 +2,17 @@
  * Cria um blog novo em sites/<nome>/ a partir do blog de exemplo.
  *
  * Uso: npm run new-site -- <nome> --name "Nome do Blog" --domain dominio.com.br [--tagline "..."] [--accent "#1363df"]
+ *        [--categories "Nome|slug|Descrição;Outra|outra|Descrição"] [--categories-file categorias.json]
  *   <nome>  pasta e valor da variável SITE (letras minúsculas, números e hífen)
+ * As categorias vão para sites/<nome>/settings.json, com ids estáveis a partir de 2.
+ * O arquivo JSON é uma lista de { "name", "slug", "description" }.
  */
 import { cp, readFile, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import path from "node:path";
 import { parseArgs } from "node:util";
 import { generateBrand } from "./lib/brand.ts";
+import type { Settings } from "../shared/settings.ts";
 
 const { values, positionals } = parseArgs({
   allowPositionals: true,
@@ -17,6 +21,8 @@ const { values, positionals } = parseArgs({
     domain: { type: "string" },
     tagline: { type: "string" },
     accent: { type: "string" },
+    categories: { type: "string" },
+    "categories-file": { type: "string" },
   },
 });
 
@@ -32,6 +38,24 @@ const domain = values.domain.replace(/^https?:\/\//, "").replace(/\/+$/, "");
 if (!/^[a-z0-9.-]+\.[a-z]{2,}$/i.test(domain)) fail(`domínio inválido: ${values.domain}`);
 const accent = values.accent ?? "#1363df";
 if (!/^#[0-9a-f]{6}$/i.test(accent)) fail("--accent precisa ser uma cor como #1363df.");
+
+type NewCategory = { name: string; slug: string; description: string };
+let categories: NewCategory[] | null = null;
+if (values["categories-file"]) categories = JSON.parse(await readFile(values["categories-file"], "utf8")) as NewCategory[];
+else if (values.categories) {
+  categories = values.categories.split(";").filter((c) => c.trim()).map((c) => {
+    const [catName = "", slug = "", ...description] = c.split("|").map((p) => p.trim());
+    return { name: catName, slug, description: description.join("|") };
+  });
+}
+if (categories) {
+  const slugs = new Set<string>();
+  for (const c of categories) {
+    if (!c.name || !/^[a-z0-9]+(-[a-z0-9]+)*$/.test(c.slug) || slugs.has(c.slug)) fail(`categoria inválida ou repetida: ${c.name}|${c.slug} (slug em minúsculas, sem acento).`);
+    slugs.add(c.slug);
+  }
+  if (categories.length === 0) fail("--categories está vazio.");
+}
 
 const model = path.resolve("sites/exemplo");
 const target = path.resolve("sites", id);
@@ -92,11 +116,20 @@ replace(/channelId: "",/, `channelId: "", // TODO: id do canal (UC...) para most
 replace(/analytics: \{ gaId: "", adsenseClient: "" \},/, `analytics: { gaId: "", adsenseClient: "" }, // TODO: IDs do Google Analytics e do AdSense`);
 await writeFile(path.join(target, "site.config.ts"), config);
 
+// settings.json inicial: é o ponto de partida até o /admin gravar o /data/settings.json
+const settings: Settings = { brand: { name, colors: { primary: accent } }, tagline };
+if (categories) {
+  settings.categories = categories.map((c, i) => ({ id: i + 2, ...c }));
+  settings.nextCategoryId = categories.length + 2;
+}
+await writeFile(path.join(target, "settings.json"), JSON.stringify(settings, null, 2) + "\n");
+
 console.log(`
 Blog criado em sites/${id}/
 
 Revise antes do deploy:
-  - sites/${id}/site.config.ts   categorias (ids fixos!), autor, redes sociais, sidebar, rodapé e os TODOs
+  - sites/${id}/settings.json    categorias (ids fixos!), nome e cor principal
+  - sites/${id}/site.config.ts   categorias de reserva, autor, redes sociais, sidebar, rodapé e os TODOs
   - sites/${id}/public/brand/    logo, favicon, imagens de compartilhamento e banners (gerados provisoriamente)
   - sites/${id}/pages/           Sobre, Contato e textos legais (revisão jurídica)
 
