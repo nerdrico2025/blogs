@@ -28,10 +28,10 @@
     <p class="hint">Use PNG com fundo transparente ou SVG, horizontal, em torno de 400 × 100 px (proporção 4:1), até 200 KB.</p><div id="b-logo-info" aria-live="polite"></div>
     <label>Favicon (o ícone da aba do navegador)</label><img class="preview" id="b-favicon-preview" alt="Favicon atual"><input type="file" id="b-favicon" accept="image/png,image/jpeg,image/webp,image/svg+xml">
     <p class="hint">Use PNG ou SVG quadrado, de 512 × 512 px, com figura simples e sem texto pequeno.</p><div id="b-favicon-info" aria-live="polite"></div>
-    <div class="row">
-      <div><label for="c-primary">Cor principal</label><input type="color" id="c-primary"><p class="hint">Links e botões</p></div>
-      <div><label for="c-highlight">Cor de destaque</label><input type="color" id="c-highlight"><p class="hint">Etiquetas e títulos pequenos</p></div>
-      <div><label for="c-callout">Cartão de chamada</label><input type="color" id="c-callout"><p class="hint">Fundo do cartão na lateral</p></div>
+    <div class="row colors">
+      <div><label for="c-primary">Cor principal</label><div class="color-pair"><input type="color" id="c-primary" aria-label="Cor principal: seletor de cor"><input type="text" id="c-primary-hex" aria-label="Cor principal: código hexadecimal" aria-describedby="c-primary-err" placeholder="#1E5AA8" autocapitalize="characters" autocomplete="off" autocorrect="off" spellcheck="false"></div><p class="hint">Links e botões</p><div id="c-primary-err" aria-live="polite"></div></div>
+      <div><label for="c-highlight">Cor de destaque</label><div class="color-pair"><input type="color" id="c-highlight" aria-label="Cor de destaque: seletor de cor"><input type="text" id="c-highlight-hex" aria-label="Cor de destaque: código hexadecimal" aria-describedby="c-highlight-err" placeholder="#1E5AA8" autocapitalize="characters" autocomplete="off" autocorrect="off" spellcheck="false"></div><p class="hint">Etiquetas e títulos pequenos</p><div id="c-highlight-err" aria-live="polite"></div></div>
+      <div><label for="c-callout">Cartão de chamada</label><div class="color-pair"><input type="color" id="c-callout" aria-label="Cartão de chamada: seletor de cor"><input type="text" id="c-callout-hex" aria-label="Cartão de chamada: código hexadecimal" aria-describedby="c-callout-err" placeholder="#1E5AA8" autocapitalize="characters" autocomplete="off" autocorrect="off" spellcheck="false"></div><p class="hint">Fundo do cartão na lateral</p><div id="c-callout-err" aria-live="polite"></div></div>
     </div>
     <div id="contrast"></div>
     <p><button>Salvar e publicar</button></p>
@@ -100,5 +100,6 @@ document.querySelectorAll('input[type="password"]').forEach(function (input) {
   wrap.appendChild(btn);
 });
 </script>
+<script src="/admin/ui/color.js"></script>
 <script src="/admin/ui/admin.js"></script></body>
 </html>

@@ -148,6 +148,37 @@ function catRow(c) {
   return row;
 }
 
+const HEX_ERROR = "Use 6 letras ou números de 0 a 9 e A a F, por exemplo #1E5AA8";
+const COLOR_FIELDS = ["c-primary", "c-highlight", "c-callout"].map((id) => ({ picker: $(id), text: $(`${id}-hex`), error: $(`${id}-err`) }));
+
+function setColorError(f, invalid) {
+  f.text.setAttribute("aria-invalid", String(invalid));
+  if (invalid) show(f.error, HEX_ERROR, "err");
+  else f.error.replaceChildren();
+}
+/** Ao sair do campo e ao salvar. Código inválido fica no texto para ser corrigido; o seletor mantém a última cor válida. */
+function commitColor(f) {
+  const hex = normalizeHex(f.text.value);
+  setColorError(f, !hex);
+  if (!hex) return false;
+  f.text.value = hex;
+  f.picker.value = hex.toLowerCase();
+  return true;
+}
+for (const f of COLOR_FIELDS) {
+  f.picker.addEventListener("input", () => {
+    f.text.value = f.picker.value.toUpperCase();
+    setColorError(f, false);
+  });
+  f.text.addEventListener("input", () => {
+    const hex = normalizeHex(f.text.value);
+    if (hex) setColorError(f, false);
+    // 3 dígitos podem ser o começo de um código de 6: só valem ao sair do campo
+    if (hex && f.text.value.replace(/[#\s]/g, "").length === 6) f.picker.value = hex.toLowerCase();
+  });
+  f.text.addEventListener("blur", () => commitColor(f));
+}
+
 function fill() {
   $("title").textContent = state.name;
   $("b-name").value = state.name;
@@ -156,6 +187,10 @@ function fill() {
   $("c-primary").value = state.colors.primary;
   $("c-highlight").value = state.colors.highlight;
   $("c-callout").value = state.colors.callout;
+  for (const f of COLOR_FIELDS) {
+    f.text.value = f.picker.value.toUpperCase();
+    setColorError(f, false);
+  }
   if (state.warnings.length) show($("contrast"), state.warnings, "warn");
   else $("contrast").replaceChildren();
   $("t-gtm").value = state.tracking.gtmId;
@@ -188,6 +223,8 @@ async function saved(promise, warning) {
 
 $("f-brand").onsubmit = (e) => {
   e.preventDefault();
+  const invalid = COLOR_FIELDS.filter((f) => !commitColor(f));
+  if (invalid.length) return invalid[0].text.focus();
   saved(post("/admin/api/brand", { name: $("b-name").value, colors: { primary: $("c-primary").value, highlight: $("c-highlight").value, callout: $("c-callout").value } }));
 };
 const IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp", "image/svg+xml"];

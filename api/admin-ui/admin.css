@@ -16,6 +16,7 @@ button:disabled{opacity:.6;cursor:wait}button.ghost{background:#fff;color:var(--
 .row{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end}.row>*{flex:1 1 160px}.row>.fix{flex:0 0 auto}
 .hint{color:var(--m);font-size:14px;margin:4px 0}
 .msg{padding:10px 12px;border-radius:8px;margin:12px 0}.ok{background:#e7f6ec;color:#14532d}.err{background:#fdecec;color:#7f1d1d}.warn{background:#fff6dd;color:#713f12}
+.colors{align-items:flex-start}.color-pair{display:flex;gap:8px;align-items:stretch}.color-pair input[type=color]{flex:0 0 56px;height:auto;min-height:44px}.color-pair input[type=text]{flex:1 1 auto;min-width:0;min-height:44px;font-family:ui-monospace,Menlo,monospace}input[aria-invalid=true]{border-color:#b91c1c}
 .status{font-size:14px}.preview{max-height:48px;display:block;margin:6px 0}
 details{border:1px solid var(--b);border-radius:8px;padding:10px;margin:8px 0}summary{cursor:pointer;font-weight:600;color:var(--ink)}
 .password{font:600 18px ui-monospace,Menlo,monospace;background:#f1f5f9;padding:12px;border-radius:8px;word-break:break-all;color:var(--ink)}

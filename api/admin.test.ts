@@ -92,6 +92,9 @@ describe("configurações", () => {
     for (const text of ["Use PNG com fundo transparente ou SVG, horizontal, em torno de 400 × 100 px (proporção 4:1), até 200 KB.", "Use PNG ou SVG quadrado, de 512 × 512 px, com figura simples e sem texto pequeno.", "Não cole o código do Tag Manager aqui, para não duplicar as medições."]) assert.ok(page.includes(text), text);
     const state = await ctx.app.inject({ url: "/admin/api/state", headers: { cookie } });
     assert.ok(state.json().maxUploadBytes > 0);
+    for (const label of ["Cor principal", "Cor de destaque", "Cartão de chamada"]) assert.ok(page.includes(`aria-label="${label}: código hexadecimal"`), label);
+    assert.ok(page.indexOf("/admin/ui/color.js") < page.indexOf("/admin/ui/admin.js"), "color.js carrega antes");
+    assert.equal((await ctx.app.inject({ url: "/admin/ui/color.js" })).statusCode, 200);
   });
 
   test("logotipo e favicon: otimizados em /assets", async () => {
