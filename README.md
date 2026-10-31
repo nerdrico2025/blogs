@@ -139,6 +139,7 @@ Painel e assistente localmente:
 
 ```bash
 npm run admin:password -- "minha senha"                                  # gera ADMIN_USER e ADMIN_PASSWORD_HASH
+npm run admin:verify -- 'minha senha'                                   # diz se confere com o ADMIN_PASSWORD_HASH do ambiente
 ADMIN_USER=admin ADMIN_PASSWORD_HASH=<hash> WP_USER=wordbee WP_APP_PASSWORD_HASH=<hash> PORT=8080 npm start
 # abra http://localhost:8080/admin
 

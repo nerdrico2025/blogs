@@ -41,13 +41,28 @@ export function hashPassword(password: string): string {
   return `scrypt:${N}:${R}:${P}:${salt.toString("base64")}:${key.toString("base64")}`;
 }
 
+const SALT_BYTES = 16;
+/** Limite padrão de memória do scrypt no Node (maxmem); acima dele, a derivação sempre falha. */
+const SCRYPT_MAX_MEM = 32 * 1024 * 1024;
+
+/** Base64 estrito e tamanho exato: o Buffer.from ignora em silêncio o que não reconhece. */
+function decodeExact(value: string, bytes: number): Buffer | null {
+  if (!/^[A-Za-z0-9+/]+={0,2}$/.test(value)) return null;
+  const decoded = Buffer.from(value, "base64");
+  return decoded.length === bytes ? decoded : null;
+}
+
 function parseHash(stored: string) {
-  // Aceita "scrypt:..." (atual) e "scrypt$..." (formato antigo)
-  const [alg, n, r, p, salt, key, ...rest] = cleanEnvValue(stored).split(/[:$]/);
+  // Aceita "scrypt:..." (atual) e "scrypt$..." (formato antigo). Quebra de linha é resto de colagem e não muda o valor.
+  const [alg, n, r, p, saltText, keyText, ...rest] = cleanEnvValue(stored).replace(/[\r\n]+/g, "").split(/[:$]/);
   const params = { N: Number(n), r: Number(r), p: Number(p) };
-  if (alg !== "scrypt" || !salt || !key || rest.length > 0 || !Object.values(params).every((v) => Number.isInteger(v) && v > 0)) return null;
-  const expected = Buffer.from(key, "base64");
-  return expected.length > 0 ? { params, salt: Buffer.from(salt, "base64"), expected } : null;
+  if (alg !== "scrypt" || rest.length > 0 || !Object.values(params).every((v) => Number.isInteger(v) && v > 0)) return null;
+  if (params.N < 2 || (params.N & (params.N - 1)) !== 0 || 128 * params.N * params.r >= SCRYPT_MAX_MEM) return null;
+  // Valor alterado no caminho (ex.: "+" virou espaço) é "hash inválido", não "senha não confere".
+  // Chave curta também: com 1 byte, 1 senha errada em 256 entraria.
+  const salt = decodeExact(saltText ?? "", SALT_BYTES);
+  const expected = decodeExact(keyText ?? "", KEYLEN);
+  return salt && expected ? { params, salt, expected } : null;
 }
 
 export const isValidHash = (stored: string) => parseHash(stored) !== null;
@@ -59,7 +74,7 @@ export function verifyPassword(password: string, stored: string): boolean {
     const actual = scryptSync(normalize(password), parsed.salt, parsed.expected.length, parsed.params);
     return timingSafeEqual(actual, parsed.expected);
   } catch {
-    // Parâmetros impossíveis no hash (ex.: N que não é potência de 2)
+    // Parâmetros que o OpenSSL recusa mesmo depois da validação (ex.: p grande demais)
     return false;
   }
 }
