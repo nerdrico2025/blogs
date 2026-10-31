@@ -8,13 +8,12 @@ import { cp, mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
-import sharp from "sharp";
 import YAML from "yaml";
 import site from "../site.config.ts";
 import { generateBrand } from "../scripts/lib/brand.ts";
 import { AD_POSITIONS, DEFAULT_HEADER_COLOR, contrastWarnings, type Settings } from "../shared/settings.ts";
 import { siteDir } from "../src/lib/site-id.ts";
-import { writeFavicons } from "./favicon.ts";
+import { IMAGE_GENERATOR_VERSION, missingOriginals, storeBrandImage } from "./brand-images.ts";
 import { Attempts, Authenticator, generateAppPassword, hashPassword, isValidHash } from "./auth.ts";
 import type { BuildQueue } from "./build-queue.ts";
 import { clientIp } from "./client-ip.ts";
@@ -142,6 +141,7 @@ export async function registerAdmin(app: FastifyInstance, deps: AdminDeps): Prom
         url: site.url,
         logo: site.logo.src,
         logoDark: site.logoDark?.src ?? "",
+        missingOriginals: missingOriginals(env.assetsDir, s.brand),
         favicon: site.favicon,
         colors: { primary: c.accent, highlight: site.theme.highlight ?? c.accent, callout: c.calloutFrom, header: site.theme.header ?? DEFAULT_HEADER_COLOR },
         warnings: contrastWarnings({ primary: c.accent, highlight: site.theme.highlight, callout: c.calloutFrom }),
@@ -183,19 +183,11 @@ export async function registerAdmin(app: FastifyInstance, deps: AdminDeps): Prom
 
     const imageUpload = (kind: "logo" | "logoDark" | "favicon") => async (req: FastifyRequest) => {
       if (!Buffer.isBuffer(req.body) || req.body.length === 0) throw new WpError(415, "invalid_image", "Envie uma imagem PNG, JPG, WebP ou SVG.");
-      await mkdir(env.assetsDir, { recursive: true });
-      const hash = digest(req.body.toString("base64")).toString("hex").slice(0, 10);
       try {
-        const input = sharp(req.body, { failOn: "error", limitInputPixels: 50_000_000 }).rotate();
-        if (kind !== "favicon") {
-          const name = `${kind === "logo" ? "logo" : "logo-dark"}-${hash}.webp`;
-          const out = await input.resize({ height: 160, withoutEnlargement: true }).webp({ quality: 85 }).toFile(path.join(env.assetsDir, name));
-          // Exibido com 40 px de altura; o arquivo maior serve para telas de alta densidade
-          const logo = { src: `/assets/${name}`, width: Math.round((out.width / out.height) * 40), height: 40 };
-          return await save(kind === "logo" ? "logotipo" : "logotipo para fundo escuro", (s) => ({ ...s, brand: { ...s.brand, [kind]: logo } }));
-        }
-        const faviconSet = await writeFavicons(req.body, env.assetsDir);
-        return await save("favicon", (s) => ({ ...s, brand: { ...s.brand, favicon: `/assets/favicon-192.png?v=${faviconSet.version}`, faviconSet } }));
+        const patch = await storeBrandImage(env.assetsDir, kind, req.body);
+        const reason = kind === "favicon" ? "favicon" : kind === "logo" ? "logotipo" : "logotipo para fundo escuro";
+        // Sem versão gravada, não há nada pendente: o que acabou de ser gerado já é da versão atual
+        return await save(reason, (s) => ({ ...s, imageGenerator: s.imageGenerator ?? IMAGE_GENERATOR_VERSION, brand: { ...s.brand, ...patch } }));
       } catch (err) {
         if (err instanceof WpError) throw err;
         throw new WpError(415, "invalid_image", "Não foi possível ler a imagem. Envie um PNG, JPG, WebP ou SVG válido.");

@@ -68,6 +68,7 @@ export interface App {
   app: FastifyInstance;
   store: Store;
   builds: BuildQueue;
+  settings: SettingsStore;
 }
 
 export async function buildApp(env: ApiEnv, opts: { logger?: boolean } = {}): Promise<App> {
@@ -257,5 +258,5 @@ export async function buildApp(env: ApiEnv, opts: { logger?: boolean } = {}): Pr
   await registerAdmin(app, { env, store, builds, settings, secrets });
   if (env.serveStatic) await registerStatic(app, env, () => settings.isConfigured());
 
-  return { app, store, builds };
+  return { app, store, builds, settings };
 }

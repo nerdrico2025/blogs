@@ -1,10 +1,12 @@
 import { existsSync } from "node:fs";
+import { syncBrandImages } from "./brand-images.ts";
 import { loadEnv } from "./env.ts";
 import { Scheduler } from "./scheduler.ts";
 import { buildApp } from "./server.ts";
 
 const env = loadEnv();
-const { app, builds } = await buildApp(env);
+const { app, builds, settings } = await buildApp(env);
+await syncBrandImages({ assetsDir: env.assetsDir, settingsFile: env.settingsFile, settings, builds, log: app.log });
 const scheduler = env.scheduler ? new Scheduler(env, builds, app.log) : null;
 
 for (const signal of ["SIGINT", "SIGTERM"] as const) {

@@ -36,7 +36,7 @@ async function writeAtomic(file: string, data: Buffer): Promise<void> {
 }
 
 /** Gera todos os ícones na memória antes de gravar: imagem ilegível não deixa um conjunto incompleto. */
-export async function writeFavicons(input: Buffer, dir: string): Promise<{ version: string; svg: boolean }> {
+export async function writeFavicons(input: Buffer, dir: string, generator: number): Promise<{ version: string; svg: boolean }> {
   const meta = await sharp(input, { failOn: "error", limitInputPixels: 50_000_000 }).metadata();
   const svg = meta.format === "svg";
   // SVG é rasterizado no tamanho do desenho: sem isso, um viewBox de 32 ficaria borrado em 512 px
@@ -53,5 +53,6 @@ export async function writeFavicons(input: Buffer, dir: string): Promise<{ versi
 
   for (const [name, data] of files) await writeAtomic(path.join(dir, name), data);
   if (!svg) await rm(path.join(dir, FAVICON_SVG), { force: true });
-  return { version: createHash("sha256").update(input).digest("hex").slice(0, 10), svg };
+  // A versão do gerador entra no ?v=: ícone refeito, endereço novo, e o navegador não fica preso no antigo
+  return { version: createHash("sha256").update(input).update(String(generator)).digest("hex").slice(0, 10), svg };
 }

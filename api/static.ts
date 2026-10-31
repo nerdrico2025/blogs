@@ -11,6 +11,7 @@ import fastifyStatic from "@fastify/static";
 import type { FastifyInstance, FastifyReply } from "fastify";
 import site from "../site.config.ts";
 import type { ApiEnv } from "./env.ts";
+import { ORIGINALS_DIR } from "./brand-images.ts";
 import { APPLE_TOUCH_ICON, FAVICON_ICO, FAVICON_SVG } from "./favicon.ts";
 
 const YEAR = "public, max-age=31536000, immutable";
@@ -113,6 +114,8 @@ export async function registerStatic(app: FastifyInstance, env: ApiEnv, isConfig
     decorateReply: false,
     index: false,
     redirect: false,
+    // Os originais nunca são públicos. Minúsculas: em disco sem diferença de caixa, ORIGINAIS abriria a mesma pasta
+    allowedPath: (p) => !path.posix.normalize(`/${p}`).toLowerCase().startsWith(`/${ORIGINALS_DIR}/`),
     setHeaders: (reply, filePath) => {
       reply.header("Cache-Control", "public, max-age=86400");
       // SVG enviado no painel: abrir o endereço direto não pode executar script nesta origem
