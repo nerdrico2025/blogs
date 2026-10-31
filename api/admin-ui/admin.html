@@ -71,5 +71,31 @@
     </div>
   </section>
 </section>
-</main><script src="/admin/ui/admin.js"></script></body>
+</main>
+<script>
+/* Botão Mostrar/Ocultar em todos os campos de senha */
+document.querySelectorAll('input[type="password"]').forEach(function (input) {
+  var wrap = document.createElement("div");
+  wrap.className = "pw-wrap";
+  input.parentNode.insertBefore(wrap, input);
+  wrap.appendChild(input);
+  var btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "ghost pw-toggle";
+  function set(show) {
+    input.type = show ? "text" : "password";
+    btn.textContent = show ? "Ocultar" : "Mostrar";
+    btn.setAttribute("aria-label", show ? "Ocultar senha" : "Mostrar senha");
+    btn.setAttribute("aria-pressed", String(show));
+  }
+  /* Não tira o foco do campo: no celular, o teclado continua aberto */
+  btn.addEventListener("mousedown", function (e) { e.preventDefault(); });
+  btn.addEventListener("click", function () { set(input.type === "password"); });
+  /* Volta a esconder ao enviar, para o navegador não guardar a senha como texto comum */
+  if (input.form) input.form.addEventListener("submit", function () { set(false); });
+  set(false);
+  wrap.appendChild(btn);
+});
+</script>
+<script src="/admin/ui/admin.js"></script></body>
 </html>

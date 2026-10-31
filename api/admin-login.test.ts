@@ -178,6 +178,18 @@ describe("limite de tentativas", () => {
   });
 });
 
+describe("botão Mostrar/Ocultar", () => {
+  test("as páginas com campo de senha trazem o script e o estilo", async () => {
+    const ctx = await server({ user: "rafael", hash: scriptHash("senha-de-teste-1") });
+    const page = await ctx.app.inject({ url: "/admin/" });
+    for (const piece of ["pw-toggle", "aria-pressed", "aria-label", 'input[type="password"]']) assert.ok(page.body.includes(piece), piece);
+    const css = await ctx.app.inject({ url: "/admin/ui/admin.css" });
+    assert.match(css.body, /\.pw-toggle/);
+    assert.match(css.body, /button:focus-visible/);
+    await ctx.app.close();
+  });
+});
+
 describe("diagnóstico no log", () => {
   const password = "S3nh@+f0rte%&=/";
   const hash = scriptHash(password);
