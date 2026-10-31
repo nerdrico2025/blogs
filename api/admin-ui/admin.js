@@ -173,11 +173,12 @@ function fill() {
   renderBuild(state.build);
 }
 
-async function saved(promise) {
+async function saved(promise, warning) {
   try {
     state = await promise;
     fill();
     show($("msg"), "Salvo. O site está sendo publicado com as mudanças.", "ok");
+    if (warning) $("msg").append(make("div", { className: "msg warn", textContent: warning }));
   } catch (err) {
     if (err.status === 401) return enter();
     show($("msg"), err.message, "err");
@@ -189,17 +190,61 @@ $("f-brand").onsubmit = (e) => {
   e.preventDefault();
   saved(post("/admin/api/brand", { name: $("b-name").value, colors: { primary: $("c-primary").value, highlight: $("c-highlight").value, callout: $("c-callout").value } }));
 };
-function upload(input, url) {
-  input.onchange = () => {
+const IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp", "image/svg+xml"];
+const LOGO_MAX_BYTES = 200 * 1024;
+const formatSize = (bytes) => (bytes < 1024 * 1024 ? `${Math.ceil(bytes / 1024)} KB` : `${(bytes / 1024 / 1024).toFixed(1).replace(".", ",")} MB`);
+
+/** Largura e altura da imagem; null se o navegador não conseguir ler (o servidor dá a resposta final). */
+async function imageSize(file) {
+  try {
+    if (file.type === "image/svg+xml") {
+      const svg = new DOMParser().parseFromString(await file.text(), "image/svg+xml").documentElement;
+      const box = (svg.getAttribute("viewBox") || "").trim().split(/[\s,]+/).map(Number);
+      if (box.length === 4 && box[2] > 0 && box[3] > 0) return { width: box[2], height: box[3] };
+      const [width, height] = ["width", "height"].map((a) => svg.getAttribute(a) || "");
+      return /^[\d.]+(px)?$/.test(width) && /^[\d.]+(px)?$/.test(height) ? { width: parseFloat(width), height: parseFloat(height) } : null;
+    }
+    const bitmap = await createImageBitmap(file);
+    const size = { width: bitmap.width, height: bitmap.height };
+    bitmap.close();
+    return size;
+  } catch {
+    return null;
+  }
+}
+
+function logoWarning(file, size) {
+  // SVG é vetor: a largura em px não limita a qualidade
+  if (!size || file.type === "image/svg+xml" || size.width >= 200) return "";
+  return `O logotipo tem ${size.width} px de largura, menos que os 200 px recomendados, e pode ficar borrado. Se puder, envie uma versão maior.`;
+}
+function faviconWarning(_file, size) {
+  if (!size || size.width === size.height) return "";
+  return `O favicon não é quadrado (${size.width} × ${size.height} px). Ele foi centralizado com sobras transparentes e pode ficar pequeno na aba. Se puder, envie uma versão quadrada.`;
+}
+
+function upload(input, url, info, maxBytes, warningFor) {
+  input.onchange = async () => {
     const file = input.files[0];
-    if (file) saved(api(url, { method: "POST", headers: { "Content-Type": file.type }, body: file }));
     input.value = "";
+    if (!file) return;
+    const label = `Arquivo escolhido: ${file.name} (${formatSize(file.size)}).`;
+    const limit = Math.min(maxBytes, state.maxUploadBytes);
+    if (!IMAGE_TYPES.includes(file.type)) return show(info, [label, "Formato não aceito. Envie um arquivo PNG, SVG, JPG ou WebP."], "err");
+    if (file.size === 0) return show(info, [label, "O arquivo está vazio. Escolha outro."], "err");
+    if (file.size > limit) return show(info, [label, `O arquivo passa do tamanho máximo de ${formatSize(limit)}. Reduza a imagem e envie de novo.`], "err");
+    const warning = warningFor(file, await imageSize(file));
+    show(info, label, "ok");
+    if (warning) info.append(make("div", { className: "msg warn", textContent: warning }));
+    saved(api(url, { method: "POST", headers: { "Content-Type": file.type }, body: file }), warning);
   };
 }
-upload($("b-logo"), "/admin/api/logo");
-upload($("b-favicon"), "/admin/api/favicon");
+upload($("b-logo"), "/admin/api/logo", $("b-logo-info"), LOGO_MAX_BYTES, logoWarning);
+upload($("b-favicon"), "/admin/api/favicon", $("b-favicon-info"), Infinity, faviconWarning);
 $("f-tracking").onsubmit = (e) => {
   e.preventDefault();
+  const hasGtmCode = /googletagmanager\.com\/gtm\.js/i.test($("t-head").value + $("t-body").value);
+  if ($("t-gtm").value.trim() && hasGtmCode && !confirm("O ID do Tag Manager está preenchido e um dos campos de código também traz o código do Tag Manager. Isso pode duplicar as medições. Salvar assim mesmo?")) return;
   saved(post("/admin/api/tracking", { gtmId: $("t-gtm").value, headCode: $("t-head").value, bodyCode: $("t-body").value }));
 };
 $("f-ads").onsubmit = (e) => {

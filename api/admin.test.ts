@@ -87,6 +87,13 @@ describe("configurações", () => {
     assert.equal((await post("/admin/api/brand", { colors: { primary: "azul" } })).statusCode, 400);
   });
 
+  test("dicas de Marca e Rastreamento na página; limite de envio no estado", async () => {
+    const page = (await ctx.app.inject({ url: "/admin/" })).body;
+    for (const text of ["Use PNG com fundo transparente ou SVG, horizontal, em torno de 400 × 100 px (proporção 4:1), até 200 KB.", "Use PNG ou SVG quadrado, de 512 × 512 px, com figura simples e sem texto pequeno.", "Não cole o código do Tag Manager aqui, para não duplicar as medições."]) assert.ok(page.includes(text), text);
+    const state = await ctx.app.inject({ url: "/admin/api/state", headers: { cookie } });
+    assert.ok(state.json().maxUploadBytes > 0);
+  });
+
   test("logotipo e favicon: otimizados em /assets", async () => {
     const png = await sharp({ create: { width: 1000, height: 400, channels: 3, background: "#123456" } }).png().toBuffer();
     const res = await ctx.app.inject({ method: "POST", url: "/admin/api/logo", headers: { cookie, "content-type": "image/png" }, payload: png });

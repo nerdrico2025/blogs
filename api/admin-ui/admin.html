@@ -25,7 +25,9 @@
     <h2>Marca</h2>
     <label for="b-name">Nome do blog</label><input id="b-name" maxlength="80">
     <label>Logotipo</label><img class="preview" id="b-logo-preview" alt="Logotipo atual"><input type="file" id="b-logo" accept="image/png,image/jpeg,image/webp,image/svg+xml">
+    <p class="hint">Use PNG com fundo transparente ou SVG, horizontal, em torno de 400 × 100 px (proporção 4:1), até 200 KB.</p><div id="b-logo-info" aria-live="polite"></div>
     <label>Favicon (o ícone da aba do navegador)</label><img class="preview" id="b-favicon-preview" alt="Favicon atual"><input type="file" id="b-favicon" accept="image/png,image/jpeg,image/webp,image/svg+xml">
+    <p class="hint">Use PNG ou SVG quadrado, de 512 × 512 px, com figura simples e sem texto pequeno.</p><div id="b-favicon-info" aria-live="polite"></div>
     <div class="row">
       <div><label for="c-primary">Cor principal</label><input type="color" id="c-primary"><p class="hint">Links e botões</p></div>
       <div><label for="c-highlight">Cor de destaque</label><input type="color" id="c-highlight"><p class="hint">Etiquetas e títulos pequenos</p></div>
@@ -38,6 +40,7 @@
   <form class="card" data-tab="Rastreamento" id="f-tracking">
     <h2>Rastreamento</h2>
     <p class="hint">Tudo aqui só carrega depois que o visitante aceita as estatísticas no banner de cookies.</p>
+    <p class="hint">O ID do Tag Manager já insere o código completo. Use os campos abaixo só para códigos que NÃO estão dentro do Tag Manager. Não cole o código do Tag Manager aqui, para não duplicar as medições.</p>
     <label for="t-gtm">ID do Google Tag Manager</label><input id="t-gtm" placeholder="GTM-XXXXXXX">
     <label for="t-head">Código no &lt;head&gt;</label><textarea id="t-head"></textarea>
     <label for="t-body">Código antes do &lt;/body&gt;</label><textarea id="t-body"></textarea>
