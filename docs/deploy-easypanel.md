@@ -169,7 +169,7 @@ Tabela completa (só as quatro primeiras são obrigatórias; as demais têm padr
 | `SITE_URL` | domínio da config | Domínio público (`https://...`, sem barra). Use o subdomínio de teste enquanto testa |
 | `WP_USER` | `wordbee` | Usuário que o Wordbee usa |
 | `WP_APP_PASSWORD_HASH` | (opcional) | Hash da senha de aplicação (passo 3.4). Tem prioridade; sem ela, vale a senha gerada no assistente ou no `/admin` |
-| `ADMIN_USER`, `ADMIN_PASSWORD_HASH` | (opcionais) | Login do `/admin` (`npm run admin:password`). Precisam estar juntas. O motivo de um login recusado aparece nos logs do serviço, sem senha nem hash. Sem elas, vale a senha do assistente; num blog com pasta, o painel fica desligado |
+| `ADMIN_USER`, `ADMIN_PASSWORD_HASH` | (opcionais) | Login do `/admin` (`npm run admin:password`). Precisam estar juntas. O motivo de um login recusado aparece nos logs do serviço, sem senha nem hash. Para testar a senha no Console do serviço: `npm run admin:verify -- '<senha>'` Sem elas, vale a senha do assistente; num blog com pasta, o painel fica desligado |
 | `SETUP_TOKEN` | (desligada) | Liga o assistente `/admin/setup` num blog sem pasta |
 | `ANTHROPIC_API_KEY`, `AI_MODEL` | `claude-sonnet-5-5` | Chave e modelo usados só pelo assistente |
 | `GLOBAL_BUILD_LOCK_DIR` | (desligada) | `/shared/build-locks`; liga a trava global entre os blogs |
@@ -533,3 +533,22 @@ VPS e copie para o volume. Ao reiniciar, o container corrige as permissões sozi
 - [ ] Volume próprio em `/data` e bind `/shared/build-locks`
 - [ ] Backup aparece em `/data/backups` no dia seguinte (e no S3, se configurado)
 - [ ] Com a Cloudflare laranja: Full (strict), Bot Fight Mode desligado, regra de Skip para `/wp-json/`
+
+---
+
+## Login do `/admin` recusado
+
+Abra o **Console** do serviço e rode, com a senha entre aspas simples:
+
+```bash
+npm run admin:verify -- 'sua senha'
+```
+
+O comando usa o mesmo código do login e lê o `ADMIN_PASSWORD_HASH` que está no container.
+
+| Resultado | O que significa | O que fazer |
+|---|---|---|
+| `confere` | O hash do container e a senha estão certos | Digite a senha no formulário com **Mostrar** ligado: o navegador pode estar preenchendo uma senha antiga guardada. Confira também `ADMIN_USER` |
+| `não confere` | O hash do container é de outra senha | Gere o hash de novo, cole a variável, salve e clique em **Deploy**: a variável nova só vale depois disso |
+| `formato inválido` | O valor foi alterado ao ser colado | Gere e cole de novo, sem aspas |
+| `não está definida` | A variável não chegou ao container | Confira o nome da variável e clique em **Deploy** |

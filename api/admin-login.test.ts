@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -127,6 +127,88 @@ describe("a causa do erro: valores que chegam diferentes", () => {
     assert.equal(isValidHash(hash), true);
     assert.equal(isValidHash("abc"), false);
     assert.equal(verifyPassword("o mesmo ç", hashPassword("o mesmo ç")), true, "NFC e NFD valem a mesma senha");
+  });
+});
+
+describe("hash alterado no caminho até o ambiente", () => {
+  const password = "senha-ficticia-de-teste-42";
+  // Sal com "+" e chave com "/": o valor que mais sofre com painéis e url-decode
+  let hash = "";
+  do hash = hashPassword(password);
+  while (!hash.split(":")[4]!.includes("+") || !hash.split(":")[5]!.includes("/"));
+  const parts = hash.split(":");
+
+  const corrupted: [string, string][] = [
+    ['"+" virou espaço', hash.replaceAll("+", " ")],
+    ['"+" removido', hash.replaceAll("+", "")],
+    ['"/" removido', hash.replaceAll("/", "")],
+    ["percent-encoding", hash.replaceAll("+", "%2B").replaceAll("/", "%2F").replaceAll("=", "%3D")],
+    ["chave truncada", hash.slice(0, -10)],
+    ["chave de 1 byte", [...parts.slice(0, 5), "AA=="].join(":")],
+    ["sal truncado", [...parts.slice(0, 4), parts[4]!.slice(0, 8), parts[5]!].join(":")],
+    ["N que não é potência de 2", ["scrypt", "15", ...parts.slice(2)].join(":")],
+    ["N acima do limite de memória", ["scrypt", String(2 ** 20), ...parts.slice(2)].join(":")],
+  ];
+  for (const [name, value] of corrupted) {
+    test(`${name}: é hash inválido, não senha errada`, () => {
+      assert.equal(isValidHash(value), false);
+      assert.equal(verifyPassword(password, value), false);
+    });
+  }
+
+  const harmless: [string, string][] = [
+    ["sem o preenchimento final", hash.replace(/=+$/, "")],
+    ["quebra de linha no meio", `${hash.slice(0, 50)}\n${hash.slice(50)}`],
+    ["formato antigo com $", hash.replaceAll(":", "$")],
+  ];
+  for (const [name, value] of harmless) {
+    test(`${name}: continua valendo`, () => assert.equal(verifyPassword(password, value), true));
+  }
+
+  test("o motivo no login é hash inválido", () => {
+    const reasons: string[] = [];
+    const auth = new Authenticator(() => ({ user: "u", passwordHash: hash.replaceAll("+", " ") }), 5, 60_000, (reason) => reasons.push(reason));
+    assert.throws(() => auth.checkPassword("u", password, "1.1.1.1"), { status: 401 });
+    assert.deepEqual(reasons, ["hash inválido"]);
+  });
+});
+
+describe("npm run admin:verify", () => {
+  const password = "senha-ficticia-de-teste-42";
+  const hash = scriptHash(password);
+  /** Pelo npm, como no Console do Easypanel: o que importa é a saída inteira. */
+  function verify(args: string[], value: string | undefined) {
+    const env: NodeJS.ProcessEnv = { ...process.env };
+    delete env.ADMIN_PASSWORD_HASH;
+    for (const k of Object.keys(env)) if (k.toLowerCase().startsWith("npm_config_")) delete env[k];
+    if (value !== undefined) env.ADMIN_PASSWORD_HASH = value;
+    const r = spawnSync("npm", ["run", "admin:verify", "--", ...args], { encoding: "utf8", env });
+    return { status: r.status, out: r.stdout, err: r.stderr };
+  }
+
+  test("senha certa: só confere, sem vazar nada", () => {
+    const r = verify([password], hash);
+    assert.deepEqual([r.status, r.out, r.err], [0, "confere\n", ""]);
+  });
+  test("senha errada: só não confere, sem vazar nada", () => {
+    const r = verify(["senha-errada-secreta"], hash);
+    assert.deepEqual([r.status, r.out, r.err], [1, "não confere\n", ""]);
+  });
+  test("aspas no valor são tratadas como no servidor", () => {
+    assert.equal(verify([password], `"${hash}"\n`).out, "confere\n");
+  });
+  test("variável ausente ou hash inválido não viram veredito", () => {
+    for (const value of [undefined, "", hash.replaceAll(":", "%3A")]) {
+      const r = verify([password], value);
+      assert.equal(r.status, 2);
+      assert.equal(r.out, "");
+      assert.ok(!r.err.includes(password) && !r.err.includes(hash));
+    }
+  });
+  test("sem senha, mostra o uso", () => {
+    const r = verify([], hash);
+    assert.equal(r.status, 2);
+    assert.ok(!r.err.includes(hash));
   });
 });
 
