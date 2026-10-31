@@ -148,6 +148,9 @@ function catRow(c) {
   return row;
 }
 
+const REUPLOAD = [["logo", "b-logo"], ["logoDark", "b-logo-dark"], ["favicon", "b-favicon"]];
+for (const [, id] of REUPLOAD) $(`${id}-reupload-btn`).onclick = () => $(id).click();
+
 const HEX_ERROR = "Use 6 letras ou números de 0 a 9 e A a F, por exemplo #1E5AA8";
 const COLOR_FIELDS = [["c-primary", "primary"], ["c-highlight", "highlight"], ["c-callout", "callout"], ["c-header", "header"]].map(([id, key]) => ({ picker: $(id), text: $(`${id}-hex`), error: $(`${id}-err`), saved: () => state.colors[key].toLowerCase() }));
 
@@ -211,6 +214,7 @@ function fill() {
   $("c-callout").value = state.colors.callout;
   $("c-header").value = state.colors.header;
   $("b-logo-dark-box").hidden = !state.logoDark;
+  for (const [kind, id] of REUPLOAD) $(`${id}-reupload`).hidden = !state.missingOriginals.includes(kind);
   if (state.logoDark) $("b-logo-dark-preview").src = state.logoDark;
   state.categories.slice(0, 3).forEach((c, i) => ($(`pv-item-${i}`).textContent = c.name));
   for (const f of COLOR_FIELDS) {

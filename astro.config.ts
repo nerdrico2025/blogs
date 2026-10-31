@@ -15,7 +15,7 @@ function serveUploads(): Plugin {
   const handlerFor = (root: string) => (req: { url?: string }, res: import("node:http").ServerResponse, next: () => void) => {
     const rel = decodeURIComponent((req.url ?? "").split("?")[0]!);
     const file = path.join(root, rel);
-    if (!file.startsWith(root) || !existsSync(file) || !statSync(file).isFile() || file.endsWith(".json")) return next();
+    if (!file.startsWith(root) || file.includes(`${path.sep}originais${path.sep}`) || !existsSync(file) || !statSync(file).isFile() || file.endsWith(".json")) return next();
     res.setHeader("Content-Type", types[path.extname(file)] ?? "application/octet-stream");
     createReadStream(file).pipe(res);
   };

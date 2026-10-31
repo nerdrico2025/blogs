@@ -42,6 +42,8 @@ export interface TrackingConfig {
 export interface Settings {
   /** Marca o fim do assistente de primeiro acesso. */
   configured?: boolean;
+  /** Versão do gerador que produziu as imagens da marca (ver api/brand-images.ts). */
+  imageGenerator?: number;
   lang?: string;
   tagline?: string;
   description?: string;
