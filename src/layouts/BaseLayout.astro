@@ -21,9 +21,10 @@ const vars = `:root{--c-accent:${c.accent};--c-accent-hover:${c.accentHover};--c
 
 const fullTitle = seo.title === site.name ? `${site.name} | ${site.tagline}` : `${seo.title} | ${site.name}`;
 const canonical = absoluteUrl(seo.path);
-const image = seo.image ?? site.seo.defaultImage;
+// A Meta não aceita WebP/AVIF de forma confiável: o compartilhamento usa sempre JPEG ou PNG
+const image = seo.image && !/\.(webp|avif)$/i.test(seo.image.src) ? seo.image : site.seo.defaultImage;
 const imageUrl = absoluteUrl(image.src);
-const imageType = image.src.endsWith(".png") ? "image/png" : image.src.endsWith(".webp") ? "image/webp" : "image/jpeg";
+const imageType = image.src.endsWith(".png") ? "image/png" : "image/jpeg";
 const robots = seo.noindex
   ? "noindex, follow"
   : "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1";

@@ -14,7 +14,7 @@ import { related, type PostView } from "../../lib/posts.ts";
 import { h2Offsets, placements, splitAt } from "../../lib/article.ts";
 import { absoluteUrl } from "../../lib/format.ts";
 import { articleSeo } from "../../lib/seo.ts";
-import { readMediaMeta, srcset } from "../../../shared/media.ts";
+import { bestFormat, readMediaMeta, srcset } from "../../../shared/media.ts";
 
 interface Props {
   post: PostView;
@@ -40,7 +40,7 @@ const slots = splitAt(html, inserts);
 
 const coverSizes = `(max-width: 544px) calc(100vw - 64px), (max-width: 921px) calc(100vw - 82px), ${site.theme.layout.container - site.theme.layout.sidebar - site.theme.layout.gap - 98}px`;
 const coverMeta = post.entry.data.cover ? readMediaMeta(post.entry.data.cover.src) : null;
-const preload = coverMeta ? { srcset: srcset(coverMeta, "avif"), sizes: coverSizes, type: "image/avif" } : undefined;
+const preload = coverMeta ? { srcset: srcset(coverMeta, bestFormat(coverMeta)), sizes: coverSizes, type: `image/${bestFormat(coverMeta)}` } : undefined;
 ---
 <BaseLayout seo={articleSeo(post)} preloadImage={preload}>
   <div class="reading-progress" aria-hidden="true"></div>

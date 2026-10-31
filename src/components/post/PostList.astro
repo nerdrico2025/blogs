@@ -11,7 +11,9 @@ interface Props {
   pages: number;
   showBanner?: boolean;
 }
-const { posts, base, page, pages, showBanner = false } = Astro.props;
+  /** Na home, a imagem do primeiro card carrega com prioridade. */
+  priorityFirst?: boolean;
+const { posts, base, page, pages, showBanner = false, priorityFirst = false } = Astro.props;
 const banner = site.home.banner;
 ---
 {showBanner && banner.enabled && (
@@ -23,6 +25,6 @@ const banner = site.home.banner;
   </div>
 )}
 {posts.length > 0
-  ? <div class="post-list">{posts.map((p, i) => <PostCard post={p} priority={i === 0} />)}</div>
+  ? <div class="post-list">{posts.map((p, i) => <PostCard post={p} priority={priorityFirst && i === 0} />)}</div>
   : <p class="card list-header">Nenhum artigo publicado ainda. Volte em breve!</p>}
 <Pagination base={base} page={page} pages={pages} />

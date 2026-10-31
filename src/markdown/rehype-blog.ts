@@ -1,6 +1,6 @@
 /**
  * Transformações do corpo dos posts:
- * - imagem sozinha num parágrafo → <figure> com <picture> (avif/webp, srcset, width/height) e legenda;
+ * - imagem sozinha num parágrafo → <figure> com <picture> (webp, srcset, width/height) e legenda;
  * - tabelas dentro de um contêiner com rolagem horizontal;
  * - blockquote iniciado por [!DICA], [!ATENCAO] ou [!INFO] → caixa de destaque;
  * - seção "Perguntas frequentes" → bloco de FAQ, com os pares pergunta/resposta no frontmatter (FAQPage);
@@ -53,14 +53,14 @@ function pictureFor(img: Element, eager: boolean, sizes: string): Element {
   const meta = readMediaMeta(src);
   const attrs = {
     alt,
-    loading: eager ? undefined : "lazy",
+    loading: eager ? "eager" : "lazy",
     fetchpriority: eager ? "high" : undefined,
     decoding: "async",
   };
   if (!meta) return h("img", { src, ...attrs });
   const fallbackWidth = meta.widths.find((w) => w >= 768) ?? meta.widths[meta.widths.length - 1]!;
   return h("picture", [
-    h("source", { type: "image/avif", srcset: srcset(meta, "avif"), sizes }),
+    ...(meta.formats.includes("avif") ? [h("source", { type: "image/avif", srcset: srcset(meta, "avif"), sizes })] : []),
     h("img", {
       src: variantUrl(meta, fallbackWidth, "webp"),
       srcset: srcset(meta, "webp"),

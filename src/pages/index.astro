@@ -18,6 +18,6 @@ const seo = {
 <BaseLayout seo={seo}>
   <TwoColumn>
     <h1 class="sr-only">{site.name}: {site.tagline}</h1>
-    <PostList posts={first!.items} base="/" page={1} pages={first!.pages} showBanner />
+    <PostList posts={first!.items} base="/" page={1} pages={first!.pages} showBanner priorityFirst />
   </TwoColumn>
 </BaseLayout>

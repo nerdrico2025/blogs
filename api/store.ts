@@ -164,10 +164,12 @@ export class Store {
         throw new WpError(415, "rest_upload_unknown_error", `Imagem inválida ou formato não suportado: ${(err as Error).message}`);
       }
       const id = this.state.nextMediaId++;
-      const ext = meta.src.split(".").pop()!;
+      // O source_url é o JPEG; o HTML do blog acha o webp e as variantes pelo .json de mesmo nome
+      const src = meta.jpeg ?? meta.src;
+      const ext = src.split(".").pop()!;
       const record: MediaRecord = {
         id,
-        src: meta.src,
+        src,
         mime: ext === "jpg" ? "image/jpeg" : `image/${ext}`,
         width: meta.width,
         height: meta.height,

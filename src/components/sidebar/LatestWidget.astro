@@ -24,7 +24,7 @@ const [first, ...rest] = (await getPosts()).slice(0, w.count);
           <li class="latest-item">
             <a href={p.url}>
               <div class="img-box">
-                {p.entry.data.cover && <Picture src={p.entry.data.cover.src} alt="" sizes="82px" fallbackWidth={150} />}
+                {p.entry.data.cover && <Picture src={p.entry.data.cover.src} alt="" sizes="82px" fallbackWidth={160} />}
               </div>
               <div>
                 <strong>{p.title}</strong>
