@@ -149,6 +149,7 @@ export async function registerAdmin(app: FastifyInstance, deps: AdminDeps): Prom
         categories: site.categories,
         wordbee: { managedByEnv: Boolean(env.passwordHash), user: env.passwordHash ? env.user : secrets.data.wordbeeUser ?? WORDBEE_USER, hasPassword: Boolean(env.passwordHash || secrets.data.wordbeePasswordHash) },
         build: builds.getStatus(),
+        maxUploadBytes: env.maxUploadBytes,
       };
     };
 
