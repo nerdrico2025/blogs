@@ -47,6 +47,8 @@ export interface SiteConfig {
   timezone: string;
   logo: ImageRef;
   favicon: string;
+  /** Ícones gerados no painel (/favicon.ico e outros). Sem valor, vale só `favicon`. */
+  faviconSet?: { version: string; svg: boolean };
   theme: {
     colors: Record<
       | "accent" | "accentHover" | "heading" | "text" | "muted" | "bg" | "card" | "border" | "soft" | "ink"
@@ -55,6 +57,8 @@ export interface SiteConfig {
     >;
     /** Cor de destaque (etiquetas e títulos pequenos). Sem valor, usa accent. */
     highlight?: string;
+    /** Cor principal escolhida no painel: também pinta os botões escuros. Sem valor, eles usam ink. */
+    button?: string;
     fontFamily: string;
     layout: { container: number; sidebar: number; gap: number };
   };

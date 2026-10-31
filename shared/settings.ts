@@ -49,6 +49,8 @@ export interface Settings {
     name?: string;
     logo?: { src: string; width: number; height: number };
     favicon?: string;
+    /** Ícones gerados no envio do favicon; `version` é o hash do arquivo, usado no ?v= das URLs. */
+    faviconSet?: { version: string; svg: boolean };
     /** Imagens geradas pelo assistente. */
     defaultImage?: string;
     organizationLogo?: string;
@@ -164,6 +166,7 @@ export function applySettings(base: SiteConfig, s: Settings): SiteConfig {
   const b = s.brand;
   if (b?.logo?.src) out.logo = { ...b.logo, alt: out.name };
   if (b?.favicon) out.favicon = b.favicon;
+  if (b?.faviconSet) out.faviconSet = b.faviconSet;
   if (b?.defaultImage) out.seo.defaultImage = image(b.defaultImage, { ...out.seo.defaultImage, alt: out.name });
   if (b?.organizationLogo) out.seo.organizationLogo = image(b.organizationLogo, { ...out.seo.organizationLogo, alt: out.name });
 
@@ -171,6 +174,8 @@ export function applySettings(base: SiteConfig, s: Settings): SiteConfig {
   const c = out.theme.colors;
   if (isHex(colors?.primary)) {
     c.accent = colors.primary;
+    // Os botões escuros do tema só mudam com cor escolhida; sem ela, o visual padrão do blog não muda
+    out.theme.button = colors.primary;
     c.accentHover = shade(colors.primary, -0.2);
   }
   if (isHex(colors?.highlight)) out.theme.highlight = colors.highlight;

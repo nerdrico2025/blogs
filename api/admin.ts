@@ -14,6 +14,7 @@ import site from "../site.config.ts";
 import { generateBrand } from "../scripts/lib/brand.ts";
 import { AD_POSITIONS, contrastWarnings, type Settings } from "../shared/settings.ts";
 import { siteDir } from "../src/lib/site-id.ts";
+import { writeFavicons } from "./favicon.ts";
 import { Attempts, Authenticator, generateAppPassword, hashPassword, isValidHash } from "./auth.ts";
 import type { BuildQueue } from "./build-queue.ts";
 import { clientIp } from "./client-ip.ts";
@@ -189,9 +190,8 @@ export async function registerAdmin(app: FastifyInstance, deps: AdminDeps): Prom
           const logo = { src: `/assets/${name}`, width: Math.round((out.width / out.height) * 40), height: 40 };
           return await save("logotipo", (s) => ({ ...s, brand: { ...s.brand, logo } }));
         }
-        const name = `favicon-${hash}.png`;
-        await input.resize(64, 64, { fit: "contain", background: { r: 0, g: 0, b: 0, alpha: 0 } }).png().toFile(path.join(env.assetsDir, name));
-        return await save("favicon", (s) => ({ ...s, brand: { ...s.brand, favicon: `/assets/${name}` } }));
+        const faviconSet = await writeFavicons(req.body, env.assetsDir);
+        return await save("favicon", (s) => ({ ...s, brand: { ...s.brand, favicon: `/assets/favicon-192.png?v=${faviconSet.version}`, faviconSet } }));
       } catch (err) {
         if (err instanceof WpError) throw err;
         throw new WpError(415, "invalid_image", "Não foi possível ler a imagem. Envie um PNG, JPG, WebP ou SVG válido.");

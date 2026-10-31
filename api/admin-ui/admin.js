@@ -149,7 +149,7 @@ function catRow(c) {
 }
 
 const HEX_ERROR = "Use 6 letras ou números de 0 a 9 e A a F, por exemplo #1E5AA8";
-const COLOR_FIELDS = ["c-primary", "c-highlight", "c-callout"].map((id) => ({ picker: $(id), text: $(`${id}-hex`), error: $(`${id}-err`) }));
+const COLOR_FIELDS = [["c-primary", "primary"], ["c-highlight", "highlight"], ["c-callout", "callout"]].map(([id, key]) => ({ picker: $(id), text: $(`${id}-hex`), error: $(`${id}-err`), saved: () => state.colors[key].toLowerCase() }));
 
 function setColorError(f, invalid) {
   f.text.setAttribute("aria-invalid", String(invalid));
@@ -208,12 +208,42 @@ function fill() {
   renderBuild(state.build);
 }
 
-async function saved(promise, warning) {
+/** Troca o "Salvo" pelo resultado real, quando o build termina. Um novo salvamento substitui o acompanhamento anterior. */
+let publishWatch = 0;
+async function watchPublish(notice) {
+  const id = ++publishWatch;
+  while (id === publishWatch) {
+    await new Promise((r) => setTimeout(r, 2000));
+    if (id !== publishWatch) return;
+    let build;
+    try {
+      ({ build } = await api("/admin/api/build"));
+    } catch (err) {
+      if (err.status === 401) return;
+      continue;
+    }
+    if (build.state !== "idle" || build.pending) continue;
+    const last = build.lastBuild;
+    if (last?.ok) {
+      const time = new Date(last.finishedAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+      notice.textContent = `Publicado às ${time}. Se não ver a mudança, atualize a página com Cmd+Shift+R.`;
+    } else {
+      notice.className = "msg err";
+      notice.textContent = "Salvo, mas a publicação falhou. O site continua na versão anterior; o painel tentará de novo em alguns minutos.";
+    }
+    return;
+  }
+}
+
+async function saved(promise, warning, afterFill) {
   try {
     state = await promise;
     fill();
+    afterFill?.();
     show($("msg"), "Salvo. O site está sendo publicado com as mudanças.", "ok");
     if (warning) $("msg").append(make("div", { className: "msg warn", textContent: warning }));
+    // Sem nada na fila (build desligado), não há publicação para anunciar
+    if (state.build.state !== "idle" || state.build.pending) watchPublish($("msg").firstChild);
   } catch (err) {
     if (err.status === 401) return enter();
     show($("msg"), err.message, "err");
@@ -273,7 +303,19 @@ function upload(input, url, info, maxBytes, warningFor) {
     const warning = warningFor(file, await imageSize(file));
     show(info, label, "ok");
     if (warning) info.append(make("div", { className: "msg warn", textContent: warning }));
-    saved(api(url, { method: "POST", headers: { "Content-Type": file.type }, body: file }), warning);
+    // O envio salva só a imagem: nome e cores ainda não salvos continuam no formulário
+    const name = $("b-name").value;
+    const typed = COLOR_FIELDS.map((f) => f.text.value);
+    const restore = () => {
+      $("b-name").value = name;
+      COLOR_FIELDS.forEach((f, i) => {
+        f.text.value = typed[i];
+        commitColor(f);
+      });
+      const pending = COLOR_FIELDS.some((f) => f.picker.value !== f.saved());
+      if (pending) info.append(make("div", { className: "msg warn", textContent: "As cores escolhidas ainda não foram salvas. Clique em Salvar e publicar." }));
+    };
+    saved(api(url, { method: "POST", headers: { "Content-Type": file.type }, body: file }), warning, restore);
   };
 }
 upload($("b-logo"), "/admin/api/logo", $("b-logo-info"), LOGO_MAX_BYTES, logoWarning);

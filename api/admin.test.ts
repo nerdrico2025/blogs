@@ -108,7 +108,7 @@ describe("configurações", () => {
     const served = await ctx.app.inject({ url: src });
     assert.equal(served.statusCode, 200);
     const fav = await ctx.app.inject({ method: "POST", url: "/admin/api/favicon", headers: { cookie, "content-type": "image/png" }, payload: png });
-    assert.match(fav.json().favicon, /favicon-.*\.png$/);
+    assert.match(fav.json().favicon, /^\/assets\/favicon-192\.png\?v=[0-9a-f]{10}$/);
     const bad = await ctx.app.inject({ method: "POST", url: "/admin/api/logo", headers: { cookie, "content-type": "image/png" }, payload: Buffer.from("não é imagem") });
     assert.equal(bad.statusCode, 415);
   });
