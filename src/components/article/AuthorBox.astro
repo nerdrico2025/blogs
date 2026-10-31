@@ -19,7 +19,7 @@ const youtube = author.links?.youtube ?? site.social?.youtube;
       <p class="author-bio">{author.bio}</p>
       <div class="author-actions">
         {youtube && <a class="btn btn-youtube" href={youtube} rel="noopener"><Icon name="youtube" />{cfg.youtubeLabel}</a>}
-        {site.sidebar.newsletter.enabled && <a class="btn btn-ink" href={site.sidebar.newsletter.button.href} rel="noopener"><Icon name="mail" />{cfg.newsletterLabel}</a>}
+        {site.sidebar.newsletter.enabled && <a class="btn btn-accent" href={site.sidebar.newsletter.button.href} rel="noopener"><Icon name="mail" />{cfg.newsletterLabel}</a>}
       </div>
     </div>
     {cfg.club.enabled && (

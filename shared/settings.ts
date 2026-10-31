@@ -115,13 +115,51 @@ export function contrastWarnings(colors: { primary?: string; highlight?: string;
   const out: string[] = [];
   const check = (value: string | undefined, label: string, use: string) => {
     if (value && isHex(value) && contrastRatio(value, "#ffffff") < 4.5) {
-      out.push(`${label}: ${use} pode ficar difícil de ler (contraste ${contrastRatio(value, "#ffffff").toFixed(1)}:1; o mínimo é 4,5:1). Tente um tom mais escuro.`);
+      out.push(`${label}: tom claro (contraste ${contrastRatio(value, "#ffffff").toFixed(1)}:1 com o branco; o mínimo é 4,5:1). ${use} Se preferir manter a cor exata, tente um tom mais escuro.`);
     }
   };
-  check(colors.primary, "Cor principal", "o texto branco dos botões e os links");
-  check(colors.highlight, "Cor de destaque", "os títulos pequenos e as etiquetas sobre fundo branco");
-  check(colors.callout, "Cor do cartão de chamada", "o texto branco do cartão");
+  check(colors.primary, "Cor principal", "Os links sairão num tom mais escuro e o texto dos botões pode ficar preto.");
+  check(colors.highlight, "Cor de destaque", "As etiquetas e os títulos pequenos sairão num tom mais escuro.");
+  check(colors.callout, "Cor do cartão de chamada", "O texto do cartão pode ficar preto.");
   return out;
+}
+
+/** Texto branco ou preto, o de maior contraste no pior dos fundos (o cartão tem gradiente de dois tons). */
+export function textOn(...backgrounds: string[]): "#ffffff" | "#000000" {
+  const worst = (text: string) => Math.min(...backgrounds.map((bg) => contrastRatio(text, bg)));
+  return worst("#ffffff") >= worst("#000000") ? "#ffffff" : "#000000";
+}
+
+/**
+ * Variáveis CSS das três cores da marca. Mapa de uso:
+ * principal: links, botões, foco, menu ativo, sumário e "Aceitar" dos cookies;
+ * destaque: etiquetas, autor, títulos pequenos e "Leia também";
+ * cartão: cartão da lateral, CTA do meio do texto e clube.
+ * -texto: texto sobre esse fundo. -legivel: a cor como texto sobre fundo claro (cor clara é escurecida até 4,5:1).
+ * Espelhada na prévia do painel (api/admin-ui/color.js); um teste garante que as duas contas batem.
+ */
+export function brandVars(site: Pick<SiteConfig, "theme">): string {
+  const c = site.theme.colors;
+  const primary = c.accent;
+  const highlight = site.theme.highlight ?? c.accent;
+  const readable = ensureReadable(primary);
+  const vars: Record<string, string> = {
+    "cor-principal": primary,
+    "cor-principal-escura": c.accentHover,
+    "cor-principal-clara": shade(primary, 0.92),
+    "cor-principal-borda": shade(primary, 0.75),
+    "cor-principal-texto": textOn(primary),
+    "cor-principal-escura-texto": textOn(c.accentHover),
+    "cor-principal-legivel": readable,
+    "cor-principal-legivel-hover": shade(readable, -0.2),
+    "cor-destaque": highlight,
+    "cor-destaque-texto": textOn(highlight),
+    "cor-destaque-legivel": ensureReadable(highlight),
+    "cor-cartao": c.calloutFrom,
+    "cor-cartao-fim": c.calloutTo,
+    "cor-cartao-texto": textOn(c.calloutFrom, c.calloutTo),
+  };
+  return Object.entries(vars).map(([k, v]) => `--${k}:${v}`).join(";");
 }
 
 function replaceDeep<T>(value: T, from: string, to: string): T {
@@ -174,16 +212,12 @@ export function applySettings(base: SiteConfig, s: Settings): SiteConfig {
   const c = out.theme.colors;
   if (isHex(colors?.primary)) {
     c.accent = colors.primary;
-    // Os botões escuros do tema só mudam com cor escolhida; sem ela, o visual padrão do blog não muda
-    out.theme.button = colors.primary;
     c.accentHover = shade(colors.primary, -0.2);
   }
   if (isHex(colors?.highlight)) out.theme.highlight = colors.highlight;
   if (isHex(colors?.callout)) {
     c.calloutFrom = colors.callout;
     c.calloutTo = shade(colors.callout, 0.15);
-    c.calloutButtonText = colors.callout;
-    c.club = colors.callout;
   }
 
   const author = out.authors[out.defaultAuthor]!;

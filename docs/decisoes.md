@@ -129,7 +129,7 @@ Validação:
 | Código de anúncio e rastreamento | Guardado em atributo (inerte) e ativado no navegador só depois do consentimento | LGPD: nada carrega antes do aceite. Consequência: `document.write` não funciona. |
 | Categorias de consentimento | GTM e códigos livres: "Estatísticas"; script da rede e posições: "Publicidade" | Reaproveita as duas categorias que o banner já tinha. |
 | Anúncio em rejeição | Espaços somem antes da primeira pintura | Evita caixa vazia para quem rejeitou. |
-| Cor de destaque | Etiquetas de categoria e títulos pequenos (`--c-highlight`, `--c-kicker`) | O motor não tinha essa cor. Sem valor, a aparência fica como antes. |
+| Cor de destaque | Etiquetas de categoria e títulos pequenos (`--cor-destaque`) | O motor não tinha essa cor. Sem valor, a aparência fica como antes. |
 | Modelo de IA do assistente | `claude-sonnet-5-5` por padrão (`AI_MODEL`), com fallback no servidor em caso de recusa | Escolha do projeto para esta tarefa simples. |
 | Modelo dos blogs sem pasta | `sites/_base/`, neutro; as páginas fixas vão para `/data/pages` | Blog novo sem criar pasta no repositório. |
 | Senha do painel e do Wordbee | Hash em `/data/secrets.json` (600), que entra no backup; variáveis de ambiente têm prioridade | Blog novo sem terminal, sem quebrar o `asasdomundo`. |
