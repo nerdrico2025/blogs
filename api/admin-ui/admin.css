@@ -19,5 +19,7 @@ button:disabled{opacity:.6;cursor:wait}button.ghost{background:#fff;color:var(--
 .status{font-size:14px}.preview{max-height:48px;display:block;margin:6px 0}
 details{border:1px solid var(--b);border-radius:8px;padding:10px;margin:8px 0}summary{cursor:pointer;font-weight:600;color:var(--ink)}
 .password{font:600 18px ui-monospace,Menlo,monospace;background:#f1f5f9;padding:12px;border-radius:8px;word-break:break-all;color:var(--ink)}
+.pw-wrap{display:flex;gap:8px;align-items:stretch}.pw-wrap input{flex:1 1 auto;min-width:0}.pw-toggle{flex:0 0 auto;min-width:88px;min-height:44px;padding:8px 12px}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,a:focus-visible,summary:focus-visible{outline:3px solid #0b3d91;outline-offset:2px}
 [hidden]{display:none!important}
 .steps{color:var(--m);font-size:14px}
