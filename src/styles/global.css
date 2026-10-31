@@ -99,8 +99,8 @@ button, input { font: inherit; }
   cursor: pointer; transition: transform .15s ease, box-shadow .15s ease, background-color .15s ease;
 }
 .btn:hover { transform: translateY(-1px); box-shadow: 0 6px 18px rgba(0, 0, 0, .12); }
-.btn-ink { background: var(--c-ink); color: #fff; }
-.btn-ink:hover { color: #fff; background: #000; }
+.btn-ink { background: var(--c-button, var(--c-ink)); color: #fff; }
+.btn-ink:hover { color: #fff; background: var(--c-button-hover, #000); }
 .btn-accent { background: var(--c-accent); color: #fff; }
 .btn-accent:hover { color: #fff; background: var(--c-accent-hover); }
 .btn-youtube { background: var(--c-youtube); color: #fff; }
@@ -248,7 +248,7 @@ button, input { font: inherit; }
 .search-form button {
   position: absolute; right: 5px; top: 5px; width: 36px; height: 36px;
   display: grid; place-items: center; border: 0; border-radius: var(--radius-sm);
-  background: var(--c-ink); color: #fff; cursor: pointer;
+  background: var(--c-button, var(--c-ink)); color: #fff; cursor: pointer;
 }
 .search-form button svg { width: 17px; height: 17px; }
 

@@ -11,6 +11,7 @@ import fastifyStatic from "@fastify/static";
 import type { FastifyInstance, FastifyReply } from "fastify";
 import site from "../site.config.ts";
 import type { ApiEnv } from "./env.ts";
+import { APPLE_TOUCH_ICON, FAVICON_ICO, FAVICON_SVG } from "./favicon.ts";
 
 const YEAR = "public, max-age=31536000, immutable";
 
@@ -98,13 +99,25 @@ export async function registerStatic(app: FastifyInstance, env: ApiEnv, isConfig
   });
 
   await mkdir(env.assetsDir, { recursive: true });
+  // Endereços fixos que navegadores e buscadores pedem sozinhos; a troca do ícone vale em até 1 dia mesmo sem o ?v=
+  for (const [url, file, type] of [["/favicon.ico", FAVICON_ICO, "image/x-icon"], ["/apple-touch-icon.png", APPLE_TOUCH_ICON, "image/png"]] as const) {
+    app.get(url, (_req, reply) => {
+      const full = path.join(env.assetsDir, file);
+      if (!existsSync(full)) return notFoundPage(reply);
+      return reply.type(type).header("Cache-Control", "public, max-age=86400").send(createReadStream(full));
+    });
+  }
   await app.register(fastifyStatic, {
     root: env.assetsDir,
     prefix: "/assets/",
     decorateReply: false,
     index: false,
     redirect: false,
-    setHeaders: (reply) => void reply.header("Cache-Control", "public, max-age=86400"),
+    setHeaders: (reply, filePath) => {
+      reply.header("Cache-Control", "public, max-age=86400");
+      // SVG enviado no painel: abrir o endereço direto não pode executar script nesta origem
+      if (path.basename(filePath) === FAVICON_SVG) reply.header("Content-Security-Policy", "default-src 'none'; style-src 'unsafe-inline'; sandbox");
+    },
   });
 
   await app.register(fastifyStatic, {
