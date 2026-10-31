@@ -36,8 +36,8 @@ const posts = defineCollection({
 });
 
 const pages = defineCollection({
-  // Páginas fixas versionadas junto com a config do blog: sites/<SITE>/pages
-  loader: glob({ pattern: "**/*.md", base: path.join(siteDir(), "pages") }),
+  // Páginas fixas: sites/<SITE>/pages; nos blogs do assistente, PAGES_DIR no volume
+  loader: glob({ pattern: "**/*.md", base: process.env.PAGES_DIR ?? path.join(siteDir(), "pages") }),
   schema: z.object({
     title: z.string(),
     description: z.string(),

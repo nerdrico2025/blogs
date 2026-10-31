@@ -165,10 +165,13 @@ Tabela completa (só as quatro primeiras são obrigatórias; as demais têm padr
 
 | Variável | Padrão | Para que serve |
 |---|---|---|
-| `SITE` | `exemplo` | Pasta do blog em `sites/` |
+| `SITE` | vazia | Pasta do blog em `sites/`. **Defina em todo blog com pasta**: vazia, o blog entra no modo do assistente (`README.md`, "Criar um blog novo") |
 | `SITE_URL` | domínio da config | Domínio público (`https://...`, sem barra). Use o subdomínio de teste enquanto testa |
-| `WP_USER` | (obrigatória) | Usuário que o Wordbee usa (`wordbee`) |
-| `WP_APP_PASSWORD_HASH` | (obrigatória) | Hash da senha de aplicação (passo 3.4) |
+| `WP_USER` | `wordbee` | Usuário que o Wordbee usa |
+| `WP_APP_PASSWORD_HASH` | (opcional) | Hash da senha de aplicação (passo 3.4). Tem prioridade; sem ela, vale a senha gerada no assistente ou no `/admin` |
+| `ADMIN_USER`, `ADMIN_PASSWORD_HASH` | (opcionais) | Login do `/admin` (`npm run admin:password`). Sem elas, vale a senha do assistente; num blog com pasta, o painel fica desligado |
+| `SETUP_TOKEN` | (desligada) | Liga o assistente `/admin/setup` num blog sem pasta |
+| `ANTHROPIC_API_KEY`, `AI_MODEL` | `claude-sonnet-5-5` | Chave e modelo usados só pelo assistente |
 | `GLOBAL_BUILD_LOCK_DIR` | (desligada) | `/shared/build-locks`; liga a trava global entre os blogs |
 | `GLOBAL_BUILD_SLOTS` | `2` | Builds simultâneos no VPS inteiro |
 | `BUILD_MAX_OLD_SPACE_MB` | `768` | Heap máximo do processo de build |
@@ -176,7 +179,7 @@ Tabela completa (só as quatro primeiras são obrigatórias; as demais têm padr
 | `PORT` | `8080` | Porta HTTP do container |
 | `TRUST_PROXY` | `1` | Proxies confiáveis à frente (o Traefik). O IP real do visitante vem do `X-Forwarded-For`, e do `CF-Connecting-IP` quando a conexão vem da Cloudflare |
 | `RATE_LIMIT_PER_MINUTE` | `120` | Limite de requisições por IP na API |
-| `MAX_UPLOAD_MB` | `16` | Tamanho máximo de imagem enviada |
+| `MAX_UPLOAD_MB` | `16` | Tamanho máximo de imagem enviada (a resolução tem limite fixo de 50 MP) |
 | `DAILY_REBUILD_UTC_HOUR` | `7` | Hora (UTC) do rebuild diário (04:00 em Brasília). O minuto é calculado pelo `SITE`, para os blogs não buildarem juntos |
 | `DAILY_BACKUP_UTC_HOUR` | `6` | Hora (UTC) do backup diário (03:00 em Brasília), também com minuto por blog |
 | `BACKUP_RETENTION_DAYS` | `14` | Dias de backup guardados em `/data/backups` |
@@ -413,6 +416,8 @@ artigos e nas linhas de produção.
 
 ## 8. Receita para adicionar um novo blog
 
+O caminho mais curto, sem terminal, é o assistente: serviço + `SITE_URL`, `SETUP_TOKEN` e `ANTHROPIC_API_KEY` (ver `README.md`, "Criar um blog novo"). Os passos abaixo são para um blog com pasta no repositório.
+
 Repita para cada blog (de preferência em lotes de 2 a 3, observando a memória entre um lote e outro):
 
 1. Na sua máquina: `npm run new-site -- <nome> --name "Nome do Blog" --domain dominio.com.br`
@@ -484,7 +489,7 @@ O próximo build (novo post ou rebuild diário) publica de novo a versão atual 
 
 ```bash
 ls /data/backups/
-cd /data && tar -xzf backups/blog-<site>-<data>.tar.gz     # recria content/, uploads/ e data/
+cd /data && tar -xzf backups/blog-<site>-<data>.tar.gz     # recria content/, uploads/ e data/ (e settings.json, secrets.json, assets/ e pages/, se houver)
 ```
 
 Depois, **reinicie o serviço** no Easypanel. O container corrige o dono dos arquivos

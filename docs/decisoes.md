@@ -12,7 +12,7 @@ Registro curto das escolhas feitas ao longo das fases, com o motivo.
 | Integração Wordbee | ~~API WP + patch no `wordbee-clone`~~ → **substituída pela atualização de escopo de 27/10**: só a API WP, **sem nenhuma mudança no Wordbee** | Ver abaixo. |
 | Identidade inicial | Blog **fictício de viagem** (nome, domínio e autor inventados) | Trocar depois só no `site.config.ts`. |
 | Categorias | Cada categoria tem um **id numérico estável** na config | O Wordbee guarda o id da categoria (`categoriaWpId`). |
-| Mídia | Original servido na hora em `/wp-content/uploads/AAAA/MM/` (antes `/uploads/`), direto pelo Nginx | O Wordbee usa `source_url` para postar no Facebook antes de qualquer build. |
+| Mídia | Versão otimizada servida na hora em `/wp-content/uploads/AAAA/MM/` (antes `/uploads/`), direto pelo Nginx | O Wordbee usa `source_url` para postar no Facebook antes de qualquer build. |
 | Criação de post | Idempotente por slug **e conteúdo** (regra refinada em 27/10, ver abaixo) | O Wordbee reenvia o mesmo POST após timeout. |
 
 ## Fase 2 (2026-10-26)
@@ -63,7 +63,8 @@ O usuário enviou um contrato de integração confirmado e correções de layout
 | Respostas | 200 | `POST /media` e `POST /posts` respondem **201**. |
 | Idempotência | Mesmo slug devolve o post existente | Mesmo slug **e mesmo conteúdo** → devolve o existente (mesmo `id` e `link`); mesmo slug com conteúdo diferente → cria `slug-2`. |
 | Caminho das imagens | `/uploads/AAAA/MM/` | `/wp-content/uploads/AAAA/MM/`, igual ao WordPress. |
-| Arquivo original | Convertido para webp | **Guardado como chegou** (jpg/png) e devolvido como `source_url`, porque a distribuição no Facebook usa essa URL e o webp não é aceito de forma confiável. As variantes webp/avif continuam sendo geradas para o blog. |
+| Arquivo original | Convertido para webp | Primeiro foi guardado como chegou e devolvido como `source_url`. **Revisto em 2026-10-31:** o arquivo enviado não é guardado (poderia conter GPS e outros metadados) e o `source_url` é um **JPEG progressivo otimizado** (até 1600 px, qualidade ~80, sem metadados). O WebP não é aceito de forma confiável pela Meta, e a distribuição no Facebook busca a foto por essa URL. O WebP e as variantes continuam sendo usados no HTML do blog. Imagens antigas continuam como estão. |
+| Imagem de compartilhamento | - | `og:image` e `twitter:image` sempre em JPEG de 1200 px de largura (ou PNG da marca), nunca WebP/AVIF, pelo mesmo motivo. |
 | `<blockquote>` | Só a sintaxe `[!DICA]` virava caixa | O `<blockquote>` comum (o que o Wordbee envia) também vira caixa de destaque. |
 | "Leia também" | O 4º artigo mais relacionado | Um artigo **da mesma categoria**, de preferência fora dos 3 relacionados; sem outro post na categoria, não aparece. |
 | Linha do card | "autor · data" | "autor / data / categoria", em azul. |
@@ -84,7 +85,7 @@ Mantidos de propósito (o texto novo diverge, mas há motivo):
 | Senha | Hash scrypt no `.env` (`npm run api:password`), comparação em tempo constante (usuário por hash SHA-256, scrypt sempre executado). Aceita a senha com ou sem espaços, como o WP | Só o hash fica no servidor. |
 | Força bruta | 10 falhas de login por IP em 15 min → 429 até a janela expirar | Além do rate limit geral. |
 | HTML → Markdown | `rehype-sanitize` com allowlist → `rehype-remark` → `remark-gfm`. `<h1>` vira `<h2>`; links sem `href` válido viram texto; `script`/`style`/`iframe`/`on*`/`javascript:` são descartados | O HTML do Wordbee não vem sanitizado. |
-| Mídia | Original guardado byte a byte (jpg/png/webp, validado pelo sharp, não pelo cabeçalho); SVG e GIF recusados (415); limite de 15 MB (413); nome de arquivo sanitizado e sem sobrescrever (`-2`) | `source_url` precisa abrir na hora e ser aceito pelo Facebook. |
+| Mídia | Entrada jpg/png/webp validada pelo sharp, não pelo cabeçalho, e convertida para JPEG e webp (a guarda byte a byte do original foi revista em 2026-10-31); até 50 MP; SVG e GIF recusados (415); limite de 15 MB (413); nome de arquivo sanitizado e sem sobrescrever (`-2`) | `source_url` precisa abrir na hora e ser aceito pelo Facebook. |
 | Estado | Posts são os próprios `.md`; um JSON pequeno (`STATE_FILE`) guarda contadores e o registro de mídias. Escritas em fila única e atômicas (tmp + rename) | Sem banco. O backup cobre `.md`, uploads e esse JSON. |
 | POST repetido | Mesmo slug + mesmo hash → 200 com o post existente | Detalhe na integração. |
 | Categoria ausente | Usa a primeira do `site.config.ts` | O WP faria o mesmo com "Sem categoria". |
@@ -118,3 +119,19 @@ Validação:
 | Trava global | Vagas `slot-N.lock` criadas com `O_EXCL` numa pasta compartilhada do host, heartbeat por mtime a cada 30 s, retomada após 10 min sem heartbeat, espera com jitter de 5–15 s | Testado entre dois containers com 1 vaga: o segundo esperou e entrou em seguida. |
 | Migração | `sites/<nome>/redirects.txt` (301) + redirecionamento automático de links com data do WordPress (`/AAAA/MM/slug/` → `/slug/`) | Trocar o domínio sem perder links. |
 | `new-site` | Copia o exemplo, troca nome, domínio e autor, gera marca provisória e deixa desligados os blocos que apontam para links de exemplo (banners, newsletter, vídeo, clube, CTA) | Nenhum link falso vai ao ar num blog novo. |
+
+## Painel, anúncios e assistente (2026-10-31)
+
+| Tema | Decisão | Motivo |
+|---|---|---|
+| Onde ficam as configurações | `/data/settings.json` por cima do `site.config.ts`; campo vazio usa o config | O `asasdomundo` continua igual sem o arquivo. |
+| Trocar slug de categoria | O slug antigo vira `aliases` da categoria e a URL antiga redireciona (301); os arquivos dos posts não são reescritos | Reescrever centenas de arquivos é mais arriscado, e os posts continuam achando a categoria. |
+| Código de anúncio e rastreamento | Guardado em atributo (inerte) e ativado no navegador só depois do consentimento | LGPD: nada carrega antes do aceite. Consequência: `document.write` não funciona. |
+| Categorias de consentimento | GTM e códigos livres: "Estatísticas"; script da rede e posições: "Publicidade" | Reaproveita as duas categorias que o banner já tinha. |
+| Anúncio em rejeição | Espaços somem antes da primeira pintura | Evita caixa vazia para quem rejeitou. |
+| Cor de destaque | Etiquetas de categoria e títulos pequenos (`--c-highlight`, `--c-kicker`) | O motor não tinha essa cor. Sem valor, a aparência fica como antes. |
+| Modelo de IA do assistente | `claude-sonnet-5-5` por padrão (`AI_MODEL`), com fallback no servidor em caso de recusa | Escolha do projeto para esta tarefa simples. |
+| Modelo dos blogs sem pasta | `sites/_base/`, neutro; as páginas fixas vão para `/data/pages` | Blog novo sem criar pasta no repositório. |
+| Senha do painel e do Wordbee | Hash em `/data/secrets.json` (600), que entra no backup; variáveis de ambiente têm prioridade | Blog novo sem terminal, sem quebrar o `asasdomundo`. |
+| Sessão do painel | Em memória | Reiniciar pede login de novo, o que é aceitável para um painel de uso raro. |
+| Modo "não configurado" | Responde 503 com `Retry-After`, além do noindex | É o sinal correto para buscadores em manutenção. |

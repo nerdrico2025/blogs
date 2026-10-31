@@ -99,14 +99,15 @@ Content-Disposition: attachment; filename="<slug>.png"
   derivado do título do post.
 - **`source_url` precisa ficar publicamente acessível na hora**, porque o módulo de
   distribuição usa essa URL para publicar no Facebook (a Meta busca a foto pela URL)
-  e para a pessoa baixar a imagem. Então o original fica num diretório servido
-  direto pelo Nginx (`/wp-content/uploads/AAAA/MM/arquivo.png`), sem depender de build.
+  e para a pessoa baixar a imagem. Então um JPEG otimizado fica num diretório servido
+  direto (`/wp-content/uploads/AAAA/MM/arquivo.jpg`), sem depender de build. Não é WebP porque
+  a Meta não o aceita de forma confiável. O arquivo enviado não é guardado.
 - Imagens de álbum são enviadas como mídia mas **não** são associadas a nenhum post;
   ficam só como hospedagem pública.
 
 Resposta mínima:
 ```json
-{ "id": 42, "source_url": "https://dominio/wp-content/uploads/2026/10/slug.png", "media_type": "image", "mime_type": "image/png" }
+{ "id": 42, "source_url": "https://dominio/wp-content/uploads/2026/10/slug.jpg", "media_type": "image", "mime_type": "image/jpeg" }
 ```
 
 ## 4. `POST /posts`
@@ -153,7 +154,7 @@ O blog **imita a WordPress REST API** e o Wordbee o cadastra como "site WordPres
 |---|---|---|
 | GET | `/users/me?context=edit` | `200 {"id", "name", "slug", "roles": ["administrator"]}` |
 | GET | `/categories?per_page=100&orderby=name&order=asc` | `200 [{"id", "name", "slug", ...}]`, das categorias do `site.config.ts` |
-| POST | `/media` (binário puro, `image/jpeg` ou `image/png`) | `201 {"id", "source_url", ...}` com `source_url` em `/wp-content/uploads/AAAA/MM/<arquivo>`, que abre na hora |
+| POST | `/media` (binário puro, `image/jpeg`, `image/png` ou `image/webp`) | `201 {"id", "source_url", ...}` com `source_url` em `/wp-content/uploads/AAAA/MM/<arquivo>`, que abre na hora |
 | POST | `/posts` (JSON) | `201 {"id", "link", "slug", "status"}` com `link` na URL pública final |
 
 Fora da v1: `POST /api/publish` próprio, tags, atualização de post, `status=future`,

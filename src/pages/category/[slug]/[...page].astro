@@ -23,6 +23,7 @@ export const getStaticPaths = (async () => {
 }) satisfies GetStaticPaths;
 
 const { page, pages, items, category } = Astro.props as { page: number; pages: number; items: PostView[]; category: Category };
+Astro.locals.ad = { type: "category", categoryId: category.id };
 const base = `/category/${category.slug}/`;
 const title = page > 1 ? `${category.name}, página ${page}` : category.name;
 const path = pageUrl(base, page);

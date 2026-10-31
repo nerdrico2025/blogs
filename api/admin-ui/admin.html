@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex, nofollow">
+<title>Painel do blog</title><link rel="stylesheet" href="/admin/ui/admin.css">
+</head>
+<body><main>
+<section id="login" class="card" hidden>
+  <h1>Entrar no painel</h1>
+  <form id="login-form">
+    <label for="user">Usuário</label><input id="user" autocomplete="username" required>
+    <label for="password">Senha</label><input id="password" type="password" autocomplete="current-password" required>
+    <p><button>Entrar</button></p>
+  </form>
+  <div id="login-msg"></div>
+</section>
+
+<section id="app" hidden>
+  <div class="row"><h1 id="title">Painel</h1><button id="logout" class="ghost fix">Sair</button></div>
+  <p class="status" id="build" role="status"></p>
+  <div id="msg" aria-live="polite"></div>
+  <nav class="tabs" role="tablist" id="tabs"></nav>
+
+  <form class="card" data-tab="Marca" id="f-brand">
+    <h2>Marca</h2>
+    <label for="b-name">Nome do blog</label><input id="b-name" maxlength="80">
+    <label>Logotipo</label><img class="preview" id="b-logo-preview" alt="Logotipo atual"><input type="file" id="b-logo" accept="image/png,image/jpeg,image/webp,image/svg+xml">
+    <label>Favicon (o ícone da aba do navegador)</label><img class="preview" id="b-favicon-preview" alt="Favicon atual"><input type="file" id="b-favicon" accept="image/png,image/jpeg,image/webp,image/svg+xml">
+    <div class="row">
+      <div><label for="c-primary">Cor principal</label><input type="color" id="c-primary"><p class="hint">Links e botões</p></div>
+      <div><label for="c-highlight">Cor de destaque</label><input type="color" id="c-highlight"><p class="hint">Etiquetas e títulos pequenos</p></div>
+      <div><label for="c-callout">Cartão de chamada</label><input type="color" id="c-callout"><p class="hint">Fundo do cartão na lateral</p></div>
+    </div>
+    <div id="contrast"></div>
+    <p><button>Salvar e publicar</button></p>
+  </form>
+
+  <form class="card" data-tab="Rastreamento" id="f-tracking">
+    <h2>Rastreamento</h2>
+    <p class="hint">Tudo aqui só carrega depois que o visitante aceita as estatísticas no banner de cookies.</p>
+    <label for="t-gtm">ID do Google Tag Manager</label><input id="t-gtm" placeholder="GTM-XXXXXXX">
+    <label for="t-head">Código no &lt;head&gt;</label><textarea id="t-head"></textarea>
+    <label for="t-body">Código antes do &lt;/body&gt;</label><textarea id="t-body"></textarea>
+    <p><button>Salvar e publicar</button></p>
+  </form>
+
+  <form class="card" data-tab="Anúncios" id="f-ads">
+    <h2>Anúncios</h2>
+    <p class="hint">Só carregam depois que o visitante aceita publicidade no banner de cookies. Códigos que usam <code>document.write</code> não funcionam.</p>
+    <label for="a-head">Script do AdSense ou da rede (vai no &lt;head&gt;)</label><textarea id="a-head"></textarea>
+    <label for="a-txt">Conteúdo do ads.txt</label><textarea id="a-txt" placeholder="google.com, pub-0000000000000000, DIRECT, f08c47fec0942fa0"></textarea>
+    <h2 style="margin-top:16px">Posições</h2>
+    <div id="slots"></div>
+    <p><button>Salvar e publicar</button></p>
+  </form>
+
+  <form class="card" data-tab="Categorias" id="f-cats">
+    <h2>Categorias</h2>
+    <p class="hint">Você pode renomear e mudar a descrição e o slug. Categorias não podem ser apagadas, porque o Wordbee guarda o número delas. Quando o slug muda, o endereço antigo redireciona para o novo.</p>
+    <div id="cats"></div>
+    <p class="row"><button type="button" class="ghost fix" id="add-cat">Adicionar categoria</button><button class="fix">Salvar e publicar</button></p>
+  </form>
+
+  <section class="card" data-tab="Wordbee">
+    <h2>Senha do Wordbee</h2>
+    <p id="wb-info"></p>
+    <p><button id="wb-new" type="button">Gerar nova senha</button></p>
+    <div id="wb-result" hidden>
+      <div class="msg warn">Guarde esta senha agora no seu gerenciador de senhas. Ela não será mostrada de novo. A senha anterior já parou de funcionar: atualize o cadastro no Wordbee.</div>
+      <p class="password" id="wb-password"></p><p><button type="button" class="ghost" id="wb-copy">Copiar</button></p>
+    </div>
+  </section>
+</section>
+</main><script src="/admin/ui/admin.js"></script></body>
+</html>

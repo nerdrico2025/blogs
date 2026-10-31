@@ -1,3 +1,5 @@
+import type { AdsConfig, TrackingConfig } from "../../shared/settings.ts";
+
 export interface Link {
   label: string;
   href: string;
@@ -15,6 +17,8 @@ export interface Category {
   slug: string;
   name: string;
   description: string;
+  /** Slugs antigos: posts já gravados continuam nesta categoria e a URL antiga redireciona. */
+  aliases?: string[];
 }
 
 export interface Author {
@@ -49,6 +53,8 @@ export interface SiteConfig {
       | "youtube" | "calloutFrom" | "calloutTo" | "calloutButtonText" | "club" | "imagePlaceholder" | "cookieBg" | "cookieAccept",
       string
     >;
+    /** Cor de destaque (etiquetas e títulos pequenos). Sem valor, usa accent. */
+    highlight?: string;
     fontFamily: string;
     layout: { container: number; sidebar: number; gap: number };
   };
@@ -109,6 +115,8 @@ export interface SiteConfig {
   };
   analytics: { gaId: string; adsenseClient: string };
   adsTxt: string[];
+  tracking?: TrackingConfig;
+  ads?: AdsConfig;
 }
 
 export function defineSiteConfig(config: SiteConfig): SiteConfig {

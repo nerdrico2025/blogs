@@ -3,6 +3,7 @@ import site from "../../site.config.ts";
 import Header from "../components/layout/Header.astro";
 import Footer from "../components/layout/Footer.astro";
 import CookieConsent from "../components/layout/CookieConsent.astro";
+import AdSlot from "../components/AdSlot.astro";
 import { absoluteUrl } from "../lib/format.ts";
 import { baseGraph, jsonLd, type SeoProps } from "../lib/seo.ts";
 import "../styles/global.css";
@@ -17,13 +18,14 @@ interface Props {
 const { seo, preloadImage } = Astro.props;
 const c = site.theme.colors;
 const l = site.theme.layout;
-const vars = `:root{--c-accent:${c.accent};--c-accent-hover:${c.accentHover};--c-heading:${c.heading};--c-text:${c.text};--c-muted:${c.muted};--c-bg:${c.bg};--c-card:${c.card};--c-border:${c.border};--c-soft:${c.soft};--c-ink:${c.ink};--c-youtube:${c.youtube};--c-callout-from:${c.calloutFrom};--c-callout-to:${c.calloutTo};--c-callout-button-text:${c.calloutButtonText};--c-club:${c.club};--c-placeholder:${c.imagePlaceholder};--c-cookie-bg:${c.cookieBg};--c-cookie-accept:${c.cookieAccept};--font:${site.theme.fontFamily};--container:${l.container}px;--sidebar:${l.sidebar}px;--gap:${l.gap}px}`;
+const vars = `:root{--c-accent:${c.accent};--c-accent-hover:${c.accentHover};--c-highlight:${site.theme.highlight ?? c.accent};${site.theme.highlight ? `--c-kicker:${site.theme.highlight};` : ""}--c-heading:${c.heading};--c-text:${c.text};--c-muted:${c.muted};--c-bg:${c.bg};--c-card:${c.card};--c-border:${c.border};--c-soft:${c.soft};--c-ink:${c.ink};--c-youtube:${c.youtube};--c-callout-from:${c.calloutFrom};--c-callout-to:${c.calloutTo};--c-callout-button-text:${c.calloutButtonText};--c-club:${c.club};--c-placeholder:${c.imagePlaceholder};--c-cookie-bg:${c.cookieBg};--c-cookie-accept:${c.cookieAccept};--font:${site.theme.fontFamily};--container:${l.container}px;--sidebar:${l.sidebar}px;--gap:${l.gap}px}`;
 
 const fullTitle = seo.title === site.name ? `${site.name} | ${site.tagline}` : `${seo.title} | ${site.name}`;
 const canonical = absoluteUrl(seo.path);
-const image = seo.image ?? site.seo.defaultImage;
+// A Meta não aceita WebP/AVIF de forma confiável: o compartilhamento usa sempre JPEG ou PNG
+const image = seo.image && !/\.(webp|avif)$/i.test(seo.image.src) ? seo.image : site.seo.defaultImage;
 const imageUrl = absoluteUrl(image.src);
-const imageType = image.src.endsWith(".png") ? "image/png" : image.src.endsWith(".webp") ? "image/webp" : "image/jpeg";
+const imageType = image.src.endsWith(".png") ? "image/png" : "image/jpeg";
 const robots = seo.noindex
   ? "noindex, follow"
   : "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1";
@@ -41,7 +43,7 @@ const graph = [...baseGraph(), ...(seo.graph ?? [])];
     {seo.prev && <link rel="prev" href={absoluteUrl(seo.prev)} />}
     {seo.next && <link rel="next" href={absoluteUrl(seo.next)} />}
     <meta name="theme-color" content={c.card} />
-    <link rel="icon" href={site.favicon} type="image/svg+xml" />
+    <link rel="icon" href={site.favicon} type={site.favicon.endsWith(".svg") ? "image/svg+xml" : "image/png"} />
     <link rel="alternate" type="application/rss+xml" title={site.name} href="/feed.xml" />
     <link rel="preload" href={fontUrl} as="font" type="font/woff2" crossorigin />
     {preloadImage && <link rel="preload" as="image" imagesrcset={preloadImage.srcset} imagesizes={preloadImage.sizes} type={preloadImage.type} fetchpriority="high" />}
@@ -83,14 +85,18 @@ const graph = [...baseGraph(), ...(seo.graph ?? [])];
     {site.analytics.adsenseClient && <meta name="google-adsense-account" content={site.analytics.adsenseClient} />}
 
     <style is:inline set:html={vars}></style>
+    {site.ads && <script is:inline>try{var c=JSON.parse(localStorage.getItem("cookie-consent.v1"));if(c&&c.ads===false)document.documentElement.classList.add("no-ads")}catch(e){}</script>}
     <script is:inline type="application/ld+json" set:html={jsonLd(graph)}></script>
     <slot name="head" />
   </head>
   <body>
     <a class="skip-link" href="#conteudo">Pular para o conteúdo</a>
     <Header />
+    <AdSlot position="header" />
     <slot />
+    <AdSlot position="footer" />
     <Footer />
+    <AdSlot position="mobileSticky" />
     <CookieConsent />
   </body>
 </html>

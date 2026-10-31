@@ -2,6 +2,7 @@
 import site from "../../../site.config.ts";
 import PostCard from "./PostCard.astro";
 import Pagination from "./Pagination.astro";
+import AdSlot from "../AdSlot.astro";
 import type { PostView } from "../../lib/posts.ts";
 
 interface Props {
@@ -10,10 +11,13 @@ interface Props {
   page: number;
   pages: number;
   showBanner?: boolean;
+  /** Na home, a imagem do primeiro card carrega com prioridade. */
+  priorityFirst?: boolean;
 }
-const { posts, base, page, pages, showBanner = false } = Astro.props;
+const { posts, base, page, pages, showBanner = false, priorityFirst = false } = Astro.props;
 const banner = site.home.banner;
 ---
+<AdSlot position="beforeContent" />
 {showBanner && banner.enabled && (
   <div>
     <span class="ad-label">Publicidade</span>
@@ -23,6 +27,7 @@ const banner = site.home.banner;
   </div>
 )}
 {posts.length > 0
-  ? <div class="post-list">{posts.map((p, i) => <PostCard post={p} priority={i === 0} />)}</div>
+  ? <div class="post-list">{posts.map((p, i) => <PostCard post={p} priority={priorityFirst && i === 0} />)}</div>
   : <p class="card list-header">Nenhum artigo publicado ainda. Volte em breve!</p>}
 <Pagination base={base} page={page} pages={pages} />
+<AdSlot position="afterContent" />

@@ -107,7 +107,7 @@ export function articleSeo(post: PostView): SeoProps {
   const url = absoluteUrl(post.url);
   const image = coverImage(post);
   const coverMeta = post.entry.data.cover ? readMediaMeta(post.entry.data.cover.src) : null;
-  const images = [image && absoluteUrl(image.src), coverMeta && absoluteUrl(coverMeta.src)].filter(Boolean);
+  const images = [image && absoluteUrl(image.src), coverMeta && absoluteUrl(coverMeta.jpeg ?? coverMeta.src)].filter(Boolean);
   const crumbs = [
     { name: post.category.name, path: `/category/${post.category.slug}/` },
     { name: post.title, path: post.url },

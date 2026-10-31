@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex, nofollow">
+<title>Configurar o blog</title><link rel="stylesheet" href="/admin/ui/admin.css">
+</head>
+<body><main>
+<h1>Configurar o blog</h1>
+<p class="steps" id="steps"></p>
+<div id="msg" aria-live="polite"></div>
+
+<form class="card" id="s0">
+  <h2>Código de configuração</h2>
+  <p class="hint">É o valor da variável SETUP_TOKEN que você definiu no servidor.</p>
+  <label for="token">Código</label><input id="token" type="password" required autocomplete="off">
+  <p><button>Continuar</button></p>
+</form>
+
+<form class="card" id="s1" hidden>
+  <h2>Sobre o blog</h2>
+  <div class="msg err" id="no-key" hidden><strong>Falta a chave da IA.</strong> A variável ANTHROPIC_API_KEY não está definida no servidor, então as sugestões não podem ser geradas. Defina a variável no Easypanel, reinicie o serviço e abra esta página de novo.</div>
+  <label for="name">Nome do blog</label><input id="name" maxlength="80" required>
+  <label for="niche">Sobre o que é o blog?</label><input id="niche" maxlength="500" required placeholder="Ex.: receitas veganas para o dia a dia">
+  <label for="lang">Idioma</label><input id="lang" value="pt-BR" required>
+  <p class="hint">Os textos gerados seguem este idioma. Botões e páginas legais do blog continuam em português.</p>
+  <label for="pass">Senha do painel (/admin)</label><input id="pass" type="password" minlength="10" required autocomplete="new-password">
+  <p class="hint">Pelo menos 10 caracteres. O usuário será <strong>admin</strong>.</p>
+  <p><button id="gen">Gerar sugestões com IA</button></p>
+  <p class="hint" id="gen-wait" hidden>Gerando as sugestões. Isso pode levar até um minuto…</p>
+</form>
+
+<form class="card" id="s3" hidden>
+  <h2>Revise e ajuste</h2>
+  <label for="tagline">Frase de apresentação</label><input id="tagline" required maxlength="120">
+  <div class="row">
+    <div><label for="c1">Cor principal</label><input type="color" id="c1"></div>
+    <div><label for="c2">Cor de destaque</label><input type="color" id="c2"></div>
+    <div><label for="c3">Cartão de chamada</label><input type="color" id="c3"></div>
+  </div>
+  <p class="hint">Se uma cor ficar clara demais para ler, o blog a escurece um pouco ao publicar.</p>
+  <h2 style="margin-top:16px">Categorias</h2>
+  <div id="cats"></div>
+  <p><button type="button" class="ghost" id="add">Adicionar categoria</button></p>
+  <label for="aname">Nome do autor</label><input id="aname" required>
+  <label for="abio">Bio do autor</label><textarea id="abio" class="text" required style="min-height:80px"></textarea>
+  <label for="about">Página Sobre</label><textarea id="about" class="text" required></textarea>
+  <p class="row"><button type="button" class="ghost fix" id="back">Voltar</button><button class="fix" id="publish">Publicar</button></p>
+</form>
+
+<section class="card" id="s4" hidden>
+  <h2>Blog publicado!</h2>
+  <p>A primeira publicação leva alguns minutos. Para ligar o Wordbee, cadastre o site como WordPress com estes dados:</p>
+  <p><strong>Endereço:</strong> <span id="w-url"></span><br><strong>Usuário:</strong> <span id="w-user"></span></p>
+  <div class="msg warn">Guarde a senha abaixo agora no seu gerenciador de senhas. Ela <strong>não será mostrada de novo</strong>. Se perder, gere outra no painel.</div>
+  <p class="password" id="w-pass"></p>
+  <p><button type="button" class="ghost" id="copy">Copiar senha</button></p>
+  <p><a href="/admin/">Ir para o painel</a> (usuário <strong id="a-user"></strong> e a senha que você escolheu)</p>
+</section>
+</main><script src="/admin/ui/setup.js"></script></body>
+</html>

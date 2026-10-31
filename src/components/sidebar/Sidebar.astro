@@ -8,6 +8,7 @@ import ToolsWidget from "./ToolsWidget.astro";
 import CalloutWidget from "./CalloutWidget.astro";
 import LatestWidget from "./LatestWidget.astro";
 import AffiliateWidget from "./AffiliateWidget.astro";
+import AdSlot from "../AdSlot.astro";
 
 const blocks = {
   search: SearchWidget,
@@ -21,7 +22,9 @@ const blocks = {
 
 const enabled = site.sidebar.order.filter((b) => site.sidebar[b].enabled);
 ---
+<AdSlot position="sidebarTop" />
 {enabled.map((b) => {
   const Block = blocks[b];
   return <Block />;
 })}
+<AdSlot position="sidebarBottom" />

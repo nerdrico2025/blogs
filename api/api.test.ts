@@ -7,6 +7,7 @@ import { after, before, describe, test } from "node:test";
 import sharp from "sharp";
 import site from "../site.config.ts";
 import { hashPassword, verifyPassword } from "./auth.ts";
+import { srcset } from "../shared/media.ts";
 import { loadEnv } from "./env.ts";
 import { buildApp, type App } from "./server.ts";
 
@@ -105,8 +106,8 @@ describe("categorias", () => {
 let mediaId: number;
 
 describe("mídia", () => {
-  test("upload binário: 201, id inteiro e arquivo original disponível na hora", async () => {
-    const data = await png();
+  test("upload binário: 201, id inteiro e versão otimizada disponível na hora", async () => {
+    const data = await png(2000, 1000);
     const res = await ctx.app.inject({
       method: "POST",
       url: "/wp-json/wp/v2/media",
@@ -117,12 +118,73 @@ describe("mídia", () => {
     const json = res.json();
     assert.ok(Number.isInteger(json.id));
     mediaId = json.id;
-    assert.match(json.source_url, new RegExp(`^${site.url}/wp-content/uploads/\\d{4}/\\d{2}/lisboa-otima\\.png$`));
+    assert.match(json.source_url, new RegExp(`^${site.url}/wp-content/uploads/\\d{4}/\\d{2}/lisboa-otima\\.jpg$`));
+    assert.equal(json.mime_type, "image/jpeg");
+    assert.equal(json.media_details.width, 1600);
+    assert.equal(json.media_details.height, 800);
     const file = path.join(tmp, "uploads", json.source_url.replace(`${site.url}/wp-content/uploads/`, ""));
-    assert.ok(existsSync(file));
-    assert.ok(readFileSync(file).equals(data), "o original é guardado byte a byte");
-    assert.ok(existsSync(file.replace(/\.png$/, "-768.avif")));
-    assert.ok(existsSync(file.replace(/\.png$/, "-og.jpg")));
+    const jpeg = await sharp(file).metadata();
+    assert.equal(jpeg.format, "jpeg");
+    assert.equal(jpeg.width, 1600);
+    assert.equal(jpeg.isProgressive, true);
+    assert.equal(jpeg.exif, undefined);
+    const webp = await sharp(file.replace(/\.jpg$/, ".webp")).metadata();
+    assert.equal(webp.format, "webp");
+    assert.equal(webp.width, 1600);
+    for (const w of [160, 480, 800, 1200]) {
+      assert.equal((await sharp(file.replace(/\.jpg$/, `-${w}.webp`)).metadata()).width, w);
+    }
+    const og = await sharp(file.replace(/\.jpg$/, "-og.jpg")).metadata();
+    assert.equal(og.format, "jpeg");
+    assert.equal(og.width, 1200);
+    assert.ok(!existsSync(file.replace(/\.jpg$/, ".png")), "o arquivo enviado não é guardado");
+  });
+
+  test("respeita a rotação, remove metadados e não amplia imagem pequena", async () => {
+    const data = await sharp({ create: { width: 600, height: 300, channels: 3, background: "#cc3366" } })
+      .withExif({ IFD0: { Copyright: "dado-sensivel" } })
+      .withMetadata({ orientation: 6 })
+      .jpeg()
+      .toBuffer();
+    assert.ok((await sharp(data).metadata()).exif, "a entrada do teste precisa ter EXIF");
+    const res = await ctx.app.inject({
+      method: "POST",
+      url: "/wp-json/wp/v2/media",
+      headers: { ...AUTH, "content-type": "image/jpeg", "content-disposition": 'attachment; filename="girada.jpg"' },
+      payload: data,
+    });
+    assert.equal(res.statusCode, 201, res.body);
+    assert.equal(res.json().media_details.width, 300);
+    assert.equal(res.json().media_details.height, 600);
+    const file = path.join(tmp, "uploads", res.json().source_url.replace(`${site.url}/wp-content/uploads/`, ""));
+    const main = await sharp(file).metadata();
+    assert.equal(main.width, 300);
+    assert.equal(main.exif, undefined);
+    assert.equal(main.orientation, undefined);
+    assert.ok(existsSync(file.replace(/\.jpg$/, "-160.webp")));
+    assert.ok(!existsSync(file.replace(/\.jpg$/, "-480.webp")), "sem variante maior que a imagem");
+  });
+
+  test("PNG transparente vira JPEG com fundo branco", async () => {
+    const data = await sharp({ create: { width: 200, height: 100, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 0 } } }).png().toBuffer();
+    const res = await ctx.app.inject({ method: "POST", url: "/wp-json/wp/v2/media", headers: { ...AUTH, "content-type": "image/png", "content-disposition": 'attachment; filename="transparente.png"' }, payload: data });
+    assert.equal(res.statusCode, 201, res.body);
+    const file = path.join(tmp, "uploads", res.json().source_url.replace(`${site.url}/wp-content/uploads/`, ""));
+    const { dominant } = await sharp(file).stats();
+    assert.ok(dominant.r > 240 && dominant.g > 240 && dominant.b > 240);
+  });
+
+  test("resolução acima do limite: 415", async () => {
+    const data = await sharp({ create: { width: 8000, height: 7000, channels: 3, background: "#000" } }).png({ compressionLevel: 1 }).toBuffer();
+    const res = await ctx.app.inject({ method: "POST", url: "/wp-json/wp/v2/media", headers: { ...AUTH, "content-type": "image/png" }, payload: data });
+    assert.equal(res.statusCode, 415);
+  });
+
+  test("srcset usa o arquivo principal na maior largura; imagem antiga mantém as variantes", () => {
+    const novo = { src: "/wp-content/uploads/a.webp", width: 1600, height: 800, widths: [480, 1600], formats: ["webp"] as ("avif" | "webp")[], og: "" };
+    assert.equal(srcset(novo, "webp"), "/wp-content/uploads/a-480.webp 480w, /wp-content/uploads/a.webp 1600w");
+    const antigo = { ...novo, src: "/wp-content/uploads/a.png", formats: ["avif", "webp"] as ("avif" | "webp")[] };
+    assert.equal(srcset(antigo, "avif"), "/wp-content/uploads/a-480.avif 480w, /wp-content/uploads/a-1600.avif 1600w");
   });
 
   test("mesmo nome de arquivo não sobrescreve (sufixo -2)", async () => {
@@ -133,7 +195,7 @@ describe("mídia", () => {
       payload: await png(),
     });
     assert.equal(res.statusCode, 201);
-    assert.match(res.json().source_url, /lisboa-otima-2\.png$/);
+    assert.match(res.json().source_url, /lisboa-otima-2\.jpg$/);
   });
 
   test("tipo não suportado: 415", async () => {
