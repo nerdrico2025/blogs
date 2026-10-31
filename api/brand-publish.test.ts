@@ -113,6 +113,45 @@ describe("cores salvas no painel chegam ao site publicado", () => {
   });
 });
 
+describe("cor do cabeçalho publicada", () => {
+  const brand = (header?: string) => ctx.app.inject({ method: "POST", url: "/admin/api/brand", headers: { cookie }, payload: { name: "", colors: { primary: "#a11d33", ...(header ? { header } : {}) } } });
+  const cssVar = (name: string) => new RegExp(`[;{]--${name}:([^;}]+)`).exec(page())?.[1];
+  const savedHeader = () => JSON.parse(readFileSync(process.env.SETTINGS_FILE!, "utf8")).brand.colors.header;
+  const headerImg = () => {
+    const src = /class="?logo"?[^>]*>\s*<img[^>]*?src="?([^"\s>]+)/.exec(page())?.[1];
+    assert.ok(src, "imagem do logotipo no cabeçalho");
+    return src;
+  };
+
+  test("fundo escuro, versão clara e volta ao padrão", { timeout: 300_000 }, async () => {
+    assert.equal((await brand("#0B1F3A")).statusCode, 200);
+    await ctx.builds.drain();
+    assert.equal(savedHeader(), "#0b1f3a");
+    assert.equal(cssVar("cor-cabecalho"), "#0b1f3a");
+    assert.equal(cssVar("cor-cabecalho-texto"), "#ffffff");
+    assert.match(page(), /\.site-header\{[^}]*background:var\(--cor-cabecalho\)/);
+    assert.match(page(), /\.nav a\{[^}]*color:var\(--cor-cabecalho-texto\)/);
+    const normal = headerImg();
+    assert.doesNotMatch(String(normal), /logo-dark/, "sem versão clara, a imagem não muda");
+
+    const dark = await send("/admin/api/logo-dark", "image/png", await image(400, 100).png().toBuffer());
+    assert.equal(dark.statusCode, 200, dark.body);
+    assert.match(dark.json().logoDark, /^\/assets\/logo-dark-[0-9a-f]+\.webp$/);
+    await ctx.builds.drain();
+    assert.match(String(headerImg()), /logo-dark/, "fundo escuro usa a versão clara");
+
+    await brand("#ebb038");
+    await ctx.builds.drain();
+    assert.equal(cssVar("cor-cabecalho-texto"), "#000000");
+    assert.doesNotMatch(String(headerImg()), /logo-dark/, "fundo claro usa o logotipo normal");
+
+    await brand("#FFFFFF");
+    await ctx.builds.drain();
+    assert.equal(savedHeader(), undefined, "o padrão não é gravado");
+    assert.equal(cssVar("cor-cabecalho"), "#ffffff");
+  });
+});
+
 describe("favicon enviado no painel", () => {
   const dims = async (data: Buffer) => {
     const m = await sharp(data).metadata();

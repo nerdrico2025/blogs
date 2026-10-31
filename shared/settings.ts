@@ -48,6 +48,8 @@ export interface Settings {
   brand?: {
     name?: string;
     logo?: { src: string; width: number; height: number };
+    /** Versão clara do logotipo, usada no cabeçalho quando o fundo dele é escuro. */
+    logoDark?: { src: string; width: number; height: number };
     favicon?: string;
     /** Ícones gerados no envio do favicon; `version` é o hash do arquivo, usado no ?v= das URLs. */
     faviconSet?: { version: string; svg: boolean };
@@ -55,7 +57,7 @@ export interface Settings {
     defaultImage?: string;
     organizationLogo?: string;
     avatar?: string;
-    colors?: { primary?: string; highlight?: string; callout?: string };
+    colors?: { primary?: string; highlight?: string; callout?: string; header?: string };
   };
   author?: { name?: string; bio?: string };
   tracking?: Partial<TrackingConfig>;
@@ -130,8 +132,30 @@ export function textOn(...backgrounds: string[]): "#ffffff" | "#000000" {
   return worst("#ffffff") >= worst("#000000") ? "#ffffff" : "#000000";
 }
 
+export const DEFAULT_HEADER_COLOR = "#ffffff";
+
+const mix = (from: string, to: string, amount: number) => {
+  const [a, b] = [hexToRgb(from), hexToRgb(to)];
+  return rgbToHex(a.map((v, i) => v + (b[i]! - v) * amount));
+};
+
 /**
- * Variáveis CSS das três cores da marca. Mapa de uso:
+ * Cores derivadas do fundo do cabeçalho. O hover anda na direção do texto só se sobrar contraste;
+ * em tons médios, anda para o lado oposto, para o texto continuar legível.
+ */
+export function headerColors(background: string): { text: string; hover: string; border: string } {
+  const text = textOn(background);
+  const away = text === "#ffffff" ? "#000000" : "#ffffff";
+  return { text, hover: mix(background, contrastRatio(text, background) >= 7 ? text : away, 0.16), border: mix(background, text, 0.15) };
+}
+
+/** Logotipo do cabeçalho: a versão clara só entra sobre fundo escuro, e só se tiver sido enviada. */
+export function headerLogo(site: Pick<SiteConfig, "theme" | "logo" | "logoDark">): ImageRef {
+  return site.logoDark && textOn(site.theme.header ?? DEFAULT_HEADER_COLOR) === "#ffffff" ? site.logoDark : site.logo;
+}
+
+/**
+ * Variáveis CSS das três cores da marca e do cabeçalho. Mapa de uso:
  * principal: links, botões, foco, menu ativo, sumário e "Aceitar" dos cookies;
  * destaque: etiquetas, autor, títulos pequenos e "Leia também";
  * cartão: cartão da lateral, CTA do meio do texto e clube.
@@ -143,7 +167,16 @@ export function brandVars(site: Pick<SiteConfig, "theme">): string {
   const primary = c.accent;
   const highlight = site.theme.highlight ?? c.accent;
   const readable = ensureReadable(primary);
+  const header = site.theme.header ?? DEFAULT_HEADER_COLOR;
+  const hc = headerColors(header);
+  // No cabeçalho branco padrão, hover e menu ativo seguem a cor principal; em fundo escolhido, ela poderia ficar ilegível
+  const isDefaultHeader = header === DEFAULT_HEADER_COLOR;
   const vars: Record<string, string> = {
+    "cor-cabecalho": header,
+    "cor-cabecalho-texto": hc.text,
+    "cor-cabecalho-hover": isDefaultHeader ? shade(primary, 0.92) : hc.hover,
+    "cor-cabecalho-hover-texto": isDefaultHeader ? readable : hc.text,
+    "cor-cabecalho-borda": hc.border,
     "cor-principal": primary,
     "cor-principal-escura": c.accentHover,
     "cor-principal-clara": shade(primary, 0.92),
@@ -203,6 +236,7 @@ export function applySettings(base: SiteConfig, s: Settings): SiteConfig {
 
   const b = s.brand;
   if (b?.logo?.src) out.logo = { ...b.logo, alt: out.name };
+  if (b?.logoDark?.src) out.logoDark = { ...b.logoDark, alt: out.name };
   if (b?.favicon) out.favicon = b.favicon;
   if (b?.faviconSet) out.faviconSet = b.faviconSet;
   if (b?.defaultImage) out.seo.defaultImage = image(b.defaultImage, { ...out.seo.defaultImage, alt: out.name });
@@ -215,6 +249,7 @@ export function applySettings(base: SiteConfig, s: Settings): SiteConfig {
     c.accentHover = shade(colors.primary, -0.2);
   }
   if (isHex(colors?.highlight)) out.theme.highlight = colors.highlight;
+  if (isHex(colors?.header)) out.theme.header = colors.header.toLowerCase();
   if (isHex(colors?.callout)) {
     c.calloutFrom = colors.callout;
     c.calloutTo = shade(colors.callout, 0.15);

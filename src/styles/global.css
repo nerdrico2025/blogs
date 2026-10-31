@@ -130,23 +130,26 @@ button, input { font: inherit; }
 @media (prefers-reduced-motion: reduce) { .ticker-track { animation: none; } }
 
 /* ---------- Header ---------- */
-.site-header { background: #fff; border-bottom: 1px solid var(--c-border); }
+.site-header { background: var(--cor-cabecalho); color: var(--cor-cabecalho-texto); border-bottom: 1px solid var(--cor-cabecalho-borda); }
 .header-inner { display: flex; align-items: center; justify-content: space-between; gap: 24px; min-height: 68px; }
 .logo { display: block; flex: none; }
 .logo img { height: 40px; width: auto; }
 .menu-toggle {
   display: none; align-items: center; justify-content: center;
-  width: 44px; height: 44px; border: 1px solid var(--c-border); border-radius: var(--radius-sm);
-  background: #fff; color: var(--c-ink); cursor: pointer;
+  width: 44px; height: 44px; border: 1px solid var(--cor-cabecalho-borda); border-radius: var(--radius-sm);
+  background: transparent; color: var(--cor-cabecalho-texto); cursor: pointer;
 }
 .menu-toggle svg { width: 22px; height: 22px; }
+.menu-toggle:hover { background: var(--cor-cabecalho-hover); color: var(--cor-cabecalho-hover-texto); }
+/* A cor principal do foco pode sumir sobre o fundo escolhido */
+.site-header a:focus-visible, .site-header button:focus-visible { outline-color: var(--cor-cabecalho-texto); }
 .nav { display: flex; }
 .nav ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 2px; }
 .nav a {
   display: block; padding: 10px 12px; border-radius: var(--radius-sm);
-  color: var(--c-heading); font-size: 15px; font-weight: 600; text-decoration: none;
+  color: var(--cor-cabecalho-texto); font-size: 15px; font-weight: 600; text-decoration: none;
 }
-.nav a:hover, .nav a[aria-current="page"] { color: var(--cor-principal-legivel); background: var(--cor-principal-clara); }
+.nav a:hover, .nav a:focus-visible, .nav a[aria-current="page"] { color: var(--cor-cabecalho-hover-texto); background: var(--cor-cabecalho-hover); }
 .nav-head { display: none; }
 
 @media (max-width: 921px) {
@@ -155,15 +158,15 @@ button, input { font: inherit; }
     /* Gaveta com a API Popover (sem JS) */
     position: fixed; inset: 0 0 0 auto; margin: 0;
     width: min(320px, 86vw); height: 100dvh; max-height: none;
-    padding: 16px; border: 0; background: #fff;
+    padding: 16px; border: 0; background: var(--cor-cabecalho);
     flex-direction: column; box-shadow: -10px 0 40px rgba(0, 0, 0, .15);
   }
   .nav:not(:popover-open) { display: none; }
   .nav::backdrop { background: rgba(15, 23, 42, .45); }
   .nav ul { flex-direction: column; }
-  .nav a { padding: 14px 12px; font-size: 17px; border-bottom: 1px solid var(--c-border); border-radius: 0; }
+  .nav a { padding: 14px 12px; font-size: 17px; border-bottom: 1px solid var(--cor-cabecalho-borda); border-radius: 0; }
   .nav-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-  .nav-head strong { font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: #666; }
+  .nav-head strong { font-size: 13px; letter-spacing: .08em; text-transform: uppercase; color: var(--cor-cabecalho-texto); }
 }
 @media (min-width: 922px) {
   .nav[popover] { display: flex; position: static; inset: auto; width: auto; height: auto; padding: 0; margin: 0; border: 0; background: none; overflow: visible; }

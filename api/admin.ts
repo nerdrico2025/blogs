@@ -12,7 +12,7 @@ import sharp from "sharp";
 import YAML from "yaml";
 import site from "../site.config.ts";
 import { generateBrand } from "../scripts/lib/brand.ts";
-import { AD_POSITIONS, contrastWarnings, type Settings } from "../shared/settings.ts";
+import { AD_POSITIONS, DEFAULT_HEADER_COLOR, contrastWarnings, type Settings } from "../shared/settings.ts";
 import { siteDir } from "../src/lib/site-id.ts";
 import { writeFavicons } from "./favicon.ts";
 import { Attempts, Authenticator, generateAppPassword, hashPassword, isValidHash } from "./auth.ts";
@@ -141,8 +141,9 @@ export async function registerAdmin(app: FastifyInstance, deps: AdminDeps): Prom
         name: site.name,
         url: site.url,
         logo: site.logo.src,
+        logoDark: site.logoDark?.src ?? "",
         favicon: site.favicon,
-        colors: { primary: c.accent, highlight: site.theme.highlight ?? c.accent, callout: c.calloutFrom },
+        colors: { primary: c.accent, highlight: site.theme.highlight ?? c.accent, callout: c.calloutFrom, header: site.theme.header ?? DEFAULT_HEADER_COLOR },
         warnings: contrastWarnings({ primary: c.accent, highlight: site.theme.highlight, callout: c.calloutFrom }),
         tracking: { gtmId: s.tracking?.gtmId ?? "", headCode: s.tracking?.headCode ?? "", bodyCode: s.tracking?.bodyCode ?? "" },
         ads: { headScript: s.ads?.headScript ?? "", adsTxt: s.ads?.adsTxt ?? site.adsTxt.join("\n"), slots: s.ads?.slots ?? {} },
@@ -173,22 +174,25 @@ export async function registerAdmin(app: FastifyInstance, deps: AdminDeps): Prom
       for (const key of ["primary", "highlight", "callout"] as const) {
         if (colors[key] === effective[key] && !settings.current.brand?.colors?.[key]) delete colors[key];
       }
+      // O cabeçalho tem padrão fixo: voltar a ele apaga o valor, em vez de guardar o branco
+      if (colors.header) colors.header = colors.header.toLowerCase();
+      if (colors.header === DEFAULT_HEADER_COLOR) delete colors.header;
       const name = typeof b.name === "string" ? b.name.trim().slice(0, 80) : "";
       return save("marca", (s) => ({ ...s, brand: { ...s.brand, name, colors } }));
     });
 
-    const imageUpload = (kind: "logo" | "favicon") => async (req: FastifyRequest) => {
+    const imageUpload = (kind: "logo" | "logoDark" | "favicon") => async (req: FastifyRequest) => {
       if (!Buffer.isBuffer(req.body) || req.body.length === 0) throw new WpError(415, "invalid_image", "Envie uma imagem PNG, JPG, WebP ou SVG.");
       await mkdir(env.assetsDir, { recursive: true });
       const hash = digest(req.body.toString("base64")).toString("hex").slice(0, 10);
       try {
         const input = sharp(req.body, { failOn: "error", limitInputPixels: 50_000_000 }).rotate();
-        if (kind === "logo") {
-          const name = `logo-${hash}.webp`;
+        if (kind !== "favicon") {
+          const name = `${kind === "logo" ? "logo" : "logo-dark"}-${hash}.webp`;
           const out = await input.resize({ height: 160, withoutEnlargement: true }).webp({ quality: 85 }).toFile(path.join(env.assetsDir, name));
           // Exibido com 40 px de altura; o arquivo maior serve para telas de alta densidade
           const logo = { src: `/assets/${name}`, width: Math.round((out.width / out.height) * 40), height: 40 };
-          return await save("logotipo", (s) => ({ ...s, brand: { ...s.brand, logo } }));
+          return await save(kind === "logo" ? "logotipo" : "logotipo para fundo escuro", (s) => ({ ...s, brand: { ...s.brand, [kind]: logo } }));
         }
         const faviconSet = await writeFavicons(req.body, env.assetsDir);
         return await save("favicon", (s) => ({ ...s, brand: { ...s.brand, favicon: `/assets/favicon-192.png?v=${faviconSet.version}`, faviconSet } }));
@@ -198,6 +202,7 @@ export async function registerAdmin(app: FastifyInstance, deps: AdminDeps): Prom
       }
     };
     scope.post("/admin/api/logo", session, imageUpload("logo"));
+    scope.post("/admin/api/logo-dark", session, imageUpload("logoDark"));
     scope.post("/admin/api/favicon", session, imageUpload("favicon"));
 
     scope.post("/admin/api/tracking", session, async (req) => {
