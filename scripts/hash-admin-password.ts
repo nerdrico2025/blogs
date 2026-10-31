@@ -7,4 +7,4 @@ import { generateAppPassword, hashPassword } from "../api/auth.ts";
 const given = process.argv[2];
 const password = given ?? generateAppPassword();
 if (!given) console.log(`Senha do painel (guarde no gerenciador de senhas): ${password}`);
-console.log(`Variáveis de ambiente (cole no Easypanel ou no .env):\nADMIN_USER=admin\nADMIN_PASSWORD_HASH=${hashPassword(password)}`);
+console.log(`Variáveis de ambiente (cole no Easypanel, sem aspas; o usuário pode ser outro):\nADMIN_USER=admin\nADMIN_PASSWORD_HASH=${hashPassword(password)}`);

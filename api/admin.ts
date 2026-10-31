@@ -14,7 +14,7 @@ import site from "../site.config.ts";
 import { generateBrand } from "../scripts/lib/brand.ts";
 import { AD_POSITIONS, contrastWarnings, type Settings } from "../shared/settings.ts";
 import { siteDir } from "../src/lib/site-id.ts";
-import { Attempts, Authenticator, generateAppPassword, hashPassword } from "./auth.ts";
+import { Attempts, Authenticator, generateAppPassword, hashPassword, isValidHash } from "./auth.ts";
 import type { BuildQueue } from "./build-queue.ts";
 import { clientIp } from "./client-ip.ts";
 import type { ApiEnv } from "./env.ts";
@@ -47,7 +47,23 @@ export const adminCredentials = (env: ApiEnv, secrets: SecretStore) =>
 export async function registerAdmin(app: FastifyInstance, deps: AdminDeps): Promise<void> {
   const { env, store, builds, settings, secrets } = deps;
   const sessions = new Map<string, number>();
-  const login = new Authenticator(() => adminCredentials(env, secrets), 5);
+  // Usuário sem diferença de maiúsculas e sem espaços nas pontas: o teclado do celular muda os dois
+  const adminUserKey = (user: string) => user.trim().toLowerCase();
+  const login = new Authenticator(
+    () => {
+      const c = adminCredentials(env, secrets);
+      return { ...c, user: adminUserKey(c.user) };
+    },
+    5,
+    15 * 60_000,
+    (reason, ip) => app.log.warn({ ip, reason, source: env.adminUser && env.adminPasswordHash ? "variáveis ADMIN_*" : "secrets.json" }, `login do /admin recusado: ${reason}`)
+  );
+  if (Boolean(env.adminUser) !== Boolean(env.adminPasswordHash)) {
+    app.log.warn("ADMIN_USER e ADMIN_PASSWORD_HASH precisam estar juntas; com só uma delas, as variáveis são ignoradas");
+  }
+  if (env.adminPasswordHash && !isValidHash(env.adminPasswordHash)) {
+    app.log.warn("ADMIN_PASSWORD_HASH está em formato inválido; gere de novo com npm run admin:password");
+  }
   const setupAttempts = new Attempts(5);
 
   const authEnabled = () => Boolean(adminCredentials(env, secrets).passwordHash);
@@ -103,7 +119,7 @@ export async function registerAdmin(app: FastifyInstance, deps: AdminDeps): Prom
     scope.post("/admin/api/login", async (req, reply) => {
       if (!authEnabled()) throw new WpError(403, "admin_disabled", "O painel está desligado: defina ADMIN_USER e ADMIN_PASSWORD_HASH.");
       const b = (req.body ?? {}) as { user?: unknown; password?: unknown };
-      login.checkPassword(String(b.user ?? ""), String(b.password ?? ""), clientIp(req));
+      login.checkPassword(adminUserKey(String(b.user ?? "")), String(b.password ?? ""), clientIp(req));
       const t = randomBytes(32).toString("base64url");
       sessions.set(digest(t).toString("hex"), Date.now() + SESSION_MS);
       setCookie(req, reply, t, SESSION_MS / 1000);

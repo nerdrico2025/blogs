@@ -5,6 +5,7 @@
 import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
 import path from "node:path";
+import { cleanEnvValue } from "./auth.ts";
 import { assetsRoot, settingsFile } from "../shared/settings.ts";
 import { hasSiteFolder, localDataDir, siteDir, siteId } from "../src/lib/site-id.ts";
 
@@ -111,8 +112,8 @@ export function loadEnv(overrides: Partial<ApiEnv> = {}): ApiEnv {
     host: process.env.HOST ?? process.env.API_HOST ?? "127.0.0.1",
     port: num("PORT", num("API_PORT", 8787)),
     // Sem as variáveis, a senha do Wordbee é a do secrets.json (gerada pelo assistente ou no /admin)
-    user: process.env.WP_USER ?? (process.env.WP_APP_PASSWORD_HASH ? required("WP_USER") : "wordbee"),
-    passwordHash: process.env.WP_APP_PASSWORD_HASH ?? "",
+    user: cleanEnvValue(process.env.WP_USER) || (cleanEnvValue(process.env.WP_APP_PASSWORD_HASH) ? required("WP_USER") : "wordbee"),
+    passwordHash: cleanEnvValue(process.env.WP_APP_PASSWORD_HASH),
     projectDir,
     contentDir: path.resolve(process.env.CONTENT_DIR ?? path.join(local, "content/posts")),
     // Blog sem pasta em sites/: as páginas fixas ficam no volume, ao lado do settings.json
@@ -122,10 +123,10 @@ export function loadEnv(overrides: Partial<ApiEnv> = {}): ApiEnv {
     settingsFile: settingsFile(),
     secretsFile: path.resolve(process.env.SECRETS_FILE ?? path.join(path.dirname(settingsFile()), "secrets.json")),
     assetsDir: assetsRoot(),
-    adminUser: process.env.ADMIN_USER ?? "",
-    adminPasswordHash: process.env.ADMIN_PASSWORD_HASH ?? "",
-    setupToken: process.env.SETUP_TOKEN ?? "",
-    anthropicApiKey: process.env.ANTHROPIC_API_KEY ?? "",
+    adminUser: cleanEnvValue(process.env.ADMIN_USER),
+    adminPasswordHash: cleanEnvValue(process.env.ADMIN_PASSWORD_HASH),
+    setupToken: cleanEnvValue(process.env.SETUP_TOKEN),
+    anthropicApiKey: cleanEnvValue(process.env.ANTHROPIC_API_KEY),
     aiModel: process.env.AI_MODEL || "claude-sonnet-5-5",
     buildCacheDir: path.resolve(process.env.BUILD_CACHE_DIR ?? path.join(local, "data/build-cache")),
     backupDir: path.resolve(process.env.BACKUP_DIR ?? path.join(local, "backups")),
