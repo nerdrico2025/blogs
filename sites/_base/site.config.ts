@@ -69,8 +69,11 @@ export default defineSiteConfig({
      * "awesomeapi": cotação buscada no build (economia.awesomeapi.com.br, cache de 1 h);
      * se a API falhar, usa `value`. "static": sempre `value`.
      */
-    ratesSource: "static",
-    rates: [],
+    ratesSource: "awesomeapi",
+    rates: [
+      { label: "Dólar", code: "USD", value: "" },
+      { label: "Euro", code: "EUR", value: "" },
+    ],
     clocks: [],
   },
 

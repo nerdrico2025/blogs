@@ -3,7 +3,7 @@ import { mkdir, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
 import site, { reloadSite } from "../site.config.ts";
 import { hasSiteFolder } from "../src/lib/site-id.ts";
-import { AD_POSITIONS, isHex, readSettings, type AdSlot, type Settings } from "../shared/settings.ts";
+import { AD_POSITIONS, isHex, readSettings, type AdSlot, type HomeLink, type HomeSettings, type Settings } from "../shared/settings.ts";
 import type { Category } from "../src/lib/config-schema.ts";
 import { WpError } from "./errors.ts";
 
@@ -111,6 +111,98 @@ export function parseAds(b: Record<string, unknown>) {
     slots[position] = slot;
   }
   return { headScript: str(b.headScript, "Script da rede", MAX_CODE), adsTxt: str(b.adsTxt, "ads.txt", MAX_CODE), slots };
+}
+
+export const HOME_LIMITS = { icon: 16, title: 80, text: 300, label: 60, href: 500, buttonLabel: 40, kicker: 40, footer: 500, placeholder: 80, items: 6, clocks: 12 };
+
+/** Interno começando com uma só barra, ou http(s) completo. Fora disso (javascript:, data:, //host) é recusado. */
+export function validHref(href: string): boolean {
+  if (/[\s\\\u0000-\u001f]/.test(href)) return false;
+  if (href.startsWith("/")) return !href.startsWith("//");
+  if (!/^https?:\/\//i.test(href)) return false;
+  return URL.canParse(href);
+}
+
+const href = (v: unknown, label: string): string => {
+  const value = str(v, label, HOME_LIMITS.href).trim();
+  if (value && !validHref(value)) throw invalid(`${label}: use um endereço interno, como /sobre/, ou completo, como https://exemplo.com/.`);
+  return value;
+};
+
+const button = (v: unknown, label: string): HomeLink => {
+  const b = (v ?? {}) as Record<string, unknown>;
+  const out = { label: str(b.label, `Texto do botão (${label})`, HOME_LIMITS.buttonLabel).trim(), href: href(b.href, `Link do botão (${label})`) };
+  if (Boolean(out.label) !== Boolean(out.href)) throw invalid(`Botão (${label}): preencha o texto e o link, ou deixe os dois vazios.`);
+  return out;
+};
+
+const validTimezone = (tz: string): boolean => {
+  try {
+    new Intl.DateTimeFormat("pt-BR", { timeZone: tz });
+    return Boolean(tz);
+  } catch {
+    return false;
+  }
+};
+
+const optionalIcon = (b: Record<string, unknown>, label: string) => (b.icon === undefined ? {} : { icon: str(b.icon, label, HOME_LIMITS.icon).trim() });
+
+/** Texto puro: quem escapa o HTML é o Astro, ao publicar. Linha toda vazia é ignorada. */
+export function parseHome(b: Record<string, unknown>): HomeSettings {
+  const home: HomeSettings = {};
+  if (b.tools) {
+    const t = b.tools as Record<string, unknown>;
+    const rows = Array.isArray(t.items) ? (t.items as Record<string, unknown>[]) : [];
+    const items = rows
+      .map((it) => {
+        const label = str(it?.label, "Texto do item", HOME_LIMITS.label).trim();
+        const link = href(it?.href, "Link do item");
+        const icon = str(it?.icon, "Emoji do item", HOME_LIMITS.icon).trim();
+        return { icon, label, ...(link ? { href: link } : {}) };
+      })
+      .filter((it) => it.label || it.icon || it.href);
+    if (items.length > HOME_LIMITS.items) throw invalid(`Caixa de recursos: são no máximo ${HOME_LIMITS.items} itens.`);
+    if (items.some((it) => !it.label)) throw invalid("Caixa de recursos: todo item precisa de texto.");
+    const tools = {
+      enabled: t.enabled === true,
+      ...optionalIcon(t, "Emoji da caixa de recursos"),
+      title: str(t.title, "Título da caixa de recursos", HOME_LIMITS.title).trim(),
+      text: str(t.text, "Descrição da caixa de recursos", HOME_LIMITS.text).trim(),
+      items,
+      button: button(t.button, "caixa de recursos"),
+    };
+    if (tools.enabled && !tools.title) throw invalid("Caixa de recursos ligada: preencha o título.");
+    home.tools = tools;
+  }
+  if (b.callout) {
+    const c = b.callout as Record<string, unknown>;
+    const callout = {
+      enabled: c.enabled === true,
+      ...optionalIcon(c, "Emoji da caixa de destaque"),
+      kicker: str(c.kicker, "Etiqueta da caixa de destaque", HOME_LIMITS.kicker).trim(),
+      title: str(c.title, "Título da caixa de destaque", HOME_LIMITS.title).trim(),
+      text: str(c.text, "Texto da caixa de destaque", HOME_LIMITS.text).trim(),
+      button: button(c.button, "caixa de destaque"),
+    };
+    if (callout.enabled && !callout.title) throw invalid("Caixa de destaque ligada: preencha o título.");
+    home.callout = callout;
+  }
+  if (b.ticker) {
+    const t = b.ticker as Record<string, unknown>;
+    const rows = Array.isArray(t.clocks) ? (t.clocks as Record<string, unknown>[]) : [];
+    const clocks = rows
+      .map((c) => ({ label: str(c?.label, "Nome da cidade", HOME_LIMITS.title).trim(), timezone: str(c?.timezone, "Fuso horário", HOME_LIMITS.title).trim() }))
+      .filter((c) => c.label || c.timezone);
+    if (clocks.length > HOME_LIMITS.clocks) throw invalid(`Faixa do topo: são no máximo ${HOME_LIMITS.clocks} cidades.`);
+    for (const c of clocks) {
+      if (!c.label) throw invalid("Faixa do topo: toda cidade precisa de nome.");
+      if (!validTimezone(c.timezone)) throw invalid(`Fuso horário inválido em "${c.label}". Use o formato America/Sao_Paulo.`);
+    }
+    home.ticker = { enabled: t.enabled === true, showRates: t.showRates === true, showClocks: t.showClocks === true, clocks };
+  }
+  if (b.footerText !== undefined) home.footerText = str(b.footerText, "Texto do rodapé", HOME_LIMITS.footer).trim();
+  if (b.searchPlaceholder !== undefined) home.searchPlaceholder = str(b.searchPlaceholder, "Texto da busca", HOME_LIMITS.placeholder).trim();
+  return home;
 }
 
 export function validSlug(slug: string): boolean {

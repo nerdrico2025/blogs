@@ -76,6 +76,8 @@ export interface SiteConfig {
     /** `code` é a moeda (USD, EUR…) e `value` o texto de reserva. */
     rates: { label: string; code: string; value: string }[];
     clocks: { label: string; timezone: string }[];
+    /** Símbolo entre uma volta e outra da faixa. Sem valor, um ponto. */
+    separator?: string;
   };
   home: { perPage: number; banner: Toggle & ImageRef & { href: string } };
   sidebar: {
@@ -88,7 +90,7 @@ export interface SiteConfig {
       fallback: { title: string; url: string; thumbnail: string };
       button: string;
     };
-    tools: Toggle & { icon: string; title: string; text: string; items: { icon: string; label: string }[]; button: Link };
+    tools: Toggle & { icon: string; title: string; text: string; items: { icon: string; label: string; href?: string }[]; button: Link };
     callout: Toggle & { icon: string; kicker: string; title: string; text: string; button: Link };
     latest: Toggle & { kicker: string; title: string; count: number; badge: string };
     affiliate: Toggle & ImageRef & { href: string; /** Versão 2x para telas de alta densidade (opcional). */ src2x?: string };

@@ -14,7 +14,7 @@
     "api:password": "node scripts/hash-password.ts",
     "admin:password": "node scripts/hash-admin-password.ts",
     "admin:verify": "node scripts/verify-admin-password.ts",
-    "test": "node --test api/*.test.ts",
+    "test": "node --test --test-concurrency=1 api/*.test.ts",
     "start": "node api/main.ts",
     "seed": "node scripts/seed-samples.ts",
     "new-site": "node scripts/new-site.ts",

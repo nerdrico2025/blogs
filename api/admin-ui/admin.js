@@ -148,6 +148,63 @@ function catRow(c) {
   return row;
 }
 
+/** Lista fechada de fusos: evita erro de digitação. Um fuso salvo fora da lista continua aparecendo. */
+const TIMEZONES = Intl.supportedValuesOf ? Intl.supportedValuesOf("timeZone") : [];
+function timezoneSelect(value) {
+  const select = make("select");
+  select.append(make("option", { value: "", textContent: "Escolha o fuso" }));
+  for (const zone of new Set([...TIMEZONES, ...(value ? [value] : [])])) select.append(make("option", { value: zone, textContent: zone }));
+  select.value = value;
+  return select;
+}
+
+/** Linha com campos curtos e botão de remover; `add` respeita o limite da lista. */
+function homeRow(fields, values) {
+  const row = make("div", { className: "row home-row" });
+  for (const [key, label, { zones, ...attrs }] of fields) {
+    const input = zones ? timezoneSelect(values[key] || "") : make("input", { value: values[key] || "", ...attrs });
+    input.dataset.f = key;
+    field(row, label, input);
+  }
+  const rm = make("button", { type: "button", className: "ghost fix", textContent: "Remover" });
+  rm.onclick = () => row.remove();
+  row.append(rm);
+  return row;
+}
+const ITEM_FIELDS = [["icon", "Emoji", { maxLength: 16, className: "emoji" }], ["label", "Texto", { maxLength: 60 }], ["href", "Link (opcional)", { maxLength: 500 }]];
+const CLOCK_FIELDS = [["label", "Cidade", { maxLength: 80 }], ["timezone", "Fuso horário", { zones: true }]];
+const readRows = (root) => [...root.children].map((row) => Object.fromEntries([...row.querySelectorAll("[data-f]")].map((el) => [el.dataset.f, el.value])));
+function addRow(root, fields, max, what) {
+  if (root.children.length >= max) return show($("msg"), `São no máximo ${max} ${what}.`, "warn");
+  root.append(homeRow(fields, {}));
+}
+$("h-tools-add").onclick = () => addRow($("h-tools-items"), ITEM_FIELDS, 6, "itens");
+$("h-clocks-add").onclick = () => addRow($("h-clocks"), CLOCK_FIELDS, 12, "cidades");
+
+function fillHome() {
+  const { tools, callout, ticker, footerText, searchPlaceholder } = state.home;
+  $("h-tools-on").checked = tools.enabled;
+  $("h-tools-icon").value = tools.icon;
+  $("h-tools-title").value = tools.title;
+  $("h-tools-text").value = tools.text;
+  $("h-tools-items").replaceChildren(...tools.items.map((it) => homeRow(ITEM_FIELDS, it)));
+  $("h-tools-btn-label").value = tools.button.label;
+  $("h-tools-btn-href").value = tools.button.href;
+  $("h-callout-on").checked = callout.enabled;
+  $("h-callout-icon").value = callout.icon;
+  $("h-callout-kicker").value = callout.kicker;
+  $("h-callout-title").value = callout.title;
+  $("h-callout-text").value = callout.text;
+  $("h-callout-btn-label").value = callout.button.label;
+  $("h-callout-btn-href").value = callout.button.href;
+  $("h-ticker-on").checked = ticker.enabled;
+  $("h-ticker-rates").checked = ticker.showRates;
+  $("h-ticker-clocks").checked = ticker.showClocks;
+  $("h-clocks").replaceChildren(...ticker.clocks.map((c) => homeRow(CLOCK_FIELDS, c)));
+  $("h-footer").value = footerText;
+  $("h-placeholder").value = searchPlaceholder;
+}
+
 const REUPLOAD = [["logo", "b-logo"], ["logoDark", "b-logo-dark"], ["favicon", "b-favicon"]];
 for (const [, id] of REUPLOAD) $(`${id}-reupload-btn`).onclick = () => $(id).click();
 
@@ -224,6 +281,7 @@ function fill() {
   renderPreview();
   if (state.warnings.length) show($("contrast"), state.warnings, "warn");
   else $("contrast").replaceChildren();
+  fillHome();
   $("t-gtm").value = state.tracking.gtmId;
   $("t-head").value = state.tracking.headCode;
   $("t-body").value = state.tracking.bodyCode;
@@ -357,6 +415,16 @@ $("c-header-reset").onclick = () => {
   commitColor(f);
 };
 upload($("b-favicon"), "/admin/api/favicon", $("b-favicon-info"), Infinity, faviconWarning);
+$("f-home").onsubmit = (e) => {
+  e.preventDefault();
+  saved(post("/admin/api/home", {
+    tools: { enabled: $("h-tools-on").checked, icon: $("h-tools-icon").value, title: $("h-tools-title").value, text: $("h-tools-text").value, items: readRows($("h-tools-items")), button: { label: $("h-tools-btn-label").value, href: $("h-tools-btn-href").value } },
+    callout: { enabled: $("h-callout-on").checked, icon: $("h-callout-icon").value, kicker: $("h-callout-kicker").value, title: $("h-callout-title").value, text: $("h-callout-text").value, button: { label: $("h-callout-btn-label").value, href: $("h-callout-btn-href").value } },
+    ticker: { enabled: $("h-ticker-on").checked, showRates: $("h-ticker-rates").checked, showClocks: $("h-ticker-clocks").checked, clocks: readRows($("h-clocks")) },
+    footerText: $("h-footer").value,
+    searchPlaceholder: $("h-placeholder").value,
+  }));
+};
 $("f-tracking").onsubmit = (e) => {
   e.preventDefault();
   const hasGtmCode = /googletagmanager\.com\/gtm\.js/i.test($("t-head").value + $("t-body").value);

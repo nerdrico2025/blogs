@@ -1,5 +1,6 @@
 ---
 import site from "../../../site.config.ts";
+import { sidebarBlockVisible } from "../../../shared/settings.ts";
 import type { SidebarBlock } from "../../lib/config-schema.ts";
 import SearchWidget from "./SearchWidget.astro";
 import NewsletterWidget from "./NewsletterWidget.astro";
@@ -20,7 +21,7 @@ const blocks = {
   affiliate: AffiliateWidget,
 } satisfies Record<SidebarBlock, unknown>;
 
-const enabled = site.sidebar.order.filter((b) => site.sidebar[b].enabled);
+const enabled = site.sidebar.order.filter((b) => sidebarBlockVisible(site, b));
 ---
 <AdSlot position="sidebarTop" />
 {enabled.map((b) => {

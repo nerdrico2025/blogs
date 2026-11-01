@@ -19,8 +19,11 @@ async function load(): Promise<{ label: string; value: string }[]> {
     const json = JSON.parse(await fetchText(`https://economia.awesomeapi.com.br/json/last/${pairs}`)) as Record<string, { bid: string }>;
     return Object.fromEntries(Object.entries(json).map(([k, v]) => [k, Number(v.bid)]));
   });
-  return rates.map((r) => {
-    const bid = data?.[`${r.code}BRL`];
-    return { label: r.label, value: bid && Number.isFinite(bid) ? brl.format(bid) : r.value };
-  });
+  // Sem cotação e sem valor de reserva, a moeda fica de fora em vez de aparecer em branco
+  return rates
+    .map((r) => {
+      const bid = data?.[`${r.code}BRL`];
+      return { label: r.label, value: bid && Number.isFinite(bid) ? brl.format(bid) : r.value };
+    })
+    .filter((r) => r.value);
 }

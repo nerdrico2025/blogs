@@ -1,13 +1,19 @@
 ---
 import site from "../../../site.config.ts";
+import { linkAttrs } from "../../../shared/settings.ts";
 const w = site.sidebar.tools;
 ---
 <section class="card widget tools" aria-labelledby="w-tools">
-  <div class="tools-icon" aria-hidden="true">{w.icon}</div>
+  {w.icon && <div class="tools-icon" aria-hidden="true">{w.icon}</div>}
   <h2 id="w-tools">{w.title}</h2>
-  <p>{w.text}</p>
+  {w.text && <p>{w.text}</p>}
   <ul>
-    {w.items.map((it) => <li><span aria-hidden="true">{it.icon}</span>{it.label}</li>)}
+    {w.items.map((it) => (
+      <li>
+        {it.icon && <span aria-hidden="true">{it.icon}</span>}
+        {it.href ? <a {...linkAttrs(it.href, site.url)}>{it.label}</a> : it.label}
+      </li>
+    ))}
   </ul>
-  <a class="btn btn-accent btn-block" href={w.button.href}>{w.button.label}</a>
+  {w.button.label && w.button.href && <a class="btn btn-accent btn-block" {...linkAttrs(w.button.href, site.url)}>{w.button.label}</a>}
 </section>
