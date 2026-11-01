@@ -4,7 +4,7 @@
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex, nofollow">
 <title>Painel do blog</title><link rel="stylesheet" href="/admin/ui/admin.css">
 </head>
-<body><main>
+<body><a class="skip" href="#content">Pular para o conteúdo</a><main>
 <section id="login" class="card" hidden>
   <h1>Entrar no painel</h1>
   <form id="login-form">
@@ -15,27 +15,50 @@
   <div id="login-msg"></div>
 </section>
 
-<section id="app" hidden>
-  <div class="row"><h1 id="title">Painel</h1><button id="logout" class="ghost fix">Sair</button></div>
-  <p class="status" id="build" role="status"></p>
-  <div id="msg" aria-live="polite"></div>
-  <nav class="tabs" role="tablist" id="tabs"></nav>
+<div id="app" hidden>
+  <aside class="side">
+    <div class="side-top">
+      <p class="side-title" id="title">Painel</p>
+      <button type="button" class="ghost menu-btn" id="menu-btn" aria-expanded="false" aria-controls="side-menu">Menu</button>
+    </div>
+    <div class="side-menu" id="side-menu">
+      <nav aria-label="Telas do painel" id="tabs"></nav>
+      <p class="status" id="build" role="status"></p>
+      <button type="button" id="logout" class="ghost">Sair</button>
+    </div>
+  </aside>
 
-  <form class="card" data-tab="Marca" id="f-brand">
-    <h2>Marca</h2>
-    <label for="b-name">Nome do blog</label><input id="b-name" maxlength="80">
-    <label>Logotipo</label><img class="preview" id="b-logo-preview" alt="Logotipo atual"><input type="file" id="b-logo" accept="image/png,image/jpeg,image/webp,image/svg+xml">
-    <p class="hint">Use PNG com fundo transparente ou SVG, horizontal, em torno de 400 × 100 px (proporção 4:1), até 200 KB.</p><div id="b-logo-reupload" hidden><div class="msg warn">Reenvie o logotipo para gerar todos os formatos</div><p><button type="button" class="ghost" id="b-logo-reupload-btn">Reenviar logotipo</button></p></div><div id="b-logo-info" aria-live="polite"></div>
-    <label for="b-logo-dark">Logotipo para fundo escuro (versão clara)</label><div class="logo-dark-box" id="b-logo-dark-box" hidden><img class="preview" id="b-logo-dark-preview" alt="Logotipo para fundo escuro atual"></div><input type="file" id="b-logo-dark" accept="image/png,image/jpeg,image/webp,image/svg+xml">
-    <p class="hint">Opcional. Use PNG com fundo transparente ou SVG, horizontal, em torno de 400 × 100 px (proporção 4:1), até 200 KB.</p><div id="b-logo-dark-reupload" hidden><div class="msg warn">Reenvie o logotipo para fundo escuro para gerar todos os formatos</div><p><button type="button" class="ghost" id="b-logo-dark-reupload-btn">Reenviar logotipo para fundo escuro</button></p></div><div id="b-logo-dark-info" aria-live="polite"></div>
-    <label>Favicon (o ícone da aba do navegador)</label><img class="preview" id="b-favicon-preview" alt="Favicon atual"><input type="file" id="b-favicon" accept="image/png,image/jpeg,image/webp,image/svg+xml">
-    <p class="hint">Use PNG ou SVG quadrado, de 512 × 512 px, com figura simples e sem texto pequeno.</p><div id="b-favicon-reupload" hidden><div class="msg warn">Reenvie o favicon para gerar todos os formatos</div><p><button type="button" class="ghost" id="b-favicon-reupload-btn">Reenviar favicon</button></p></div><div id="b-favicon-info" aria-live="polite"></div>
-    <div class="row colors">
+  <div class="content" id="content" tabindex="-1">
+  <h1 id="screen-title" tabindex="-1"></h1>
+
+  <form data-tab="Marca" id="f-brand">
+    <details class="sec" data-sec="marca-nome" open><summary><h2>Nome do blog</h2></summary><div class="sec-body">
+      <label for="b-name">Nome do blog</label><input id="b-name" maxlength="80">
+      <p class="hint">Aparece no topo, no rodapé e no título das páginas.</p>
+    </div></details>
+
+    <details class="sec" data-sec="marca-imagens" id="sec-images" open><summary><h2>Logotipos e favicon</h2></summary><div class="sec-body grid2">
+      <div>
+        <label for="b-logo">Logotipo</label><img class="preview" id="b-logo-preview" alt="Logotipo atual"><input type="file" id="b-logo" accept="image/png,image/jpeg,image/webp,image/svg+xml">
+        <p class="hint">Use PNG com fundo transparente ou SVG, horizontal, em torno de 400 × 100 px (proporção 4:1), até 200 KB.</p><div id="b-logo-reupload" hidden><div class="msg warn">Reenvie o logotipo para gerar todos os formatos</div><p><button type="button" class="ghost" id="b-logo-reupload-btn">Reenviar logotipo</button></p></div><div id="b-logo-info" aria-live="polite"></div>
+      </div>
+      <div>
+        <label for="b-logo-dark">Logotipo para fundo escuro (versão clara)</label><div class="logo-dark-box" id="b-logo-dark-box" hidden><img class="preview" id="b-logo-dark-preview" alt="Logotipo para fundo escuro atual"></div><input type="file" id="b-logo-dark" accept="image/png,image/jpeg,image/webp,image/svg+xml">
+        <p class="hint">Opcional. Use PNG com fundo transparente ou SVG, horizontal, em torno de 400 × 100 px (proporção 4:1), até 200 KB.</p><div id="b-logo-dark-reupload" hidden><div class="msg warn">Reenvie o logotipo para fundo escuro para gerar todos os formatos</div><p><button type="button" class="ghost" id="b-logo-dark-reupload-btn">Reenviar logotipo para fundo escuro</button></p></div><div id="b-logo-dark-info" aria-live="polite"></div>
+      </div>
+      <div>
+        <label for="b-favicon">Favicon (o ícone da aba do navegador)</label><img class="preview" id="b-favicon-preview" alt="Favicon atual"><input type="file" id="b-favicon" accept="image/png,image/jpeg,image/webp,image/svg+xml">
+        <p class="hint">Use PNG ou SVG quadrado, de 512 × 512 px, com figura simples e sem texto pequeno.</p><div id="b-favicon-reupload" hidden><div class="msg warn">Reenvie o favicon para gerar todos os formatos</div><p><button type="button" class="ghost" id="b-favicon-reupload-btn">Reenviar favicon</button></p></div><div id="b-favicon-info" aria-live="polite"></div>
+      </div>
+    </div></details>
+
+    <details class="sec" data-sec="marca-cores" open><summary><h2>Cores</h2></summary><div class="sec-body">
+    <div class="grid2 colors">
       <div><label for="c-primary">Cor principal</label><div class="color-pair"><input type="color" id="c-primary" aria-label="Cor principal: seletor de cor"><input type="text" id="c-primary-hex" aria-label="Cor principal: código hexadecimal" aria-describedby="c-primary-err" placeholder="#1E5AA8" autocapitalize="characters" autocomplete="off" autocorrect="off" spellcheck="false"></div><p class="hint">Links e botões</p><div id="c-primary-err" aria-live="polite"></div></div>
       <div><label for="c-highlight">Cor de destaque</label><div class="color-pair"><input type="color" id="c-highlight" aria-label="Cor de destaque: seletor de cor"><input type="text" id="c-highlight-hex" aria-label="Cor de destaque: código hexadecimal" aria-describedby="c-highlight-err" placeholder="#1E5AA8" autocapitalize="characters" autocomplete="off" autocorrect="off" spellcheck="false"></div><p class="hint">Etiquetas e títulos pequenos</p><div id="c-highlight-err" aria-live="polite"></div></div>
       <div><label for="c-callout">Cartão de chamada</label><div class="color-pair"><input type="color" id="c-callout" aria-label="Cartão de chamada: seletor de cor"><input type="text" id="c-callout-hex" aria-label="Cartão de chamada: código hexadecimal" aria-describedby="c-callout-err" placeholder="#1E5AA8" autocapitalize="characters" autocomplete="off" autocorrect="off" spellcheck="false"></div><p class="hint">Fundo do cartão na lateral</p><div id="c-callout-err" aria-live="polite"></div></div>
       <div><label for="c-header">Cor de fundo do cabeçalho</label><div class="color-pair"><input type="color" id="c-header" aria-label="Cor de fundo do cabeçalho: seletor de cor"><input type="text" id="c-header-hex" aria-label="Cor de fundo do cabeçalho: código hexadecimal" aria-describedby="c-header-err" placeholder="#FFFFFF" autocapitalize="characters" autocomplete="off" autocorrect="off" spellcheck="false"></div><p class="hint">Fundo da faixa do logotipo e do menu</p><div id="c-header-err" aria-live="polite"></div><p><button type="button" class="ghost" id="c-header-reset">Voltar ao padrão</button></p><div id="c-header-warning" aria-live="polite"></div></div>
-      <div class="brand-preview" id="brand-preview" role="group" aria-label="Prévia das cores escolhidas">
+    <div class="brand-preview" id="brand-preview" role="group" aria-label="Prévia das cores escolhidas">
         <span class="preview-title">Prévia</span>
         <span class="pv-tag">Etiqueta</span>
         <span class="pv-btn">Botão</span>
@@ -44,93 +67,111 @@
       </div>
     </div>
     <div id="contrast"></div>
-    <p><button>Salvar e publicar</button></p>
+    </div></details>
   </form>
 
-  <form class="card" data-tab="Home" id="f-home">
-    <h2>Caixa de recursos</h2>
-    <label class="inline"><input type="checkbox" id="h-tools-on">Mostrar esta caixa</label>
-    <p class="hint">Sem nenhum item, a caixa não aparece. Links aceitam endereço interno (/sobre/) ou completo (https://…). Links para outros sites abrem em nova aba e são marcados como patrocinados.</p>
-    <div class="row">
-      <div class="fix"><label for="h-tools-icon">Emoji</label><input id="h-tools-icon" class="emoji" maxlength="16"></div>
-      <div><label for="h-tools-title">Título</label><input id="h-tools-title" maxlength="80"></div>
-    </div>
-    <label for="h-tools-text">Descrição</label><input id="h-tools-text" maxlength="300">
-    <h3 style="margin-top:12px">Itens (até 6)</h3>
-    <div id="h-tools-items"></div>
-    <p><button type="button" class="ghost" id="h-tools-add">Adicionar item</button></p>
-    <div class="row">
-      <div><label for="h-tools-btn-label">Texto do botão</label><input id="h-tools-btn-label" maxlength="40"></div>
-      <div><label for="h-tools-btn-href">Link do botão</label><input id="h-tools-btn-href" maxlength="500"></div>
-    </div>
+  <form data-tab="Home" id="f-home">
+    <details class="sec" data-sec="home-recursos" open><summary><h2>Caixa de recursos</h2></summary><div class="sec-body">
+      <label class="inline"><input type="checkbox" id="h-tools-on">Mostrar esta caixa</label>
+      <p class="hint">Sem nenhum item, a caixa não aparece. Links aceitam endereço interno (/sobre/) ou completo (https://…). Links para outros sites abrem em nova aba e são marcados como patrocinados.</p>
+      <div class="row">
+        <div class="fix"><label for="h-tools-icon">Emoji</label><input id="h-tools-icon" class="emoji" maxlength="16"></div>
+        <div><label for="h-tools-title">Título</label><input id="h-tools-title" maxlength="80"></div>
+      </div>
+      <label for="h-tools-text">Descrição</label><input id="h-tools-text" maxlength="300">
+      <p class="hint">Uma frase curta, logo abaixo do título.</p>
+      <h3>Itens (até 6)</h3>
+      <div id="h-tools-items"></div>
+      <p><button type="button" class="ghost" id="h-tools-add">Adicionar item</button></p>
+      <div class="grid2">
+        <div><label for="h-tools-btn-label">Texto do botão</label><input id="h-tools-btn-label" maxlength="40"></div>
+        <div><label for="h-tools-btn-href">Link do botão</label><input id="h-tools-btn-href" maxlength="500"></div>
+      </div>
+      <p class="hint">Sem texto e link, o botão não aparece.</p>
+    </div></details>
 
-    <h2 style="margin-top:24px">Caixa de destaque</h2>
-    <label class="inline"><input type="checkbox" id="h-callout-on">Mostrar esta caixa</label>
-    <div class="row">
-      <div class="fix"><label for="h-callout-icon">Emoji</label><input id="h-callout-icon" class="emoji" maxlength="16"></div>
-      <div><label for="h-callout-kicker">Etiqueta</label><input id="h-callout-kicker" maxlength="40"></div>
-    </div>
-    <label for="h-callout-title">Título</label><input id="h-callout-title" maxlength="80">
-    <label for="h-callout-text">Texto</label><input id="h-callout-text" maxlength="300">
-    <div class="row">
-      <div><label for="h-callout-btn-label">Texto do botão</label><input id="h-callout-btn-label" maxlength="40"></div>
-      <div><label for="h-callout-btn-href">Link do botão</label><input id="h-callout-btn-href" maxlength="500"></div>
-    </div>
+    <details class="sec" data-sec="home-destaque" open><summary><h2>Caixa de destaque</h2></summary><div class="sec-body">
+      <label class="inline"><input type="checkbox" id="h-callout-on">Mostrar esta caixa</label>
+      <p class="hint">Fica na lateral, com a cor do cartão de chamada. Sem título, não aparece.</p>
+      <div class="row">
+        <div class="fix"><label for="h-callout-icon">Emoji</label><input id="h-callout-icon" class="emoji" maxlength="16"></div>
+        <div><label for="h-callout-kicker">Etiqueta</label><input id="h-callout-kicker" maxlength="40"></div>
+      </div>
+      <label for="h-callout-title">Título</label><input id="h-callout-title" maxlength="80">
+      <label for="h-callout-text">Texto</label><input id="h-callout-text" maxlength="300">
+      <div class="grid2">
+        <div><label for="h-callout-btn-label">Texto do botão</label><input id="h-callout-btn-label" maxlength="40"></div>
+        <div><label for="h-callout-btn-href">Link do botão</label><input id="h-callout-btn-href" maxlength="500"></div>
+      </div>
+    </div></details>
 
-    <h2 style="margin-top:24px">Faixa do topo</h2>
-    <label class="inline"><input type="checkbox" id="h-ticker-on">Mostrar a faixa</label>
-    <div>
-      <label class="inline"><input type="checkbox" id="h-ticker-rates">Cotações (dólar e euro)</label>
-      <label class="inline"><input type="checkbox" id="h-ticker-clocks">Relógios</label>
-    </div>
-    <p class="hint">A cotação é atualizada a cada publicação. Se nada estiver marcado, a faixa não aparece.</p>
-    <h3 style="margin-top:12px">Cidades dos relógios (até 12)</h3>
-    <div id="h-clocks"></div>
-    <p><button type="button" class="ghost" id="h-clocks-add">Adicionar cidade</button></p>
+    <details class="sec" data-sec="home-faixa"><summary><h2>Faixa do topo</h2></summary><div class="sec-body">
+      <label class="inline"><input type="checkbox" id="h-ticker-on">Mostrar a faixa</label>
+      <div>
+        <label class="inline"><input type="checkbox" id="h-ticker-rates">Cotações (dólar e euro)</label>
+        <label class="inline"><input type="checkbox" id="h-ticker-clocks">Relógios</label>
+      </div>
+      <p class="hint">A cotação é atualizada a cada publicação. Se nada estiver marcado, a faixa não aparece.</p>
+      <h3>Cidades dos relógios (até 12)</h3>
+      <div id="h-clocks"></div>
+      <p><button type="button" class="ghost" id="h-clocks-add">Adicionar cidade</button></p>
+    </div></details>
 
-    <h2 style="margin-top:24px">Textos</h2>
-    <label for="h-footer">Texto do rodapé</label><textarea id="h-footer" class="text" maxlength="500" style="min-height:80px"></textarea>
-    <label for="h-placeholder">Texto de exemplo na busca</label><input id="h-placeholder" maxlength="80">
-    <p class="hint">Aparece dentro do campo de busca, antes de a pessoa digitar.</p>
-    <p><button>Salvar e publicar</button></p>
+    <details class="sec" data-sec="home-textos"><summary><h2>Rodapé e busca</h2></summary><div class="sec-body">
+      <label for="h-footer">Texto do rodapé</label><textarea id="h-footer" class="text" maxlength="500" style="min-height:80px"></textarea>
+      <p class="hint">Aparece em todas as páginas, acima dos links do rodapé.</p>
+      <label for="h-placeholder">Texto de exemplo na busca</label><input id="h-placeholder" maxlength="80">
+      <p class="hint">Aparece dentro do campo de busca, antes de a pessoa digitar.</p>
+    </div></details>
   </form>
 
-  <form class="card" data-tab="Autor" id="f-author">
-    <h2>Autor</h2>
+  <form data-tab="Autor" id="f-author">
     <p class="hint">Use uma pessoa real e credenciais verdadeiras.</p>
     <p class="hint">Com o nome preenchido, esta pessoa assina todos os artigos, e o site ganha a página dela. Sem nome, os artigos saem como <strong id="au-fallback"></strong>.</p>
-    <div class="row">
-      <div><label for="au-name">Nome</label><input id="au-name" maxlength="80" autocomplete="off"></div>
-      <div><label for="au-role">Cargo ou título</label><input id="au-role" maxlength="80" placeholder="Ex.: Consultor de viagens"></div>
-    </div>
-    <label for="au-short">Bio curta (até 200 caracteres)</label><textarea id="au-short" class="text" maxlength="200" style="min-height:70px"></textarea>
-    <label for="au-full">Bio completa</label><textarea id="au-full" class="text" maxlength="5000"></textarea>
-    <label for="au-photo">Foto</label><img class="preview author-preview-photo" id="au-photo-preview" alt="Foto atual do autor" hidden><input type="file" id="au-photo" accept="image/png,image/jpeg,image/webp">
-    <p class="hint">PNG, JPG ou WebP, quadrada ou com o rosto ao centro, a partir de 400 × 400 px. É recortada em quadrado, e os dados de localização são removidos.</p>
-    <p><button type="button" class="ghost" id="au-photo-remove" hidden>Remover foto</button></p>
-    <div id="au-photo-info" aria-live="polite"></div>
-    <label for="au-alt">Texto alternativo da foto</label><input id="au-alt" maxlength="160" placeholder="Ex.: Retrato de Ana Souza sorrindo">
-    <label for="au-credentials">Credenciais e experiência (uma por linha, até 6)</label><textarea id="au-credentials" class="text" style="min-height:110px"></textarea>
-    <label for="au-specialties">Áreas de especialidade (uma por linha, até 8)</label><textarea id="au-specialties" class="text" style="min-height:90px"></textarea>
-    <h3 style="margin-top:12px">Links (todos opcionais)</h3>
-    <div class="row">
-      <div><label for="au-site">Site</label><input id="au-site" type="url" maxlength="500" placeholder="https://"></div>
-      <div><label for="au-instagram">Instagram</label><input id="au-instagram" type="url" maxlength="500" placeholder="https://"></div>
-      <div><label for="au-linkedin">LinkedIn</label><input id="au-linkedin" type="url" maxlength="500" placeholder="https://"></div>
-      <div><label for="au-youtube">YouTube</label><input id="au-youtube" type="url" maxlength="500" placeholder="https://"></div>
-      <div><label for="au-x">X</label><input id="au-x" type="url" maxlength="500" placeholder="https://"></div>
-      <div><label for="au-email">E-mail público</label><input id="au-email" type="email" maxlength="200"></div>
-    </div>
-    <h3 style="margin-top:16px">Prévia da assinatura no artigo</h3>
-    <div class="author-preview" id="au-preview" aria-live="off"><img id="au-pv-photo" alt="" width="36" height="36" hidden><span>Por <strong id="au-pv-name"></strong><span id="au-pv-role"></span></span></div>
-    <p><button>Salvar e publicar</button></p>
+    <details class="sec" data-sec="autor-dados" open><summary><h2>Quem é</h2></summary><div class="sec-body">
+      <div class="grid2">
+        <div><label for="au-name">Nome</label><input id="au-name" maxlength="80" autocomplete="off"><p class="hint">Vazio: a assinatura volta a ser a da equipe.</p></div>
+        <div><label for="au-role">Cargo ou título</label><input id="au-role" maxlength="80" placeholder="Ex.: Consultor de viagens"><p class="hint">Aparece ao lado do nome.</p></div>
+      </div>
+      <h3>Prévia da assinatura no artigo</h3>
+      <div class="author-preview" id="au-preview" aria-live="off"><img id="au-pv-photo" alt="" width="36" height="36" hidden><span>Por <strong id="au-pv-name"></strong><span id="au-pv-role"></span></span></div>
+      <div class="grid2">
+        <div><label for="au-short">Bio curta (até 200 caracteres)</label><textarea id="au-short" class="text" maxlength="200" style="min-height:110px"></textarea><p class="hint">Vai na caixa "Sobre o autor", no fim dos artigos.</p></div>
+        <div><label for="au-full">Bio completa</label><textarea id="au-full" class="text" maxlength="5000" style="min-height:110px"></textarea><p class="hint">Vai na página do autor. Deixe uma linha em branco entre parágrafos.</p></div>
+      </div>
+    </div></details>
+    <details class="sec" data-sec="autor-foto" open><summary><h2>Foto</h2></summary><div class="sec-body">
+      <label for="au-photo">Foto</label><img class="preview author-preview-photo" id="au-photo-preview" alt="Foto atual do autor" hidden><input type="file" id="au-photo" accept="image/png,image/jpeg,image/webp">
+      <p class="hint">PNG, JPG ou WebP, quadrada ou com o rosto ao centro, a partir de 400 × 400 px. É recortada em quadrado, e os dados de localização são removidos.</p>
+      <p><button type="button" class="ghost" id="au-photo-remove" hidden>Remover foto</button></p>
+      <div id="au-photo-info" aria-live="polite"></div>
+      <label for="au-alt">Texto alternativo da foto</label><input id="au-alt" maxlength="160" placeholder="Ex.: Retrato de Ana Souza sorrindo">
+      <p class="hint">Descreve a foto para quem usa leitor de tela.</p>
+    </div></details>
+    <details class="sec" data-sec="autor-credenciais"><summary><h2>Credenciais e especialidades</h2></summary><div class="sec-body grid2">
+      <div><label for="au-credentials">Credenciais e experiência (uma por linha, até 6)</label><textarea id="au-credentials" class="text" style="min-height:110px"></textarea><p class="hint">Só o que puder ser comprovado.</p></div>
+      <div><label for="au-specialties">Áreas de especialidade (uma por linha, até 8)</label><textarea id="au-specialties" class="text" style="min-height:110px"></textarea><p class="hint">Temas curtos, como "Europa".</p></div>
+    </div></details>
+    <details class="sec" data-sec="autor-links"><summary><h2>Links (todos opcionais)</h2></summary><div class="sec-body">
+      <p class="hint">Endereços completos, começando por https://. Aparecem na página do autor.</p>
+      <div class="grid2">
+        <div><label for="au-site">Site</label><input id="au-site" type="url" maxlength="500" placeholder="https://"></div>
+        <div><label for="au-instagram">Instagram</label><input id="au-instagram" type="url" maxlength="500" placeholder="https://"></div>
+        <div><label for="au-linkedin">LinkedIn</label><input id="au-linkedin" type="url" maxlength="500" placeholder="https://"></div>
+        <div><label for="au-youtube">YouTube</label><input id="au-youtube" type="url" maxlength="500" placeholder="https://"></div>
+        <div><label for="au-x">X</label><input id="au-x" type="url" maxlength="500" placeholder="https://"></div>
+        <div><label for="au-email">E-mail público</label><input id="au-email" type="email" maxlength="200"></div>
+      </div>
+    </div></details>
   </form>
 
-  <section class="card" data-tab="Artigos">
-    <h2>Artigos</h2>
-    <label for="p-search">Buscar pelo título</label><input id="p-search" type="search" autocomplete="off">
-    <p class="row"><span id="p-count" role="status"></span><button type="button" class="ghost fix" id="p-delete-many" disabled>Excluir selecionados</button></p>
-    <div class="table-wrap">
+  <section data-tab="Artigos">
+    <div class="posts-tools">
+      <label for="p-search">Buscar pelo título</label><input id="p-search" type="search" autocomplete="off">
+      <p class="hint">Marque artigos para excluir vários de uma vez. <span id="p-count" role="status"></span></p>
+      <div class="bulk" id="p-bulk" hidden><button type="button" class="danger" id="p-delete-many">Excluir selecionados</button><button type="button" class="ghost" id="p-clear">Limpar seleção</button></div>
+    </div>
+    <div class="table-wrap card">
       <table class="posts">
         <thead><tr><th scope="col"><input type="checkbox" id="p-all" aria-label="Selecionar todos os artigos da lista"></th><th scope="col">Título</th><th scope="col">Categoria</th><th scope="col">Data</th><th scope="col">Status</th><th scope="col"><span class="sr-only">Ações</span></th></tr></thead>
         <tbody id="p-rows"></tbody>
@@ -138,43 +179,58 @@
     </div>
   </section>
 
-  <form class="card" data-tab="Rastreamento" id="f-tracking">
-    <h2>Rastreamento</h2>
+  <form data-tab="Rastreamento" id="f-tracking">
     <p class="hint">Tudo aqui só carrega depois que o visitante aceita as estatísticas no banner de cookies.</p>
-    <p class="hint">O ID do Tag Manager já insere o código completo. Use os campos abaixo só para códigos que NÃO estão dentro do Tag Manager. Não cole o código do Tag Manager aqui, para não duplicar as medições.</p>
-    <label for="t-gtm">ID do Google Tag Manager</label><input id="t-gtm" placeholder="GTM-XXXXXXX">
-    <label for="t-head">Código no &lt;head&gt;</label><textarea id="t-head"></textarea>
-    <label for="t-body">Código antes do &lt;/body&gt;</label><textarea id="t-body"></textarea>
-    <p><button>Salvar e publicar</button></p>
+    <details class="sec" data-sec="rast-gtm" open><summary><h2>Google Tag Manager</h2></summary><div class="sec-body">
+      <label for="t-gtm">ID do Google Tag Manager</label><input id="t-gtm" placeholder="GTM-XXXXXXX">
+      <p class="hint">O ID do Tag Manager já insere o código completo.</p>
+    </div></details>
+    <details class="sec" data-sec="rast-codigos"><summary><h2>Outros códigos</h2></summary><div class="sec-body">
+      <p class="hint">Use os campos abaixo só para códigos que NÃO estão dentro do Tag Manager. Não cole o código do Tag Manager aqui, para não duplicar as medições.</p>
+      <div class="grid2">
+        <div><label for="t-head">Código no &lt;head&gt;</label><textarea id="t-head"></textarea><p class="hint">Quando o fornecedor pedir "no início da página".</p></div>
+        <div><label for="t-body">Código antes do &lt;/body&gt;</label><textarea id="t-body"></textarea><p class="hint">Quando o fornecedor pedir "no fim da página".</p></div>
+      </div>
+    </div></details>
   </form>
 
-  <form class="card" data-tab="Anúncios" id="f-ads">
-    <h2>Anúncios</h2>
+  <form data-tab="Anúncios" id="f-ads">
     <p class="hint">Só carregam depois que o visitante aceita publicidade no banner de cookies. Códigos que usam <code>document.write</code> não funcionam.</p>
-    <label for="a-head">Script do AdSense ou da rede (vai no &lt;head&gt;)</label><textarea id="a-head"></textarea>
-    <label for="a-txt">Conteúdo do ads.txt</label><textarea id="a-txt" placeholder="google.com, pub-0000000000000000, DIRECT, f08c47fec0942fa0"></textarea>
-    <h2 style="margin-top:16px">Posições</h2>
-    <div id="slots"></div>
-    <p><button>Salvar e publicar</button></p>
+    <details class="sec" data-sec="ads-rede" open><summary><h2>Rede de anúncios</h2></summary><div class="sec-body grid2">
+      <div><label for="a-head">Script do AdSense ou da rede (vai no &lt;head&gt;)</label><textarea id="a-head"></textarea><p class="hint">O código que a rede manda colocar em todas as páginas.</p></div>
+      <div><label for="a-txt">Conteúdo do ads.txt</label><textarea id="a-txt" placeholder="google.com, pub-0000000000000000, DIRECT, f08c47fec0942fa0"></textarea><p class="hint">Uma linha por rede, como a rede informar.</p></div>
+    </div></details>
+    <details class="sec" data-sec="ads-posicoes" open><summary><h2>Posições</h2></summary><div class="sec-body">
+      <div id="slots" class="grid2 slots"></div>
+    </div></details>
   </form>
 
-  <form class="card" data-tab="Categorias" id="f-cats">
-    <h2>Categorias</h2>
+  <form data-tab="Categorias" id="f-cats">
     <p class="hint">Você pode renomear e mudar a descrição e o slug. Categorias não podem ser apagadas, porque o Wordbee guarda o número delas. Quando o slug muda, o endereço antigo redireciona para o novo.</p>
-    <div id="cats"></div>
-    <p class="row"><button type="button" class="ghost fix" id="add-cat">Adicionar categoria</button><button class="fix">Salvar e publicar</button></p>
+    <div id="cats" class="grid2"></div>
+    <p><button type="button" class="ghost" id="add-cat">Adicionar categoria</button></p>
   </form>
 
-  <section class="card" data-tab="Wordbee">
-    <h2>Senha do Wordbee</h2>
-    <p id="wb-info"></p>
-    <p><button id="wb-new" type="button">Gerar nova senha</button></p>
-    <div id="wb-result" hidden>
-      <div class="msg warn">Guarde esta senha agora no seu gerenciador de senhas. Ela não será mostrada de novo. A senha anterior já parou de funcionar: atualize o cadastro no Wordbee.</div>
-      <p class="password" id="wb-password"></p><p><button type="button" class="ghost" id="wb-copy">Copiar</button></p>
-    </div>
+  <section data-tab="Wordbee">
+    <details class="sec" data-sec="wb-senha" open><summary><h2>Senha do Wordbee</h2></summary><div class="sec-body">
+      <p id="wb-info"></p>
+      <p><button id="wb-new" type="button">Gerar nova senha</button></p>
+      <div id="wb-result" hidden>
+        <div class="msg warn">Guarde esta senha agora no seu gerenciador de senhas. Ela não será mostrada de novo. A senha anterior já parou de funcionar: atualize o cadastro no Wordbee.</div>
+        <p class="password" id="wb-password"></p><p><button type="button" class="ghost" id="wb-copy">Copiar</button></p>
+      </div>
+    </div></details>
   </section>
-</section>
+  </div>
+
+  <div class="savebar" id="savebar">
+    <div id="msg" aria-live="polite"></div>
+    <div class="savebar-actions" id="save-actions" hidden>
+      <span class="dirty" id="dirty" role="status"></span>
+      <button id="save-btn">Salvar e publicar</button>
+    </div>
+  </div>
+</div>
 </main>
 <script>
 /* Botão Mostrar/Ocultar em todos os campos de senha */

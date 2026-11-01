@@ -245,3 +245,32 @@ describe("contraste", () => {
     assert.equal(contrastWarnings({ primary: "#ffee00" }).length, 1);
   });
 });
+
+describe("telas do painel", () => {
+  const SCREENS = ["artigos", "categorias", "autor", "marca", "home", "anuncios", "rastreamento", "wordbee"];
+  test("cada tela tem endereço próprio, sem cache e fora dos buscadores, e /admin/ continua", async () => {
+    for (const url of ["/admin/", ...SCREENS.map((s) => `/admin/${s}`), ...SCREENS.map((s) => `/admin/${s}/`)]) {
+      const res = await ctx.app.inject({ url });
+      assert.equal(res.statusCode, 200, url);
+      assert.match(res.body, /id="login-form"/, url);
+      assert.equal(res.headers["cache-control"], "no-store", url);
+      assert.match(String(res.headers["x-robots-tag"]), /noindex/, url);
+    }
+  });
+
+  test("a página não expõe dados antes do login", async () => {
+    assert.equal((await ctx.app.inject({ url: "/admin/api/state" })).statusCode, 401);
+    assert.doesNotMatch((await ctx.app.inject({ url: "/admin/wordbee" })).body, /api-state|passwordHash/);
+  });
+
+  test("nenhum campo sumiu do painel", async () => {
+    const page = (await ctx.app.inject({ url: "/admin/marca" })).body;
+    const ids = `b-name b-logo b-logo-preview b-logo-reupload b-logo-reupload-btn b-logo-info b-logo-dark b-logo-dark-box b-logo-dark-preview b-logo-dark-reupload b-logo-dark-reupload-btn b-logo-dark-info b-favicon b-favicon-preview b-favicon-reupload b-favicon-reupload-btn b-favicon-info
+      c-primary c-primary-hex c-highlight c-highlight-hex c-callout c-callout-hex c-header c-header-hex c-header-reset c-header-warning brand-preview pv-logo contrast
+      h-tools-on h-tools-icon h-tools-title h-tools-text h-tools-items h-tools-add h-tools-btn-label h-tools-btn-href h-callout-on h-callout-icon h-callout-kicker h-callout-title h-callout-text h-callout-btn-label h-callout-btn-href h-ticker-on h-ticker-rates h-ticker-clocks h-clocks h-clocks-add h-footer h-placeholder
+      au-fallback au-name au-role au-short au-full au-photo au-photo-preview au-photo-remove au-photo-info au-alt au-credentials au-specialties au-site au-instagram au-linkedin au-youtube au-x au-email au-preview
+      p-search p-count p-delete-many p-all p-rows t-gtm t-head t-body a-head a-txt slots cats add-cat wb-info wb-new wb-result wb-password wb-copy logout build title msg login-form`.split(/\s+/);
+    for (const id of ids) assert.ok(page.includes(`id="${id}"`), id);
+    assert.match(page, /Use uma pessoa real e credenciais verdadeiras\./);
+  });
+});

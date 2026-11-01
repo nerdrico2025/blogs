@@ -116,6 +116,16 @@ export async function registerAdmin(app: FastifyInstance, deps: AdminDeps): Prom
       return page(reply, "admin.html");
     });
 
+    // Um endereço para cada tela do painel; quem escolhe o que mostrar é o admin.js
+    for (const screen of ["artigos", "categorias", "autor", "marca", "home", "anuncios", "rastreamento", "wordbee"]) {
+      for (const url of [`/admin/${screen}`, `/admin/${screen}/`]) {
+        scope.get(url, async (_req, reply) => {
+          if (!settings.isConfigured()) return reply.redirect("/admin/setup", 302);
+          return page(reply, "admin.html");
+        });
+      }
+    }
+
     scope.post("/admin/api/login", async (req, reply) => {
       if (!authEnabled()) throw new WpError(403, "admin_disabled", "O painel está desligado: defina ADMIN_USER e ADMIN_PASSWORD_HASH.");
       const b = (req.body ?? {}) as { user?: unknown; password?: unknown };

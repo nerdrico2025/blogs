@@ -94,6 +94,8 @@ Um site WordPress comum, nos mesmos 4 endpoints de `/wp-json/wp/v2`: `users/me`,
 
 ## Painel /admin
 
+Menu lateral em grupos, com um endereço para cada tela: Conteúdo (`/admin/artigos`, `/admin/categorias`, `/admin/autor`), Aparência (`/admin/marca`, `/admin/home`), Monetização e dados (`/admin/anuncios`, `/admin/rastreamento`) e Integração (`/admin/wordbee`). `/admin/` abre Artigos.
+
 Login próprio, com bloqueio depois de 5 tentativas erradas. Cada "Salvar" valida, grava `/data/settings.json` de
 forma atômica e pede um build (respeitando a trava global); o estado aparece no topo da tela. Campo vazio = vale o
 `site.config.ts`.

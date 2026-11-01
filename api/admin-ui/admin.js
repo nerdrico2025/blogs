@@ -2,8 +2,16 @@
 const $ = (id) => document.getElementById(id);
 const LABELS = { header: "Topo do site", beforeContent: "Antes do conteúdo", inContent: "Dentro do conteúdo", afterContent: "Depois do conteúdo", sidebarTop: "Lateral, no topo", sidebarBottom: "Lateral, no fim", footer: "Rodapé", mobileSticky: "Banner fixo no celular" };
 const BUILD = { idle: "publicado", waiting: "na fila", "waiting-slot": "aguardando vaga (outros blogs publicando)", building: "publicando agora" };
+const SCREENS = [
+  ["Conteúdo", [["artigos", "Artigos"], ["categorias", "Categorias"], ["autor", "Autor"]]],
+  ["Aparência", [["marca", "Marca"], ["home", "Home"]]],
+  ["Monetização e dados", [["anuncios", "Anúncios"], ["rastreamento", "Rastreamento"]]],
+  ["Integração", [["wordbee", "Wordbee"]]],
+];
+const SCREEN_NAMES = Object.fromEntries(SCREENS.flatMap(([, list]) => list));
+const DEFAULT_SCREEN = "artigos";
 let state = null;
-let tab = "Marca";
+let screen = DEFAULT_SCREEN;
 
 async function api(url, options = {}) {
   const res = await fetch(url, { credentials: "same-origin", ...options });
@@ -60,22 +68,120 @@ function checks(parent, title, options, selected, name) {
 }
 const checked = (root, name) => [...root.querySelectorAll(`input[data-group="${name}"]:checked`)].map((c) => c.value);
 
-function renderTabs() {
-  const tabs = $("tabs");
-  tabs.replaceChildren();
-  for (const sec of document.querySelectorAll("[data-tab]")) {
-    const name = sec.dataset.tab;
-    sec.hidden = name !== tab;
-    const b = make("button", { type: "button", textContent: name, role: "tab" });
-    b.setAttribute("aria-selected", String(name === tab));
-    b.onclick = () => {
-      tab = name;
-      renderTabs();
-      if (name === "Artigos") loadPosts();
-    };
-    tabs.append(b);
+/** Seção recolhível: lembra aberta ou fechada neste navegador. */
+function remember(details, key) {
+  try {
+    const saved = localStorage.getItem(`admin:sec:${key}`);
+    if (saved !== null) details.open = saved === "1";
+  } catch {}
+  details.addEventListener("toggle", () => {
+    try {
+      localStorage.setItem(`admin:sec:${key}`, details.open ? "1" : "0");
+    } catch {}
+  });
+}
+for (const d of document.querySelectorAll("details[data-sec]")) remember(d, d.dataset.sec);
+/** Campo com problema dentro de seção fechada: abre, para o navegador conseguir apontar para ele. */
+function openAround(el) {
+  for (let d = el.closest("details"); d; d = d.parentElement.closest("details")) d.open = true;
+}
+document.addEventListener("invalid", (e) => openAround(e.target), true);
+
+/* Alterações não salvas: compara o formulário com o que veio do servidor, então desfazer à mão também limpa o aviso. */
+const FORMS = () => [...document.querySelectorAll("#content form[data-tab]")];
+const snapshot = (form) => JSON.stringify([...form.elements].filter((el) => ["INPUT", "SELECT", "TEXTAREA"].includes(el.tagName) && el.type !== "file").map((el) => (el.type === "checkbox" ? el.checked : el.value)));
+const baseline = new Map();
+function markSaved() {
+  for (const form of FORMS()) baseline.set(form, snapshot(form));
+  updateDirty();
+}
+const isDirty = (form) => baseline.has(form) && baseline.get(form) !== snapshot(form);
+const anyDirty = () => FORMS().some(isDirty);
+function updateDirty() {
+  const form = currentForm();
+  $("dirty").textContent = form && isDirty(form) ? "Você tem alterações não salvas" : "";
+}
+const currentForm = () => document.querySelector(`#content form[data-tab="${SCREEN_NAMES[screen]}"]`);
+for (const form of FORMS()) for (const type of ["input", "change", "click"]) form.addEventListener(type, () => setTimeout(updateDirty));
+/** Sair da tela com alterações: pergunta, e quem desiste de salvar volta ao que está gravado. */
+function confirmLeave() {
+  if (!anyDirty()) return true;
+  if (!confirm("Você tem alterações não salvas. Sair sem salvar?")) return false;
+  fill();
+  markSaved();
+  return true;
+}
+window.addEventListener("beforeunload", (e) => {
+  if (anyDirty()) e.preventDefault();
+});
+
+function renderNav() {
+  const nav = $("tabs");
+  nav.replaceChildren();
+  for (const [group, list] of SCREENS) {
+    const box = make("div", { className: "nav-group" });
+    const title = make("p", { className: "nav-title", textContent: group });
+    const ul = make("ul");
+    for (const [slug, name] of list) {
+      const a = make("a", { href: `/admin/${slug}`, textContent: name });
+      a.dataset.slug = slug;
+      a.onclick = (e) => {
+        // Ctrl/Cmd+clique continua abrindo em outra aba
+        if (e.ctrlKey || e.metaKey || e.shiftKey) return;
+        e.preventDefault();
+        openMenu(false);
+        if (slug === screen || !confirmLeave()) return;
+        history.pushState(null, "", `/admin/${slug}`);
+        showScreen(slug, true);
+      };
+      const li = make("li");
+      li.append(a);
+      ul.append(li);
+    }
+    box.append(title, ul);
+    nav.append(box);
   }
 }
+function screenFromUrl() {
+  const slug = location.pathname.replace(/^\/admin\/?/, "").replace(/\/$/, "");
+  return SCREEN_NAMES[slug] ? slug : DEFAULT_SCREEN;
+}
+function showScreen(slug, focus) {
+  screen = slug;
+  const name = SCREEN_NAMES[slug];
+  for (const sec of document.querySelectorAll("[data-tab]")) sec.hidden = sec.dataset.tab !== name;
+  for (const a of document.querySelectorAll("#tabs a")) {
+    if (a.dataset.slug === slug) a.setAttribute("aria-current", "page");
+    else a.removeAttribute("aria-current");
+  }
+  $("screen-title").textContent = name;
+  $("menu-btn").textContent = `Menu: ${name}`;
+  document.title = `${name} | Painel do blog`;
+  const form = currentForm();
+  $("save-actions").hidden = !form;
+  // Fora do formulário, o botão ainda envia e o Enter nos campos continua salvando
+  if (form) $("save-btn").setAttribute("form", form.id);
+  $("msg").replaceChildren();
+  updateDirty();
+  if (slug === "artigos") loadPosts();
+  window.scrollTo(0, 0);
+  if (focus) $("screen-title").focus({ preventScroll: true });
+}
+function openMenu(open) {
+  $("side-menu").classList.toggle("open", open);
+  $("menu-btn").setAttribute("aria-expanded", String(open));
+}
+$("menu-btn").onclick = () => openMenu($("menu-btn").getAttribute("aria-expanded") !== "true");
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && $("menu-btn").getAttribute("aria-expanded") === "true") {
+    openMenu(false);
+    $("menu-btn").focus();
+  }
+});
+window.addEventListener("popstate", () => {
+  if (!confirmLeave()) return history.pushState(null, "", `/admin/${screen}`);
+  showScreen(screenFromUrl(), true);
+});
 
 function renderBuild(build) {
   const last = build.lastBuild;
@@ -92,6 +198,7 @@ function renderSlots() {
     const s = state.ads.slots[position] || {};
     const d = make("details");
     d.dataset.position = position;
+    remember(d, `ads-${position}`);
     d.append(make("summary", { textContent: `${LABELS[position]}${s.enabled ? " (ativa)" : ""}` }));
     const on = make("input", { type: "checkbox", checked: !!s.enabled });
     on.dataset.f = "enabled";
@@ -100,14 +207,14 @@ function renderSlots() {
     d.append(l);
     const code = make("textarea", { value: s.code || "" });
     code.dataset.f = "code";
-    field(d, "Código HTML/JS", code);
+    field(d, "Código HTML/JS", code, "O bloco que a rede de anúncios fornece para esta posição.");
     const row = make("div", { className: "row" });
     if (position !== "mobileSticky") {
       const dev = make("select");
       dev.dataset.f = "devices";
       for (const [v, t] of [["both", "Celular e computador"], ["desktop", "Só computador"], ["mobile", "Só celular"]]) dev.append(make("option", { value: v, textContent: t }));
       dev.value = s.devices || "both";
-      field(row, "Dispositivos", dev);
+      field(row, "Dispositivos", dev, "Onde esta posição aparece.");
     }
     const mh = make("input", { type: "number", min: 0, max: 1000, value: s.minHeight ?? (position === "mobileSticky" ? 60 : 250) });
     mh.dataset.f = "minHeight";
@@ -125,6 +232,7 @@ function renderSlots() {
     } else {
       checks(d, "Tipos de página", [["home", "Início"], ["article", "Artigo"], ["category", "Categoria"]], s.pageTypes || ["home", "article", "category"], "pageTypes");
     }
+    d.append(make("p", { className: "hint", textContent: "Tipos de página e categorias limitam onde o anúncio aparece." }));
     checks(d, "Só nestas categorias (nenhuma marcada = todas)", cats, (s.includeCategories || []).map(String), "include");
     checks(d, "Exceto nestas categorias", cats, (s.excludeCategories || []).map(String), "exclude");
     root.append(d);
@@ -140,12 +248,12 @@ function catRow(c) {
   const slug = make("input", { value: c.slug || "", maxLength: 80, required: true, pattern: "[a-z0-9]+(-[a-z0-9]+)*" });
   slug.dataset.f = "slug";
   field(top, c.id ? `Nome (id ${c.id})` : "Nome (nova)", name);
-  field(top, "Slug", slug);
+  field(top, "Slug", slug, "Parte do endereço: minúsculas, sem acento, com hífen.");
   row.append(top);
   const desc = make("textarea", { value: c.description || "", className: "text", maxLength: 300, rows: 2 });
   desc.style.minHeight = "64px";
   desc.dataset.f = "description";
-  field(row, "Descrição", desc);
+  field(row, "Descrição", desc, "Aparece na página da categoria e nos buscadores.");
   return row;
 }
 
@@ -172,7 +280,7 @@ function homeRow(fields, values) {
   row.append(rm);
   return row;
 }
-const ITEM_FIELDS = [["icon", "Emoji", { maxLength: 16, className: "emoji" }], ["label", "Texto", { maxLength: 60 }], ["href", "Link (opcional)", { maxLength: 500 }]];
+const ITEM_FIELDS = [["icon", "Emoji", { maxLength: 16, className: "emoji" }], ["label", "Texto", { maxLength: 60 }], ["href", "Link (opcional)", { maxLength: 500, placeholder: "/sobre/ ou https://" }]];
 const CLOCK_FIELDS = [["label", "Cidade", { maxLength: 80 }], ["timezone", "Fuso horário", { zones: true }]];
 const readRows = (root) => [...root.children].map((row) => Object.fromEntries([...row.querySelectorAll("[data-f]")].map((el) => [el.dataset.f, el.value])));
 function addRow(root, fields, max, what) {
@@ -273,6 +381,8 @@ function fill() {
   $("c-header").value = state.colors.header;
   $("b-logo-dark-box").hidden = !state.logoDark;
   for (const [kind, id] of REUPLOAD) $(`${id}-reupload`).hidden = !state.missingOriginals.includes(kind);
+  // Aviso de reenvio não pode ficar escondido numa seção recolhida
+  if (state.missingOriginals.length) $("sec-images").open = true;
   if (state.logoDark) $("b-logo-dark-preview").src = state.logoDark;
   state.categories.slice(0, 3).forEach((c, i) => ($(`pv-item-${i}`).textContent = c.name));
   for (const f of COLOR_FIELDS) {
@@ -327,10 +437,14 @@ async function watchPublish(notice) {
 }
 
 async function saved(promise, warning, afterFill) {
+  $("save-btn").disabled = true;
   try {
     state = await promise;
     fill();
+    markSaved();
+    // Restaura o que foi digitado e não salvo (envio de imagem): o aviso de alterações continua valendo
     afterFill?.();
+    updateDirty();
     show($("msg"), "Salvo. O site está sendo publicado com as mudanças.", "ok");
     if (warning) $("msg").append(make("div", { className: "msg warn", textContent: warning }));
     // Sem nada na fila (build desligado), não há publicação para anunciar
@@ -338,14 +452,19 @@ async function saved(promise, warning, afterFill) {
   } catch (err) {
     if (err.status === 401) return enter();
     show($("msg"), err.message, "err");
+  } finally {
+    $("save-btn").disabled = false;
   }
-  window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
 $("f-brand").onsubmit = (e) => {
   e.preventDefault();
   const invalid = COLOR_FIELDS.filter((f) => !commitColor(f));
-  if (invalid.length) return invalid[0].text.focus();
+  if (invalid.length) {
+    openAround(invalid[0].text);
+    show($("msg"), "Corrija o código de cor marcado antes de salvar.", "err");
+    return invalid[0].text.focus();
+  }
   saved(post("/admin/api/brand", { name: $("b-name").value, colors: { primary: $("c-primary").value, highlight: $("c-highlight").value, callout: $("c-callout").value, header: $("c-header").value } }));
 };
 const IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp", "image/svg+xml"];
@@ -388,9 +507,13 @@ function upload(input, url, info, maxBytes, warningFor) {
     if (!file) return;
     const label = `Arquivo escolhido: ${file.name} (${formatSize(file.size)}).`;
     const limit = Math.min(maxBytes, state.maxUploadBytes);
-    if (!IMAGE_TYPES.includes(file.type)) return show(info, [label, "Formato não aceito. Envie um arquivo PNG, SVG, JPG ou WebP."], "err");
-    if (file.size === 0) return show(info, [label, "O arquivo está vazio. Escolha outro."], "err");
-    if (file.size > limit) return show(info, [label, `O arquivo passa do tamanho máximo de ${formatSize(limit)}. Reduza a imagem e envie de novo.`], "err");
+    const reject = (text) => {
+      show(info, label, "warn");
+      show($("msg"), text, "err");
+    };
+    if (!IMAGE_TYPES.includes(file.type)) return reject("Formato não aceito. Envie um arquivo PNG, SVG, JPG ou WebP.");
+    if (file.size === 0) return reject("O arquivo está vazio. Escolha outro.");
+    if (file.size > limit) return reject(`O arquivo passa do tamanho máximo de ${formatSize(limit)}. Reduza a imagem e envie de novo.`);
     const warning = warningFor(file, await imageSize(file));
     show(info, label, "ok");
     if (warning) info.append(make("div", { className: "msg warn", textContent: warning }));
@@ -425,8 +548,8 @@ const postChecks = () => [...$("p-rows").querySelectorAll("input[type=checkbox]"
 function updateSelection() {
   const boxes = postChecks();
   const selected = boxes.filter((c) => c.checked).length;
-  $("p-delete-many").disabled = selected === 0;
-  $("p-delete-many").textContent = selected ? `Excluir selecionados (${selected})` : "Excluir selecionados";
+  $("p-bulk").hidden = selected === 0;
+  $("p-delete-many").textContent = `Excluir selecionados (${selected})`;
   $("p-all").checked = boxes.length > 0 && selected === boxes.length;
 }
 /** Só o que está na lista pode estar selecionado: ao buscar, a seleção de quem saiu dela é desfeita. */
@@ -438,16 +561,17 @@ function renderPosts() {
     const tr = make("tr");
     const box = make("input", { type: "checkbox", value: p.slug, checked: keep.has(p.slug), onchange: updateSelection });
     box.setAttribute("aria-label", `Selecionar: ${p.title}`);
-    const cell = (child) => {
+    const cell = (child, label) => {
       const td = make("td");
+      if (label) td.dataset.label = label;
       td.append(child);
       tr.append(td);
     };
     cell(box);
     cell(p.status === "publish" ? make("a", { href: p.link, target: "_blank", rel: "noopener", textContent: p.title }) : p.title);
-    cell(p.category);
-    cell(p.date ? new Date(p.date).toLocaleDateString("pt-BR") : "");
-    cell(POST_STATUS[p.status] || p.status);
+    cell(p.category, "Categoria");
+    cell(p.date ? new Date(p.date).toLocaleDateString("pt-BR") : "", "Data");
+    cell(POST_STATUS[p.status] || p.status, "Status");
     const del = make("button", { type: "button", className: "ghost", textContent: "Excluir", onclick: () => deletePosts([p]) });
     del.setAttribute("aria-label", `Excluir: ${p.title}`);
     cell(del);
@@ -486,9 +610,12 @@ async function deletePosts(list) {
     if (err.status === 401) return enter();
     show($("msg"), err.message, "err");
   }
-  window.scrollTo({ top: 0, behavior: "smooth" });
 }
 $("p-search").oninput = renderPosts;
+$("p-clear").onclick = () => {
+  for (const c of postChecks()) c.checked = false;
+  updateSelection();
+};
 $("p-all").onchange = () => {
   for (const c of postChecks()) c.checked = $("p-all").checked;
   updateSelection();
@@ -549,9 +676,13 @@ $("au-photo").onchange = () => {
   if (!file) return;
   const info = $("au-photo-info");
   const label = `Arquivo escolhido: ${file.name} (${formatSize(file.size)}).`;
-  if (!["image/png", "image/jpeg", "image/webp"].includes(file.type)) return show(info, [label, "Formato não aceito. Envie um arquivo PNG, JPG ou WebP."], "err");
-  if (file.size === 0) return show(info, [label, "O arquivo está vazio. Escolha outro."], "err");
-  if (file.size > state.maxUploadBytes) return show(info, [label, `O arquivo passa do tamanho máximo de ${formatSize(state.maxUploadBytes)}. Reduza a imagem e envie de novo.`], "err");
+  const reject = (text) => {
+    show(info, label, "warn");
+    show($("msg"), text, "err");
+  };
+  if (!["image/png", "image/jpeg", "image/webp"].includes(file.type)) return reject("Formato não aceito. Envie um arquivo PNG, JPG ou WebP.");
+  if (file.size === 0) return reject("O arquivo está vazio. Escolha outro.");
+  if (file.size > state.maxUploadBytes) return reject(`O arquivo passa do tamanho máximo de ${formatSize(state.maxUploadBytes)}. Reduza a imagem e envie de novo.`);
   show(info, label, "ok");
   // O envio salva só a foto: o que foi digitado e ainda não salvo continua no formulário
   const draft = readAuthor();
@@ -613,6 +744,7 @@ $("wb-new").onclick = async () => {
 };
 $("wb-copy").onclick = () => navigator.clipboard.writeText($("wb-password").textContent).then(() => ($("wb-copy").textContent = "Copiado"));
 $("logout").onclick = async () => {
+  if (!confirmLeave()) return;
   await post("/admin/api/logout", {});
   location.reload();
 };
@@ -634,12 +766,16 @@ async function enter() {
   } catch {
     $("login").hidden = false;
     $("app").hidden = true;
+    document.body.classList.remove("in-app");
     return;
   }
   $("login").hidden = true;
   $("app").hidden = false;
+  document.body.classList.add("in-app");
   fill();
-  renderTabs();
+  renderNav();
+  showScreen(screenFromUrl(), false);
+  markSaved();
   clearInterval(poll);
   poll = setInterval(async () => {
     try {
