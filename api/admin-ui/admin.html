@@ -95,6 +95,18 @@
     <p><button>Salvar e publicar</button></p>
   </form>
 
+  <section class="card" data-tab="Artigos">
+    <h2>Artigos</h2>
+    <label for="p-search">Buscar pelo título</label><input id="p-search" type="search" autocomplete="off">
+    <p class="row"><span id="p-count" role="status"></span><button type="button" class="ghost fix" id="p-delete-many" disabled>Excluir selecionados</button></p>
+    <div class="table-wrap">
+      <table class="posts">
+        <thead><tr><th scope="col"><input type="checkbox" id="p-all" aria-label="Selecionar todos os artigos da lista"></th><th scope="col">Título</th><th scope="col">Categoria</th><th scope="col">Data</th><th scope="col">Status</th><th scope="col"><span class="sr-only">Ações</span></th></tr></thead>
+        <tbody id="p-rows"></tbody>
+      </table>
+    </div>
+  </section>
+
   <form class="card" data-tab="Rastreamento" id="f-tracking">
     <h2>Rastreamento</h2>
     <p class="hint">Tudo aqui só carrega depois que o visitante aceita as estatísticas no banner de cookies.</p>

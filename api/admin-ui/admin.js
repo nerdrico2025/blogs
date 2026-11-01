@@ -71,6 +71,7 @@ function renderTabs() {
     b.onclick = () => {
       tab = name;
       renderTabs();
+      if (name === "Artigos") loadPosts();
     };
     tabs.append(b);
   }
@@ -415,6 +416,87 @@ $("c-header-reset").onclick = () => {
   commitColor(f);
 };
 upload($("b-favicon"), "/admin/api/favicon", $("b-favicon-info"), Infinity, faviconWarning);
+const POST_STATUS = { publish: "Publicado", draft: "Rascunho", future: "Agendado", trash: "Na lixeira" };
+const plainTitle = (s) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+let posts = [];
+
+const postChecks = () => [...$("p-rows").querySelectorAll("input[type=checkbox]")];
+function updateSelection() {
+  const boxes = postChecks();
+  const selected = boxes.filter((c) => c.checked).length;
+  $("p-delete-many").disabled = selected === 0;
+  $("p-delete-many").textContent = selected ? `Excluir selecionados (${selected})` : "Excluir selecionados";
+  $("p-all").checked = boxes.length > 0 && selected === boxes.length;
+}
+/** Só o que está na lista pode estar selecionado: ao buscar, a seleção de quem saiu dela é desfeita. */
+function renderPosts() {
+  const q = plainTitle($("p-search").value.trim());
+  const keep = new Set(postChecks().filter((c) => c.checked).map((c) => c.value));
+  const list = posts.filter((p) => plainTitle(p.title).includes(q));
+  $("p-rows").replaceChildren(...list.map((p) => {
+    const tr = make("tr");
+    const box = make("input", { type: "checkbox", value: p.slug, checked: keep.has(p.slug), onchange: updateSelection });
+    box.setAttribute("aria-label", `Selecionar: ${p.title}`);
+    const cell = (child) => {
+      const td = make("td");
+      td.append(child);
+      tr.append(td);
+    };
+    cell(box);
+    cell(p.status === "publish" ? make("a", { href: p.link, target: "_blank", rel: "noopener", textContent: p.title }) : p.title);
+    cell(p.category);
+    cell(p.date ? new Date(p.date).toLocaleDateString("pt-BR") : "");
+    cell(POST_STATUS[p.status] || p.status);
+    const del = make("button", { type: "button", className: "ghost", textContent: "Excluir", onclick: () => deletePosts([p]) });
+    del.setAttribute("aria-label", `Excluir: ${p.title}`);
+    cell(del);
+    return tr;
+  }));
+  $("p-count").textContent = list.length === posts.length ? `${posts.length} artigo(s)` : `${list.length} de ${posts.length} artigo(s)`;
+  updateSelection();
+}
+async function loadPosts() {
+  try {
+    ({ posts } = await api("/admin/api/posts"));
+    renderPosts();
+  } catch (err) {
+    if (err.status === 401) return enter();
+    show($("msg"), err.message, "err");
+  }
+}
+async function deletePosts(list) {
+  const SHOWN = 10;
+  const titles = list.slice(0, SHOWN).map((p) => `"${p.title}"`).join("\n");
+  const more = list.length > SHOWN ? `\ne mais ${list.length - SHOWN}` : "";
+  const what = list.length === 1 ? "este artigo" : `estes ${list.length} artigos`;
+  if (!confirm(`Excluir ${what}?\n\n${titles}${more}\n\nEsta ação não pode ser desfeita.`)) return;
+  try {
+    const r = await post("/admin/api/posts/delete", { slugs: list.map((p) => p.slug) });
+    posts = r.posts;
+    renderPosts();
+    const n = r.deleted.length;
+    const notes = [];
+    if (n) notes.push(n === 1 ? "1 artigo excluído. Ele sai do site quando a publicação terminar." : `${n} artigos excluídos. Eles saem do site quando a publicação terminar.`);
+    if (r.missing.length) notes.push(`${r.missing.length} já não existia(m).`);
+    show($("msg"), notes, "ok");
+    if (r.failed.length) $("msg").append(make("div", { className: "msg err", textContent: `Não foi possível excluir: ${r.failed.join(", ")}. Atualize a lista e tente de novo.` }));
+    if (n && (r.build.state !== "idle" || r.build.pending)) watchPublish($("msg").firstChild);
+  } catch (err) {
+    if (err.status === 401) return enter();
+    show($("msg"), err.message, "err");
+  }
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+$("p-search").oninput = renderPosts;
+$("p-all").onchange = () => {
+  for (const c of postChecks()) c.checked = $("p-all").checked;
+  updateSelection();
+};
+$("p-delete-many").onclick = () => {
+  const chosen = new Set(postChecks().filter((c) => c.checked).map((c) => c.value));
+  deletePosts(posts.filter((p) => chosen.has(p.slug)));
+};
+
 $("f-home").onsubmit = (e) => {
   e.preventDefault();
   saved(post("/admin/api/home", {

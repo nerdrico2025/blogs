@@ -225,6 +225,23 @@ export async function registerAdmin(app: FastifyInstance, deps: AdminDeps): Prom
       return save("home", (s) => ({ ...s, home: { ...s.home, ...home } }));
     });
 
+    scope.get("/admin/api/posts", session, async () => ({ posts: await store.listArticles() }));
+
+    scope.post("/admin/api/posts/delete", session, async (req) => {
+      const { slugs } = (req.body ?? {}) as { slugs?: unknown };
+      if (!Array.isArray(slugs) || slugs.length === 0 || slugs.length > 500 || !slugs.every((s) => typeof s === "string")) {
+        throw new WpError(400, "invalid_settings", "Escolha de 1 a 500 artigos.");
+      }
+      const { deleted, missing, failed } = await store.deletePosts(slugs);
+      for (const f of failed) req.log.error({ slug: f.slug, err: f.error }, "não foi possível excluir o artigo");
+      if (deleted.length) {
+        req.log.info({ slugs: deleted }, "artigos excluídos pelo painel");
+        builds.request(deleted.length === 1 ? `exclusão de ${deleted[0]}` : `exclusão de ${deleted.length} artigos`);
+      }
+      // O motivo técnico fica só no log: pode trazer caminhos do volume
+      return { deleted, missing, failed: failed.map((f) => f.slug), build: builds.getStatus(), posts: await store.listArticles() };
+    });
+
     scope.post("/admin/api/categories", session, async (req) => {
       const body = (req.body ?? {}) as { categories?: unknown };
       const merged = mergeCategories(site.categories, body.categories, settings.current.nextCategoryId);

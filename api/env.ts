@@ -78,6 +78,10 @@ export interface ApiEnv {
   dailyBackupUtcHour: number;
   scheduleMinute: number;
   backupRetentionDays: number;
+  /** Cópias dos artigos excluídos no /admin; fora de toda pasta pública. */
+  trashDir: string;
+  /** Dias na lixeira antes da limpeza automática. 0 = nunca limpa. */
+  trashRetentionDays: number;
   s3: S3Config | null;
 }
 
@@ -149,6 +153,8 @@ export function loadEnv(overrides: Partial<ApiEnv> = {}): ApiEnv {
     dailyBackupUtcHour: num("DAILY_BACKUP_UTC_HOUR", 6),
     scheduleMinute: num("SCHEDULE_MINUTE", minute),
     backupRetentionDays: num("BACKUP_RETENTION_DAYS", 14),
+    trashDir: path.resolve(process.env.TRASH_DIR ?? path.join(path.dirname(settingsFile()), "lixeira")),
+    trashRetentionDays: num("TRASH_RETENTION_DAYS", 30),
     s3: s3FromEnv(),
     ...overrides,
   };
