@@ -3,9 +3,10 @@ import { mkdir, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
 import site, { reloadSite } from "../site.config.ts";
 import { hasSiteFolder } from "../src/lib/site-id.ts";
-import { AD_POSITIONS, isHex, readSettings, type AdSlot, type HomeLink, type HomeSettings, type Settings } from "../shared/settings.ts";
+import { AD_POSITIONS, AUTHOR_LINKS, isHex, readSettings, type AdSlot, type AuthorProfile, type HomeLink, type HomeSettings, type Settings } from "../shared/settings.ts";
 import type { Category } from "../src/lib/config-schema.ts";
 import { WpError } from "./errors.ts";
+import { slugify } from "./store.ts";
 
 const invalid = (msg: string) => new WpError(400, "invalid_settings", msg);
 const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -203,6 +204,50 @@ export function parseHome(b: Record<string, unknown>): HomeSettings {
   if (b.footerText !== undefined) home.footerText = str(b.footerText, "Texto do rodapé", HOME_LIMITS.footer).trim();
   if (b.searchPlaceholder !== undefined) home.searchPlaceholder = str(b.searchPlaceholder, "Texto da busca", HOME_LIMITS.placeholder).trim();
   return home;
+}
+
+export const AUTHOR_LIMITS = { name: 80, role: 80, bioShort: 200, bioFull: 5000, alt: 160, credentials: 6, credential: 160, specialties: 8, specialty: 60, url: 500, email: 200 };
+const LINK_LABELS: Record<(typeof AUTHOR_LINKS)[number], string> = { site: "Site", instagram: "Instagram", linkedin: "LinkedIn", youtube: "YouTube", x: "X" };
+
+function textList(v: unknown, label: string, max: number, maxLength: number): string[] {
+  if (v !== undefined && !Array.isArray(v)) throw invalid(`${label}: lista inválida.`);
+  const items = ((v ?? []) as unknown[]).map((it) => str(it, label, maxLength).trim()).filter(Boolean);
+  if (items.length > max) throw invalid(`${label}: são no máximo ${max} itens.`);
+  return items;
+}
+
+/** Texto puro: quem escapa o HTML é o Astro, ao publicar. Só a foto e o histórico de endereços vêm do que já estava salvo. */
+export function parseAuthor(b: Record<string, unknown>, previous: AuthorProfile | undefined): AuthorProfile {
+  const name = str(b.name, "Nome", AUTHOR_LIMITS.name).trim();
+  const input = (b.links ?? {}) as Record<string, unknown>;
+  const links: AuthorProfile["links"] = {};
+  for (const key of AUTHOR_LINKS) {
+    const url = str(input[key], LINK_LABELS[key], AUTHOR_LIMITS.url).trim();
+    if (!url) continue;
+    if (!/^https?:\/\//i.test(url) || !validHref(url)) throw invalid(`${LINK_LABELS[key]}: use um endereço completo, como https://exemplo.com/.`);
+    links[key] = url;
+  }
+  const email = str(b.email, "E-mail público", AUTHOR_LIMITS.email).trim();
+  if (email && !/^[^\s@<>"'&?]+@[^\s@<>"'&?]+\.[^\s@<>"'&?]+$/.test(email)) throw invalid("E-mail público: confira o endereço.");
+  // Sem nome, o endereço anterior é mantido: o autor pode ser cadastrado de novo
+  const slug = name ? slugify(name) || "autor" : previous?.slug ?? "";
+  const aliases = new Set(previous?.aliases ?? []);
+  if (previous?.slug && previous.slug !== slug) aliases.add(previous.slug);
+  aliases.delete(slug);
+  return {
+    name,
+    slug,
+    ...(aliases.size ? { aliases: [...aliases] } : {}),
+    role: str(b.role, "Cargo", AUTHOR_LIMITS.role).trim(),
+    bioShort: str(b.bioShort, "Bio curta", AUTHOR_LIMITS.bioShort).trim(),
+    bioFull: str(b.bioFull, "Bio completa", AUTHOR_LIMITS.bioFull).trim(),
+    ...(previous?.photo ? { photo: previous.photo } : {}),
+    photoAlt: str(b.photoAlt, "Texto alternativo da foto", AUTHOR_LIMITS.alt).trim(),
+    credentials: textList(b.credentials, "Credenciais", AUTHOR_LIMITS.credentials, AUTHOR_LIMITS.credential),
+    specialties: textList(b.specialties, "Áreas de especialidade", AUTHOR_LIMITS.specialties, AUTHOR_LIMITS.specialty),
+    links,
+    email,
+  };
 }
 
 export function validSlug(slug: string): boolean {

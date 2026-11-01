@@ -63,7 +63,7 @@ const preload = coverMeta ? { srcset: srcset(coverMeta, bestFormat(coverMeta)), 
         ))}
       </div>
       {/* Sem relacionados, o anúncio ficaria colado no cartão do autor */}
-      {(suggestions.length > 0 || !cfg.authorBox.enabled) && <AdSlot position="afterContent" />}
+      {(suggestions.length > 0 || !(cfg.authorBox.enabled || site.authorProfile)) && <AdSlot position="afterContent" />}
       <RelatedPosts posts={suggestions} />
       <AuthorBox author={post.author} />
     </article>

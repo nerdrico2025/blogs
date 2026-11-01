@@ -27,3 +27,4 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 .steps{color:var(--m);font-size:14px}
 input.emoji{width:72px;text-align:center}.row>.fix input.emoji{width:72px}.home-row{border-bottom:1px solid var(--b);padding-bottom:10px;margin-bottom:10px}.home-row label{margin-top:0}
 .table-wrap{overflow-x:auto}.posts{width:100%;border-collapse:collapse;font-size:14px}.posts th,.posts td{padding:8px;text-align:left;border-bottom:1px solid var(--b);vertical-align:middle}.posts th{color:var(--ink)}.posts td button{padding:6px 10px}.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+.author-preview{display:flex;align-items:center;gap:8px;padding:10px 12px;border:1px solid var(--b);border-radius:8px;font-size:14px}.author-preview img{border-radius:50%;width:36px;height:36px;object-fit:cover}.author-preview-photo{border-radius:50%;max-height:96px}

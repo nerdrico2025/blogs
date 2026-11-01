@@ -1,0 +1,72 @@
+---
+/** Página do autor cadastrado na aba Autor. Sem cadastro, a página não existe. */
+import type { GetStaticPaths } from "astro";
+import site from "../../../site.config.ts";
+import { authorPhotoUrl, authorUrl } from "../../../shared/settings.ts";
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import TwoColumn from "../../components/layout/TwoColumn.astro";
+import { formatDate, isoDate } from "../../lib/format.ts";
+import { getPosts } from "../../lib/posts.ts";
+import { authorPerson, breadcrumb, breadcrumbRef, webPage } from "../../lib/seo.ts";
+
+export const getStaticPaths = (() => (site.authorProfile ? [{ params: { slug: site.authorProfile.slug } }] : [])) satisfies GetStaticPaths;
+
+const profile = site.authorProfile!;
+const path = authorUrl(profile);
+const posts = await getPosts();
+const description = profile.bioShort || `Artigos de ${profile.name} no ${site.name}.`;
+const paragraphs = (profile.bioFull || profile.bioShort).split(/\n\s*\n/).map((p) => p.trim()).filter(Boolean);
+const person = authorPerson(profile);
+const seo = {
+  title: profile.name,
+  description,
+  path,
+  ...(profile.photo ? { image: { src: authorPhotoUrl(profile.photo, 400), width: 400, height: 400, alt: profile.photoAlt || profile.name } } : {}),
+  graph: [
+    webPage(path, profile.name, description, "ProfilePage", { breadcrumb: breadcrumbRef(path), mainEntity: { "@id": person["@id"] } }),
+    breadcrumb(path, [{ name: profile.name, path }]),
+    person,
+  ],
+};
+const LINKS = { site: "Site", instagram: "Instagram", linkedin: "LinkedIn", youtube: "YouTube", x: "X" } as const;
+const links = (Object.keys(LINKS) as (keyof typeof LINKS)[]).flatMap((k) => (profile.links[k] ? [{ label: LINKS[k], href: profile.links[k]! }] : []));
+---
+<BaseLayout seo={seo}>
+  <TwoColumn>
+    <article class="card article author-page">
+      <header class="author-page-head">
+        {profile.photo && (
+          <img class="author-page-photo" src={authorPhotoUrl(profile.photo, 400)} srcset={`${authorPhotoUrl(profile.photo, 192)} 192w, ${authorPhotoUrl(profile.photo, 400)} 400w`} sizes="160px" alt={profile.photoAlt || profile.name} width="160" height="160" />
+        )}
+        <div>
+          <h1>{profile.name}</h1>
+          {profile.role && <p class="author-role">{profile.role}</p>}
+        </div>
+      </header>
+      <div class="prose">{paragraphs.map((p) => <p>{p}</p>)}</div>
+      {profile.credentials.length > 0 && (
+        <section><h2>Credenciais e experiência</h2><ul>{profile.credentials.map((c) => <li>{c}</li>)}</ul></section>
+      )}
+      {profile.specialties.length > 0 && (
+        <section><h2>Áreas de especialidade</h2><ul>{profile.specialties.map((c) => <li>{c}</li>)}</ul></section>
+      )}
+      {(links.length > 0 || profile.email) && (
+        <section>
+          <h2>Links</h2>
+          <ul class="author-links">
+            {links.map((l) => <li><a href={l.href} rel="me noopener">{l.label}</a></li>)}
+            {profile.email && <li><a href={`mailto:${profile.email}`}>{profile.email}</a></li>}
+          </ul>
+        </section>
+      )}
+      {posts.length > 0 && (
+        <section>
+          <h2>Artigos</h2>
+          <ul class="author-posts">
+            {posts.map((p) => <li><a href={p.url}>{p.title}</a> <time datetime={isoDate(p.date)}>{formatDate(p.date)}</time></li>)}
+          </ul>
+        </section>
+      )}
+    </article>
+  </TwoColumn>
+</BaseLayout>

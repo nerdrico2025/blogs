@@ -95,6 +95,37 @@
     <p><button>Salvar e publicar</button></p>
   </form>
 
+  <form class="card" data-tab="Autor" id="f-author">
+    <h2>Autor</h2>
+    <p class="hint">Use uma pessoa real e credenciais verdadeiras.</p>
+    <p class="hint">Com o nome preenchido, esta pessoa assina todos os artigos, e o site ganha a página dela. Sem nome, os artigos saem como <strong id="au-fallback"></strong>.</p>
+    <div class="row">
+      <div><label for="au-name">Nome</label><input id="au-name" maxlength="80" autocomplete="off"></div>
+      <div><label for="au-role">Cargo ou título</label><input id="au-role" maxlength="80" placeholder="Ex.: Consultor de viagens"></div>
+    </div>
+    <label for="au-short">Bio curta (até 200 caracteres)</label><textarea id="au-short" class="text" maxlength="200" style="min-height:70px"></textarea>
+    <label for="au-full">Bio completa</label><textarea id="au-full" class="text" maxlength="5000"></textarea>
+    <label for="au-photo">Foto</label><img class="preview author-preview-photo" id="au-photo-preview" alt="Foto atual do autor" hidden><input type="file" id="au-photo" accept="image/png,image/jpeg,image/webp">
+    <p class="hint">PNG, JPG ou WebP, quadrada ou com o rosto ao centro, a partir de 400 × 400 px. É recortada em quadrado, e os dados de localização são removidos.</p>
+    <p><button type="button" class="ghost" id="au-photo-remove" hidden>Remover foto</button></p>
+    <div id="au-photo-info" aria-live="polite"></div>
+    <label for="au-alt">Texto alternativo da foto</label><input id="au-alt" maxlength="160" placeholder="Ex.: Retrato de Ana Souza sorrindo">
+    <label for="au-credentials">Credenciais e experiência (uma por linha, até 6)</label><textarea id="au-credentials" class="text" style="min-height:110px"></textarea>
+    <label for="au-specialties">Áreas de especialidade (uma por linha, até 8)</label><textarea id="au-specialties" class="text" style="min-height:90px"></textarea>
+    <h3 style="margin-top:12px">Links (todos opcionais)</h3>
+    <div class="row">
+      <div><label for="au-site">Site</label><input id="au-site" type="url" maxlength="500" placeholder="https://"></div>
+      <div><label for="au-instagram">Instagram</label><input id="au-instagram" type="url" maxlength="500" placeholder="https://"></div>
+      <div><label for="au-linkedin">LinkedIn</label><input id="au-linkedin" type="url" maxlength="500" placeholder="https://"></div>
+      <div><label for="au-youtube">YouTube</label><input id="au-youtube" type="url" maxlength="500" placeholder="https://"></div>
+      <div><label for="au-x">X</label><input id="au-x" type="url" maxlength="500" placeholder="https://"></div>
+      <div><label for="au-email">E-mail público</label><input id="au-email" type="email" maxlength="200"></div>
+    </div>
+    <h3 style="margin-top:16px">Prévia da assinatura no artigo</h3>
+    <div class="author-preview" id="au-preview" aria-live="off"><img id="au-pv-photo" alt="" width="36" height="36" hidden><span>Por <strong id="au-pv-name"></strong><span id="au-pv-role"></span></span></div>
+    <p><button>Salvar e publicar</button></p>
+  </form>
+
   <section class="card" data-tab="Artigos">
     <h2>Artigos</h2>
     <label for="p-search">Buscar pelo título</label><input id="p-search" type="search" autocomplete="off">

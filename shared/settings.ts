@@ -53,7 +53,33 @@ export interface HomeSettings {
   searchPlaceholder?: string;
 }
 
+export const AUTHOR_LINKS = ["site", "instagram", "linkedin", "youtube", "x"] as const;
+export const AUTHOR_PHOTO_WIDTHS = [96, 192, 400] as const;
+
+/** Autor de referência, da aba Autor. Vale só com nome preenchido. Separado de `authors`, que alimenta o GET /users/me. */
+export interface AuthorProfile {
+  name: string;
+  /** Parte do endereço /autor/<slug>/. */
+  slug: string;
+  /** Slugs antigos: redirecionam para o atual. */
+  aliases?: string[];
+  role: string;
+  bioShort: string;
+  bioFull: string;
+  /** `base` é o caminho sem a largura: <base>-<largura>.webp */
+  photo?: { base: string };
+  photoAlt: string;
+  credentials: string[];
+  specialties: string[];
+  links: Partial<Record<(typeof AUTHOR_LINKS)[number], string>>;
+  email: string;
+}
+
+export const authorPhotoUrl = (photo: { base: string }, width: (typeof AUTHOR_PHOTO_WIDTHS)[number]) => `${photo.base}-${width}.webp`;
+export const authorUrl = (profile: { slug: string }) => `/autor/${profile.slug}/`;
+
 export interface Settings {
+  authorProfile?: AuthorProfile;
   home?: HomeSettings;
   /** Marca o fim do assistente de primeiro acesso. */
   configured?: boolean;
@@ -287,6 +313,9 @@ export function applySettings(base: SiteConfig, s: Settings): SiteConfig {
     out.ads = { headScript: s.ads.headScript ?? "", slots: s.ads.slots ?? {} };
     if (s.ads.adsTxt?.trim()) out.adsTxt = s.ads.adsTxt.split("\n").map((l) => l.trim()).filter(Boolean);
   }
+  // Definido mesmo vazio: a recarga no servidor copia as chaves por cima, e apagar o nome precisa valer
+  out.authorProfile = s.authorProfile?.name?.trim() ? s.authorProfile : undefined;
+
   const h = s.home;
   if (h?.tools) out.sidebar.tools = { ...h.tools, icon: h.tools.icon ?? out.sidebar.tools.icon };
   if (h?.callout) out.sidebar.callout = { ...h.callout, icon: h.callout.icon ?? out.sidebar.callout.icon };

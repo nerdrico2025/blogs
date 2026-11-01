@@ -113,8 +113,8 @@ $("s1").onsubmit = async (e) => {
     $("c2").value = p.palette.highlight;
     $("c3").value = p.palette.callout;
     $("cats").replaceChildren(...p.categories.map(catRow));
-    $("aname").value = p.authorName;
-    $("abio").value = p.authorBio;
+    $("expert").textContent = p.expertProfile || "";
+    $("expert-box").hidden = !p.expertProfile;
     $("about").value = p.about;
     fillHome(p.home);
     go("s3");
@@ -147,8 +147,6 @@ $("s3").onsubmit = async (e) => {
         tagline: $("tagline").value,
         palette: { primary: $("c1").value, highlight: $("c2").value, callout: $("c3").value },
         categories,
-        authorName: $("aname").value,
-        authorBio: $("abio").value,
         about: $("about").value,
         home: readHome(),
       },

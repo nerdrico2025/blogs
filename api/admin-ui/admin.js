@@ -282,6 +282,7 @@ function fill() {
   renderPreview();
   if (state.warnings.length) show($("contrast"), state.warnings, "warn");
   else $("contrast").replaceChildren();
+  fillAuthor(state.author || {});
   fillHome();
   $("t-gtm").value = state.tracking.gtmId;
   $("t-head").value = state.tracking.headCode;
@@ -495,6 +496,72 @@ $("p-all").onchange = () => {
 $("p-delete-many").onclick = () => {
   const chosen = new Set(postChecks().filter((c) => c.checked).map((c) => c.value));
   deletePosts(posts.filter((p) => chosen.has(p.slug)));
+};
+
+const AUTHOR_LINK_KEYS = ["site", "instagram", "linkedin", "youtube", "x"];
+const lines = (el) => el.value.split("\n").map((l) => l.trim()).filter(Boolean);
+function readAuthor() {
+  return {
+    name: $("au-name").value,
+    role: $("au-role").value,
+    bioShort: $("au-short").value,
+    bioFull: $("au-full").value,
+    photoAlt: $("au-alt").value,
+    credentials: lines($("au-credentials")),
+    specialties: lines($("au-specialties")),
+    links: Object.fromEntries(AUTHOR_LINK_KEYS.map((k) => [k, $(`au-${k}`).value])),
+    email: $("au-email").value,
+  };
+}
+function renderAuthorPreview() {
+  const name = $("au-name").value.trim();
+  const photo = name && state?.author?.photo;
+  $("au-pv-name").textContent = name || state?.authorFallback || "";
+  $("au-pv-role").textContent = name && $("au-role").value.trim() ? `, ${$("au-role").value.trim()}` : "";
+  $("au-pv-photo").hidden = !photo;
+  if (photo) $("au-pv-photo").src = `${photo.base}-96.webp`;
+}
+function fillAuthor(a) {
+  $("au-fallback").textContent = state.authorFallback;
+  $("au-name").value = a.name || "";
+  $("au-role").value = a.role || "";
+  $("au-short").value = a.bioShort || "";
+  $("au-full").value = a.bioFull || "";
+  $("au-alt").value = a.photoAlt || "";
+  $("au-credentials").value = (a.credentials || []).join("\n");
+  $("au-specialties").value = (a.specialties || []).join("\n");
+  for (const k of AUTHOR_LINK_KEYS) $(`au-${k}`).value = a.links?.[k] || "";
+  $("au-email").value = a.email || "";
+  const photo = state.author?.photo;
+  $("au-photo-preview").hidden = !photo;
+  $("au-photo-remove").hidden = !photo;
+  if (photo) $("au-photo-preview").src = `${photo.base}-192.webp`;
+  renderAuthorPreview();
+}
+for (const id of ["au-name", "au-role"]) $(id).addEventListener("input", renderAuthorPreview);
+$("f-author").onsubmit = (e) => {
+  e.preventDefault();
+  saved(post("/admin/api/author", readAuthor()));
+};
+$("au-photo").onchange = () => {
+  const file = $("au-photo").files[0];
+  $("au-photo").value = "";
+  if (!file) return;
+  const info = $("au-photo-info");
+  const label = `Arquivo escolhido: ${file.name} (${formatSize(file.size)}).`;
+  if (!["image/png", "image/jpeg", "image/webp"].includes(file.type)) return show(info, [label, "Formato não aceito. Envie um arquivo PNG, JPG ou WebP."], "err");
+  if (file.size === 0) return show(info, [label, "O arquivo está vazio. Escolha outro."], "err");
+  if (file.size > state.maxUploadBytes) return show(info, [label, `O arquivo passa do tamanho máximo de ${formatSize(state.maxUploadBytes)}. Reduza a imagem e envie de novo.`], "err");
+  show(info, label, "ok");
+  // O envio salva só a foto: o que foi digitado e ainda não salvo continua no formulário
+  const draft = readAuthor();
+  saved(api("/admin/api/author-photo", { method: "POST", headers: { "Content-Type": file.type }, body: file }), "", () => fillAuthor(draft));
+};
+$("au-photo-remove").onclick = () => {
+  if (!confirm("Remover a foto do autor? A imagem será apagada do servidor.")) return;
+  $("au-photo-info").replaceChildren();
+  const draft = readAuthor();
+  saved(post("/admin/api/author", { ...draft, removePhoto: true }), "", () => fillAuthor(draft));
 };
 
 $("f-home").onsubmit = (e) => {

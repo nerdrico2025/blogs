@@ -1,6 +1,7 @@
 ---
 import site from "../../../site.config.ts";
 import Icon from "../Icon.astro";
+import { authorPhotoUrl, authorUrl } from "../../../shared/settings.ts";
 import type { Author } from "../../lib/config-schema.ts";
 interface Props {
   author: Author;
@@ -8,8 +9,23 @@ interface Props {
 const { author } = Astro.props;
 const cfg = site.article.authorBox;
 const youtube = author.links?.youtube ?? site.social?.youtube;
+const profile = site.authorProfile;
 ---
-{cfg.enabled && (
+{profile && (
+  <section class="card author-box" aria-labelledby="author-name" data-pagefind-ignore>
+    {profile.photo
+      ? <img class="author-photo" src={authorPhotoUrl(profile.photo, 192)} alt={profile.photoAlt || profile.name} width="90" height="90" loading="lazy" decoding="async" />
+      : <span aria-hidden="true"></span>}
+    <div>
+      <span class="kicker">Sobre o autor</span>
+      <h2 class="author-name" id="author-name"><a href={authorUrl(profile)}>{profile.name}</a></h2>
+      {profile.role && <p class="author-role">{profile.role}</p>}
+      {profile.bioShort && <p class="author-bio">{profile.bioShort}</p>}
+      <div class="author-actions"><a class="btn btn-accent" href={authorUrl(profile)}>Ver perfil completo</a></div>
+    </div>
+  </section>
+)}
+{!profile && cfg.enabled && (
   <section class="card author-box" aria-labelledby="author-name" data-pagefind-ignore>
     <img class="author-photo" src={author.avatar} alt="" width="90" height="90" loading="lazy" decoding="async" />
     <div>

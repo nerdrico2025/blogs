@@ -2,7 +2,7 @@ import { getCollection, type CollectionEntry } from "astro:content";
 import site from "../../site.config.ts";
 import type { Author, Category } from "./config-schema.ts";
 import type { FaqItem } from "../markdown/rehype-blog.ts";
-import { findCategory } from "../../shared/settings.ts";
+import { authorPhotoUrl, findCategory } from "../../shared/settings.ts";
 
 export type Post = CollectionEntry<"posts">;
 
@@ -50,6 +50,13 @@ function firstParagraph(html: string): string {
   return m ? m[1]!.replace(/<[^>]+>/g, "") : "";
 }
 
+/** Com autor cadastrado, ele assina todos os artigos, qualquer que seja o `author` do arquivo. */
+function registeredAuthor(): PostView["author"] | null {
+  const p = site.authorProfile;
+  if (!p) return null;
+  return { id: p.slug, name: p.name, role: p.role, bio: p.bioShort, avatar: p.photo ? authorPhotoUrl(p.photo, 400) : "", links: p.links };
+}
+
 export function toView(entry: Post): PostView {
   const meta = (entry.rendered?.metadata?.frontmatter ?? {}) as { readingTime?: number; words?: number; faq?: FaqItem[] };
   const category = categoryBySlug(entry.data.category);
@@ -66,7 +73,7 @@ export function toView(entry: Post): PostView {
     date: entry.data.date,
     updated: entry.data.updated ?? entry.data.date,
     category,
-    author: { ...site.authors[authorId]!, id: authorId },
+    author: registeredAuthor() ?? { ...site.authors[authorId]!, id: authorId },
     readingTime: meta.readingTime ?? 1,
     words: meta.words ?? 0,
     faq: meta.faq ?? [],

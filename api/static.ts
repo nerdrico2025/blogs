@@ -76,6 +76,9 @@ export async function registerStatic(app: FastifyInstance, env: ApiEnv, isConfig
       const cat = site.categories.find((c) => c.aliases?.includes(renamed[1]!));
       if (cat) return reply.redirect(`/category/${cat.slug}${renamed[2] ?? "/"}`, 301);
     }
+    // Nome do autor trocado no /admin
+    const author = p.match(/^\/autor\/([^/]+)\/?$/);
+    if (author && site.authorProfile?.aliases?.includes(author[1]!)) return reply.redirect(`/autor/${site.authorProfile.slug}/`, 301);
     // Caminhos do WordPress que não existem aqui e arquivos ocultos
     if (BLOCKED.test(p) && !p.startsWith("/.well-known/")) return notFoundPage(reply);
     // Migração: lista do blog, com ou sem barra no fim
