@@ -29,6 +29,17 @@ const GOOD = {
   tagline: "Sua horta em casa",
   // Amarelo claro: precisa ser escurecido
   palette: { primary: "#ffee00", highlight: "#116633", callout: "#114411" },
+  home: {
+    tools: {
+      title: "Vai plantar?",
+      text: "O que usamos na horta.",
+      items: ["Vasos", "Sementes", "Adubo", "Ferramentas", "Regador"].map((label) => ({ icon: "🌱", label, href: "/category/cat-1/" })),
+      button: { label: "Ver tudo", href: "/sobre/" },
+    },
+    callout: { kicker: "Guias", title: "Guia da horta", text: "Passo a passo para começar.", button: { label: "Conhecer", href: "/category/cat-2/" } },
+    footerText: "Horta em Casa é um blog independente.",
+    searchPlaceholder: "Ex.: tomate em vaso",
+  },
 };
 const responses: { status: number; body: unknown }[] = [];
 const requests: { headers: Record<string, unknown>; body: Record<string, unknown> }[] = [];
@@ -40,8 +51,8 @@ const { buildApp } = await import("./server.ts");
 const { default: site } = await import("../site.config.ts");
 let ctx: Awaited<ReturnType<typeof buildApp>>;
 
-const setup = (url: string, payload: object, token = TOKEN) =>
-  ctx.app.inject({ method: "POST", url: `/admin/setup/api/${url}`, headers: { "x-setup-token": token }, payload });
+const setup = (url: string, payload: object, token = TOKEN, remoteAddress = "127.0.0.1") =>
+  ctx.app.inject({ method: "POST", url: `/admin/setup/api/${url}`, remoteAddress, headers: { "x-setup-token": token }, payload });
 const generateBody = { name: "Horta em Casa", niche: "hortas urbanas", lang: "pt-BR" };
 
 before(async () => {
@@ -148,8 +159,60 @@ describe("geração com IA", () => {
   });
 });
 
+describe("blocos da home gerados pela IA", () => {
+  const withHome = (home: unknown) => ({ status: 200, body: textMessage(JSON.stringify({ ...GOOD, home })) });
+  // Cada caso com um endereço próprio, por causa do limite de 6 gerações por minuto
+  let retryIp = 0;
+
+  test("o pedido exige os blocos no JSON, e as caixas voltam ligadas", async () => {
+    responses.push(withHome(GOOD.home));
+    const res = await setup("generate", generateBody, TOKEN, "10.3.0.2");
+    assert.equal(res.statusCode, 200, res.body);
+    const schema = (requests.at(-1)!.body.output_config as { format: { schema: { required: string[] } } }).format.schema;
+    assert.ok(schema.required.includes("home"));
+    const { home } = res.json();
+    assert.equal(home.tools.enabled, true);
+    assert.equal(home.callout.enabled, true);
+    assert.equal(home.tools.items.length, 5);
+    assert.equal(home.ticker, undefined, "a faixa do topo não é gerada");
+  });
+
+  for (const [name, bad] of [
+    ["HTML no texto", { ...GOOD.home, footerText: "<script>alert(1)</script>" }],
+    ["texto longo demais", { ...GOOD.home, searchPlaceholder: "x".repeat(81) }],
+    ["link externo inventado", { ...GOOD.home, callout: { ...GOOD.home.callout, button: { label: "Comprar", href: "https://afiliado.example/" } } }],
+    ["categoria inexistente", { ...GOOD.home, callout: { ...GOOD.home.callout, button: { label: "Ver", href: "/category/nao-existe/" } } }],
+    ["link javascript", { ...GOOD.home, callout: { ...GOOD.home.callout, button: { label: "Ver", href: "javascript:alert(1)" } } }],
+    ["só 2 itens", { ...GOOD.home, tools: { ...GOOD.home.tools, items: GOOD.home.tools.items.slice(0, 2) } }],
+  ] as const) {
+    test(`${name}: pede de novo`, async () => {
+      responses.push(withHome(bad), withHome(GOOD.home));
+      const res = await setup("generate", generateBody, TOKEN, `10.2.0.${++retryIp}`);
+      assert.equal(res.statusCode, 200, res.body);
+      assert.match(JSON.stringify(requests.at(-1)!.body.messages), /recusada/);
+      assert.equal(res.json().home.tools.title, "Vai plantar?");
+    });
+  }
+
+  test("blocos inválidos duas vezes não travam o assistente: voltam vazios", async () => {
+    responses.push(withHome({ tools: 1 }), withHome(null));
+    const res = await setup("generate", generateBody, TOKEN, "10.3.0.1");
+    assert.equal(res.statusCode, 200, res.body);
+    assert.equal(res.json().home, null);
+    assert.equal(res.json().categories.length, 5);
+  });
+});
+
 describe("publicar", () => {
   let password = "";
+
+  test("link para categoria removida na revisão é recusado e nada é gravado", async () => {
+    const proposal = { ...GOOD, categories: GOOD.categories.slice(1), home: { ...GOOD.home, tools: { ...GOOD.home.tools, enabled: true } } };
+    const res = await setup("publish", { name: "Horta em Casa", adminPassword: "senha-do-painel", proposal });
+    assert.equal(res.statusCode, 400);
+    assert.match(res.json().message, /cat-1/);
+    assert.ok(!existsSync(process.env.SETTINGS_FILE!));
+  });
 
   test("senha fraca é recusada e nada é gravado", async () => {
     const res = await setup("publish", { name: "Horta em Casa", adminPassword: "curta", proposal: GOOD });
@@ -158,9 +221,16 @@ describe("publicar", () => {
   });
 
   test("grava configurações, ids estáveis, Sobre e secrets 600; mostra a senha", async () => {
-    const res = await setup("publish", { name: "Horta em Casa", lang: "pt-BR", adminPassword: "senha-do-painel", proposal: { ...GOOD, palette: { ...GOOD.palette } } });
+    const res = await setup("publish", { name: "Horta em Casa", lang: "pt-BR", adminPassword: "senha-do-painel", proposal: { ...GOOD, palette: { ...GOOD.palette }, home: { ...GOOD.home, tools: { ...GOOD.home.tools, enabled: true }, callout: { ...GOOD.home.callout, enabled: true, button: { label: "Parceiro", href: "https://afiliado.example/" } } } } });
     assert.equal(res.statusCode, 200, res.body);
     password = res.json().wordbee.password;
+    assert.equal(site.sidebar.tools.title, "Vai plantar?");
+    assert.equal(site.sidebar.tools.enabled, true);
+    assert.equal(site.sidebar.tools.icon, "🧰", "emoji neutro do modelo");
+    assert.equal(site.sidebar.callout.button.href, "https://afiliado.example/", "quem revisa pode pôr link externo");
+    assert.equal(site.footer.text, GOOD.home.footerText);
+    assert.equal(site.sidebar.search.placeholder, GOOD.home.searchPlaceholder);
+    assert.equal(site.ticker.enabled, false, "a faixa continua desligada");
     assert.equal(res.json().wordbee.user, "wordbee");
 
     const saved = JSON.parse(readFileSync(process.env.SETTINGS_FILE!, "utf8"));

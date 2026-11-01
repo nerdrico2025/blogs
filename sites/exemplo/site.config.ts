@@ -84,6 +84,7 @@ export default defineSiteConfig({
 
   ticker: {
     enabled: true,
+    separator: "✈",
     /**
      * "awesomeapi": cotação buscada no build (economia.awesomeapi.com.br, cache de 1 h);
      * se a API falhar, usa `value`. "static": sempre `value`.

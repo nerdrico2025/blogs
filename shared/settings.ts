@@ -4,7 +4,7 @@
  */
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
-import type { Category, ImageRef, SiteConfig } from "../src/lib/config-schema.ts";
+import type { Category, ImageRef, SidebarBlock, SiteConfig } from "../src/lib/config-schema.ts";
 import { localDataDir, siteDir } from "../src/lib/site-id.ts";
 
 export const AD_POSITIONS = ["header", "beforeContent", "inContent", "afterContent", "sidebarTop", "sidebarBottom", "footer", "mobileSticky"] as const;
@@ -39,7 +39,22 @@ export interface TrackingConfig {
   bodyCode: string;
 }
 
+export interface HomeLink {
+  label: string;
+  href: string;
+}
+
+/** Blocos editáveis na aba Home. Bloco ausente = vale o que está no site.config.ts. */
+export interface HomeSettings {
+  tools?: { enabled: boolean; icon?: string; title: string; text: string; items: { icon: string; label: string; href?: string }[]; button: HomeLink };
+  callout?: { enabled: boolean; icon?: string; kicker: string; title: string; text: string; button: HomeLink };
+  ticker?: { enabled: boolean; showRates: boolean; showClocks: boolean; clocks: { label: string; timezone: string }[] };
+  footerText?: string;
+  searchPlaceholder?: string;
+}
+
 export interface Settings {
+  home?: HomeSettings;
   /** Marca o fim do assistente de primeiro acesso. */
   configured?: boolean;
   /** Versão do gerador que produziu as imagens da marca (ver api/brand-images.ts). */
@@ -272,7 +287,40 @@ export function applySettings(base: SiteConfig, s: Settings): SiteConfig {
     out.ads = { headScript: s.ads.headScript ?? "", slots: s.ads.slots ?? {} };
     if (s.ads.adsTxt?.trim()) out.adsTxt = s.ads.adsTxt.split("\n").map((l) => l.trim()).filter(Boolean);
   }
+  const h = s.home;
+  if (h?.tools) out.sidebar.tools = { ...h.tools, icon: h.tools.icon ?? out.sidebar.tools.icon };
+  if (h?.callout) out.sidebar.callout = { ...h.callout, icon: h.callout.icon ?? out.sidebar.callout.icon };
+  if (h?.ticker) {
+    out.ticker.enabled = h.ticker.enabled;
+    out.ticker.rates = h.ticker.showRates ? out.ticker.rates : [];
+    out.ticker.clocks = h.ticker.showClocks ? h.ticker.clocks : [];
+  }
+  if (h?.footerText !== undefined) out.footer.text = h.footerText;
+  if (h?.searchPlaceholder !== undefined) out.sidebar.search.placeholder = h.searchPlaceholder;
   return out;
+}
+
+/** Caixa ligada mas vazia não aparece: a de recursos sem itens, a de destaque sem título. */
+export function sidebarBlockVisible(site: Pick<SiteConfig, "sidebar">, block: SidebarBlock): boolean {
+  const { sidebar } = site;
+  if (!sidebar[block].enabled) return false;
+  if (block === "tools") return sidebar.tools.items.length > 0;
+  if (block === "callout") return Boolean(sidebar.callout.title.trim());
+  return true;
+}
+
+/**
+ * Link para fora do blog abre em outra aba e é marcado como patrocinado.
+ * Endereço completo do próprio domínio continua sendo link interno.
+ */
+export function linkAttrs(href: string, siteUrl: string): { href: string; rel?: string; target?: string } {
+  if (!/^https?:\/\//i.test(href)) return { href };
+  try {
+    if (new URL(href).host === new URL(siteUrl).host) return { href };
+  } catch {
+    // Endereço ilegível é tratado como externo, o caso mais restrito
+  }
+  return { href, rel: "sponsored noopener", target: "_blank" };
 }
 
 /** Categoria pelo slug atual ou por um slug antigo (posts gravados antes de renomear). */

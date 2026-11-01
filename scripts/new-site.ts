@@ -105,6 +105,26 @@ for (const [block, indent, note] of [
 ] as const) {
   replace(new RegExp(`(${block}: \\{\\n${indent})enabled: true,`), `$1enabled: false, // TODO: ${note}`);
 }
+// Blocos de viagem do modelo: o blog novo nasce neutro, com tudo desligado, e preenche na aba Home do painel
+replace(/(ticker: \{\n\s+enabled: )true,\n\s+separator: "✈",/, "$1false,");
+replace(/tools: \{\n[\s\S]*?\n    \},/, `tools: {
+      enabled: false,
+      icon: "🧰",
+      title: "Recursos",
+      text: "Ferramentas que recomendamos.",
+      items: [],
+      button: { label: "Ver todos os recursos", href: "/sobre/" },
+    },`);
+replace(/callout: \{\n[\s\S]*?\n    \},/, `callout: {
+      enabled: false,
+      icon: "📘",
+      kicker: "Guias completos",
+      title: "Guias",
+      text: "Materiais completos para aprofundar o assunto.",
+      button: { label: "Conhecer os guias", href: "/sobre/" },
+    },`);
+replace(/placeholder: "[^"]*"/, `placeholder: "O que você procura?"`);
+replace(/(footer: \{\n\s+text: )"[^"]*",/, `$1${q(`${name} é um blog independente. Conteúdo informativo; confirme preços e regras com as empresas antes de comprar.`)},`);
 replace(/defaultAuthor: "clara-menezes",/, `defaultAuthor: "autor",`);
 config = config
   .replaceAll("Rota Leve", name)

@@ -99,6 +99,7 @@ forma atômica e pede um build (respeitando a trava global); o estado aparece no
 `site.config.ts`.
 
 - **Marca:** nome, logotipo e favicon (otimizados em `/data/assets`) e 3 cores, com prévia e aviso de contraste baixo. Principal: links, botões, foco, menu ativo, sumário e "Aceitar" dos cookies. Destaque: etiquetas, autor, títulos pequenos e "Leia também". Cartão: cartão da lateral, CTA e clube. Cabeçalho: fundo opcional, com texto calculado e logotipo opcional para fundo escuro. Os originais do logotipo e do favicon ficam em `/data/assets/originais/`, sem metadados e sem acesso público; ao mudar o que é gerado, aumente `IMAGE_GENERATOR_VERSION` em `api/brand-images.ts` e o servidor refaz as imagens no arranque.
+- **Home:** caixa de recursos (até 6 itens), caixa de destaque, faixa do topo (cotações e/ou relógios, com lista de cidades), texto do rodapé e da busca. Caixa ligada sem itens ou sem título não aparece. Links aceitam endereço interno ou completo; link para outro site abre em nova aba com `rel="sponsored noopener"`. Bloco nunca salvo vale o que está em `sites/<nome>/site.config.ts`; em blog novo, tudo começa desligado. Na faixa, a lista de moedas e o símbolo entre as voltas ficam no `site.config.ts`.
 - **Rastreamento:** ID do Tag Manager e códigos livres. Só carregam depois do aceite de estatísticas no banner.
 - **Anúncios:** script da rede, `ads.txt` e 8 posições (topo, antes, dentro e depois do conteúdo, lateral no topo
   e no fim, rodapé e fixo no celular), cada uma com código, dispositivos, tipos de página, categorias e altura

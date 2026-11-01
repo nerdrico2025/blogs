@@ -44,6 +44,29 @@
   <label for="aname">Nome do autor</label><input id="aname" required>
   <label for="abio">Bio do autor</label><textarea id="abio" class="text" required style="min-height:80px"></textarea>
   <label for="about">Página Sobre</label><textarea id="about" class="text" required></textarea>
+  <h2 style="margin-top:16px">Blocos da barra lateral</h2>
+  <div class="msg warn" id="no-home" hidden>A IA não gerou estes blocos. Eles ficam desligados, e você pode preenchê-los depois na aba Home do painel.</div>
+  <div id="home-fields">
+    <p class="hint">Os links são internos. Para usar um link de afiliado, troque aqui ou depois, na aba Home do painel.</p>
+    <label class="inline"><input type="checkbox" id="ht-on" checked>Mostrar a caixa de recursos</label>
+    <label for="ht-title">Título</label><input id="ht-title" maxlength="80">
+    <label for="ht-text">Descrição</label><input id="ht-text" maxlength="300">
+    <div id="ht-items"></div>
+    <div class="row">
+      <div><label for="ht-btn-label">Texto do botão</label><input id="ht-btn-label" maxlength="40"></div>
+      <div><label for="ht-btn-href">Link do botão</label><input id="ht-btn-href" maxlength="500"></div>
+    </div>
+    <label class="inline" style="margin-top:16px"><input type="checkbox" id="hc-on" checked>Mostrar a caixa de destaque</label>
+    <label for="hc-kicker">Etiqueta</label><input id="hc-kicker" maxlength="40">
+    <label for="hc-title">Título</label><input id="hc-title" maxlength="80">
+    <label for="hc-text">Texto</label><input id="hc-text" maxlength="300">
+    <div class="row">
+      <div><label for="hc-btn-label">Texto do botão</label><input id="hc-btn-label" maxlength="40"></div>
+      <div><label for="hc-btn-href">Link do botão</label><input id="hc-btn-href" maxlength="500"></div>
+    </div>
+    <label for="h-footer">Texto do rodapé</label><input id="h-footer" maxlength="500">
+    <label for="h-placeholder">Texto de exemplo na busca</label><input id="h-placeholder" maxlength="80">
+  </div>
   <p class="row"><button type="button" class="ghost fix" id="back">Voltar</button><button class="fix" id="publish">Publicar</button></p>
 </form>
 

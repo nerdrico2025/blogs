@@ -47,6 +47,54 @@
     <p><button>Salvar e publicar</button></p>
   </form>
 
+  <form class="card" data-tab="Home" id="f-home">
+    <h2>Caixa de recursos</h2>
+    <label class="inline"><input type="checkbox" id="h-tools-on">Mostrar esta caixa</label>
+    <p class="hint">Sem nenhum item, a caixa não aparece. Links aceitam endereço interno (/sobre/) ou completo (https://…). Links para outros sites abrem em nova aba e são marcados como patrocinados.</p>
+    <div class="row">
+      <div class="fix"><label for="h-tools-icon">Emoji</label><input id="h-tools-icon" class="emoji" maxlength="16"></div>
+      <div><label for="h-tools-title">Título</label><input id="h-tools-title" maxlength="80"></div>
+    </div>
+    <label for="h-tools-text">Descrição</label><input id="h-tools-text" maxlength="300">
+    <h3 style="margin-top:12px">Itens (até 6)</h3>
+    <div id="h-tools-items"></div>
+    <p><button type="button" class="ghost" id="h-tools-add">Adicionar item</button></p>
+    <div class="row">
+      <div><label for="h-tools-btn-label">Texto do botão</label><input id="h-tools-btn-label" maxlength="40"></div>
+      <div><label for="h-tools-btn-href">Link do botão</label><input id="h-tools-btn-href" maxlength="500"></div>
+    </div>
+
+    <h2 style="margin-top:24px">Caixa de destaque</h2>
+    <label class="inline"><input type="checkbox" id="h-callout-on">Mostrar esta caixa</label>
+    <div class="row">
+      <div class="fix"><label for="h-callout-icon">Emoji</label><input id="h-callout-icon" class="emoji" maxlength="16"></div>
+      <div><label for="h-callout-kicker">Etiqueta</label><input id="h-callout-kicker" maxlength="40"></div>
+    </div>
+    <label for="h-callout-title">Título</label><input id="h-callout-title" maxlength="80">
+    <label for="h-callout-text">Texto</label><input id="h-callout-text" maxlength="300">
+    <div class="row">
+      <div><label for="h-callout-btn-label">Texto do botão</label><input id="h-callout-btn-label" maxlength="40"></div>
+      <div><label for="h-callout-btn-href">Link do botão</label><input id="h-callout-btn-href" maxlength="500"></div>
+    </div>
+
+    <h2 style="margin-top:24px">Faixa do topo</h2>
+    <label class="inline"><input type="checkbox" id="h-ticker-on">Mostrar a faixa</label>
+    <div>
+      <label class="inline"><input type="checkbox" id="h-ticker-rates">Cotações (dólar e euro)</label>
+      <label class="inline"><input type="checkbox" id="h-ticker-clocks">Relógios</label>
+    </div>
+    <p class="hint">A cotação é atualizada a cada publicação. Se nada estiver marcado, a faixa não aparece.</p>
+    <h3 style="margin-top:12px">Cidades dos relógios (até 12)</h3>
+    <div id="h-clocks"></div>
+    <p><button type="button" class="ghost" id="h-clocks-add">Adicionar cidade</button></p>
+
+    <h2 style="margin-top:24px">Textos</h2>
+    <label for="h-footer">Texto do rodapé</label><textarea id="h-footer" class="text" maxlength="500" style="min-height:80px"></textarea>
+    <label for="h-placeholder">Texto de exemplo na busca</label><input id="h-placeholder" maxlength="80">
+    <p class="hint">Aparece dentro do campo de busca, antes de a pessoa digitar.</p>
+    <p><button>Salvar e publicar</button></p>
+  </form>
+
   <form class="card" data-tab="Rastreamento" id="f-tracking">
     <h2>Rastreamento</h2>
     <p class="hint">Tudo aqui só carrega depois que o visitante aceita as estatísticas no banner de cookies.</p>

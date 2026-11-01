@@ -45,6 +45,50 @@ function catRow(c = {}) {
   return row;
 }
 
+function itemRow(it = {}) {
+  const row = document.createElement("div");
+  row.className = "row home-row";
+  for (const [key, label, maxLength] of [["icon", "Emoji", 16], ["label", "Texto", 60], ["href", "Link", 500]]) {
+    const l = document.createElement("label");
+    l.textContent = label;
+    const i = Object.assign(document.createElement("input"), { value: it[key] || "", maxLength });
+    i.dataset.f = key;
+    l.append(i);
+    row.append(l);
+  }
+  return row;
+}
+
+let hasHome = false;
+function fillHome(home) {
+  hasHome = Boolean(home);
+  $("no-home").hidden = hasHome;
+  $("home-fields").hidden = !hasHome;
+  if (!home) return;
+  $("ht-title").value = home.tools.title;
+  $("ht-text").value = home.tools.text;
+  $("ht-items").replaceChildren(...home.tools.items.map(itemRow));
+  $("ht-btn-label").value = home.tools.button.label;
+  $("ht-btn-href").value = home.tools.button.href;
+  $("hc-kicker").value = home.callout.kicker;
+  $("hc-title").value = home.callout.title;
+  $("hc-text").value = home.callout.text;
+  $("hc-btn-label").value = home.callout.button.label;
+  $("hc-btn-href").value = home.callout.button.href;
+  $("h-footer").value = home.footerText;
+  $("h-placeholder").value = home.searchPlaceholder;
+}
+function readHome() {
+  if (!hasHome) return null;
+  const items = [...$("ht-items").children].map((row) => Object.fromEntries([...row.querySelectorAll("[data-f]")].map((i) => [i.dataset.f, i.value])));
+  return {
+    tools: { enabled: $("ht-on").checked, title: $("ht-title").value, text: $("ht-text").value, items, button: { label: $("ht-btn-label").value, href: $("ht-btn-href").value } },
+    callout: { enabled: $("hc-on").checked, kicker: $("hc-kicker").value, title: $("hc-title").value, text: $("hc-text").value, button: { label: $("hc-btn-label").value, href: $("hc-btn-href").value } },
+    footerText: $("h-footer").value,
+    searchPlaceholder: $("h-placeholder").value,
+  };
+}
+
 $("s0").onsubmit = async (e) => {
   e.preventDefault();
   try {
@@ -72,6 +116,7 @@ $("s1").onsubmit = async (e) => {
     $("aname").value = p.authorName;
     $("abio").value = p.authorBio;
     $("about").value = p.about;
+    fillHome(p.home);
     go("s3");
   } catch (err) {
     message(err.message, "err");
@@ -105,6 +150,7 @@ $("s3").onsubmit = async (e) => {
         authorName: $("aname").value,
         authorBio: $("abio").value,
         about: $("about").value,
+        home: readHome(),
       },
     });
     $("pass").value = "";

@@ -20,8 +20,8 @@ import { clientIp } from "./client-ip.ts";
 import type { ApiEnv } from "./env.ts";
 import { WpError } from "./errors.ts";
 import type { SecretStore } from "./secrets.ts";
-import { generateProposal, validateProposal, type SetupProposal } from "./setup-ai.ts";
-import { mergeCategories, parseAds, parseColors, parseTracking, type SettingsStore } from "./settings-store.ts";
+import { brokenCategoryLinks, generateProposal, validateProposal, type SetupProposal } from "./setup-ai.ts";
+import { mergeCategories, parseAds, parseColors, parseHome, parseTracking, type SettingsStore } from "./settings-store.ts";
 import type { Store } from "./store.ts";
 
 const COOKIE = "blog_admin";
@@ -148,6 +148,19 @@ export async function registerAdmin(app: FastifyInstance, deps: AdminDeps): Prom
         tracking: { gtmId: s.tracking?.gtmId ?? "", headCode: s.tracking?.headCode ?? "", bodyCode: s.tracking?.bodyCode ?? "" },
         ads: { headScript: s.ads?.headScript ?? "", adsTxt: s.ads?.adsTxt ?? site.adsTxt.join("\n"), slots: s.ads?.slots ?? {} },
         positions: AD_POSITIONS,
+        // A lista salva vale mesmo com os relógios desmarcados, para ninguém perder as cidades
+        home: {
+          tools: site.sidebar.tools,
+          callout: site.sidebar.callout,
+          ticker: {
+            enabled: site.ticker.enabled,
+            showRates: s.home?.ticker?.showRates ?? site.ticker.rates.length > 0,
+            showClocks: s.home?.ticker?.showClocks ?? site.ticker.clocks.length > 0,
+            clocks: s.home?.ticker?.clocks ?? site.ticker.clocks,
+          },
+          footerText: site.footer.text,
+          searchPlaceholder: site.sidebar.search.placeholder,
+        },
         categories: site.categories,
         wordbee: { managedByEnv: Boolean(env.passwordHash), user: env.passwordHash ? env.user : secrets.data.wordbeeUser ?? WORDBEE_USER, hasPassword: Boolean(env.passwordHash || secrets.data.wordbeePasswordHash) },
         build: builds.getStatus(),
@@ -205,6 +218,11 @@ export async function registerAdmin(app: FastifyInstance, deps: AdminDeps): Prom
     scope.post("/admin/api/ads", session, async (req) => {
       const ads = parseAds((req.body ?? {}) as Record<string, unknown>);
       return save("anúncios", (s) => ({ ...s, ads }));
+    });
+
+    scope.post("/admin/api/home", session, async (req) => {
+      const home = parseHome((req.body ?? {}) as Record<string, unknown>);
+      return save("home", (s) => ({ ...s, home: { ...s.home, ...home } }));
     });
 
     scope.post("/admin/api/categories", session, async (req) => {
@@ -267,6 +285,10 @@ export async function registerAdmin(app: FastifyInstance, deps: AdminDeps): Prom
       const problems = validateProposal(p).filter((e) => !e.startsWith("são de"));
       if (!p.categories?.length) problems.push("inclua pelo menos uma categoria");
       if (problems.length) throw new WpError(400, "invalid_settings", `Confira: ${problems.join("; ")}.`);
+      // Antes de gravar qualquer coisa: categoria removida na revisão não pode deixar link quebrado
+      const home = p.home ? parseHome(p.home as unknown as Record<string, unknown>) : undefined;
+      const broken = home ? brokenCategoryLinks(home, p.categories.map((c) => c.slug)) : [];
+      if (broken.length) throw new WpError(400, "invalid_settings", `Estes links apontam para uma categoria que não existe: ${broken.join(", ")}.`);
 
       await generateBrand(path.join(env.assetsDir, "brand"), { name, tagline: p.tagline, accent: p.palette.primary });
       const brandSvgWidth = Math.round(52 + name.length * 11.5);
@@ -303,6 +325,7 @@ export async function registerAdmin(app: FastifyInstance, deps: AdminDeps): Prom
           colors: p.palette,
         },
         author: { name: p.authorName, bio: p.authorBio },
+        ...(home ? { home } : {}),
         ...merged,
       }));
       builds.request("primeira publicação do assistente");

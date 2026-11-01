@@ -25,3 +25,4 @@ details{border:1px solid var(--b);border-radius:8px;padding:10px;margin:8px 0}su
 button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,a:focus-visible,summary:focus-visible{outline:3px solid #0b3d91;outline-offset:2px}
 [hidden]{display:none!important}
 .steps{color:var(--m);font-size:14px}
+input.emoji{width:72px;text-align:center}.row>.fix input.emoji{width:72px}.home-row{border-bottom:1px solid var(--b);padding-bottom:10px;margin-bottom:10px}.home-row label{margin-top:0}
