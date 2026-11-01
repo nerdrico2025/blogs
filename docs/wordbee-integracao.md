@@ -176,6 +176,7 @@ Regras:
   (mesmo `id` e `link`, com **200** em vez de 201; o Wordbee só confere `res.ok`); mesmo
   slug com conteúdo diferente cria `slug-2`. Funciona também depois de reiniciar a API,
   porque o hash fica no frontmatter (`wpHash`).
+- **Depois de excluir no /admin:** o slug fica livre. O mesmo slug, mesmo com o mesmo conteúdo, cria um post novo (201) com outro id; o excluído não volta. O `id` da imagem excluída deixa de existir (`featured_media` com ele dá 400), então a imagem precisa ser enviada de novo.
 - **Sanitização:** o HTML recebido não vem sanitizado. Usamos uma allowlist com as tags
   do prompt do Wordbee mais `a`, `table`, `thead`, `tbody`, `tr`, `th`, `td` e `img`
   (com atributos seguros). Nada de `<script>` nem atributos `on*`.

@@ -7,6 +7,7 @@ import type { FastifyBaseLogger } from "fastify";
 import { runBackup } from "./backup.ts";
 import type { BuildQueue } from "./build-queue.ts";
 import type { ApiEnv } from "./env.ts";
+import { cleanTrash } from "./trash.ts";
 
 /** Próximo instante (UTC) com a hora e o minuto dados, depois de `from`. */
 export function nextRun(hour: number, minute: number, from = new Date()): Date {
@@ -32,6 +33,10 @@ export class Scheduler {
     this.daily("backup diário", this.env.dailyBackupUtcHour, async () => {
       const r = await runBackup(this.env);
       this.log.info({ file: r.file, bytes: r.bytes, uploaded: r.uploaded, removed: r.removed }, "backup concluído");
+    });
+    this.daily("limpeza da lixeira", this.env.dailyBackupUtcHour, async () => {
+      const removed = await cleanTrash(this.env.trashDir, this.env.trashRetentionDays);
+      if (removed) this.log.info({ removed }, "lixeira limpa");
     });
   }
 

@@ -183,6 +183,7 @@ Tabela completa (só as quatro primeiras são obrigatórias; as demais têm padr
 | `DAILY_REBUILD_UTC_HOUR` | `7` | Hora (UTC) do rebuild diário (04:00 em Brasília). O minuto é calculado pelo `SITE`, para os blogs não buildarem juntos |
 | `DAILY_BACKUP_UTC_HOUR` | `6` | Hora (UTC) do backup diário (03:00 em Brasília), também com minuto por blog |
 | `BACKUP_RETENTION_DAYS` | `14` | Dias de backup guardados em `/data/backups` |
+| `TRASH_RETENTION_DAYS` | `30` | Dias que a cópia de um artigo excluído fica em `/data/lixeira` (0 = nunca limpa) |
 | `BACKUP_S3_ENDPOINT` | (desligado) | Ex.: `https://eu2.contabostorage.com` (Object Storage da Contabo) |
 | `BACKUP_S3_REGION` | `us-east-1` | Região (a Contabo aceita o padrão) |
 | `BACKUP_S3_BUCKET` | (desligado) | Nome do bucket |

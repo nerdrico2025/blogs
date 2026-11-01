@@ -5,16 +5,17 @@
  */
 import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
-import { mkdir, readdir, readFile, rename, writeFile } from "node:fs/promises";
+import { cp, mkdir, readdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import YAML from "yaml";
 import site from "../site.config.ts";
 import { RESERVED_SLUGS } from "../src/lib/slugs.ts";
-import { processImage, safeBaseName, type MediaMeta } from "../shared/media.ts";
+import { processImage, PUBLIC_PREFIX, safeBaseName, type MediaMeta } from "../shared/media.ts";
 import { findCategory } from "../shared/settings.ts";
 import type { ApiEnv } from "./env.ts";
 import { badParam, WpError } from "./errors.ts";
 import { htmlToMarkdown, plainText, truncate } from "./html-to-md.ts";
+import { resolveImage, trashFolder, uploadRefs } from "./trash.ts";
 
 export interface MediaRecord {
   id: number;
@@ -29,6 +30,23 @@ interface State {
   nextPostId: number;
   nextMediaId: number;
   media: Record<string, MediaRecord>;
+  /** Imagens de artigos excluídos (AAAA/MM/nome), cujo endereço não volta a ser usado. */
+  retiredImages?: string[];
+}
+
+export interface ArticleSummary {
+  slug: string;
+  title: string;
+  status: string;
+  category: string;
+  date: string;
+  link: string;
+}
+
+export interface DeleteResult {
+  deleted: string[];
+  missing: string[];
+  failed: { slug: string; error: string }[];
 }
 
 export interface PostRecord {
@@ -159,7 +177,8 @@ export class Store {
       const subdir = `${now.getUTCFullYear()}/${String(now.getUTCMonth() + 1).padStart(2, "0")}`;
       const base = safeBaseName(filename);
       let name = base;
-      for (let i = 2; existsSync(path.join(this.env.uploadsDir, subdir, `${name}.json`)); i++) name = `${base}-${i}`;
+      const retired = new Set(this.state.retiredImages ?? []);
+      for (let i = 2; existsSync(path.join(this.env.uploadsDir, subdir, `${name}.json`)) || retired.has(`${subdir}/${name}`); i++) name = `${base}-${i}`;
 
       let meta: MediaMeta;
       try {
@@ -253,5 +272,105 @@ export class Store {
       this.posts.set(slug, post);
       return { post, created: true };
     });
+  }
+
+  /** Todos os artigos em disco, inclusive os sem wpId. Lê os arquivos a cada chamada. */
+  async listArticles(): Promise<ArticleSummary[]> {
+    const out: ArticleSummary[] = [];
+    for (const file of await readdir(this.env.contentDir)) {
+      if (!file.endsWith(".md")) continue;
+      const slug = file.replace(/\.md$/, "");
+      let data: Record<string, unknown> = {};
+      try {
+        const fm = (await readFile(path.join(this.env.contentDir, file), "utf8")).match(/^---\n([\s\S]*?)\n---/);
+        if (fm) data = (YAML.parse(fm[1]!) as Record<string, unknown>) ?? {};
+      } catch {
+        // Arquivo com cabeçalho quebrado continua na lista, para poder ser apagado
+      }
+      const category = String(data.category ?? "");
+      const date = new Date(String(data.date));
+      out.push({
+        slug,
+        title: String(data.title ?? slug),
+        status: String(data.status ?? "publish"),
+        category: findCategory(site.categories, category)?.name ?? category,
+        date: Number.isNaN(date.getTime()) ? "" : date.toISOString(),
+        link: this.postLink(slug),
+      });
+    }
+    return out.sort((a, b) => b.date.localeCompare(a.date));
+  }
+
+  /** Referências a imagens em tudo que continua publicado ou pode voltar a ser: posts, páginas e configurações. */
+  private async imageUsers(): Promise<Map<string, string[]>> {
+    const users = new Map<string, string[]>();
+    const read = async (id: string, file: string) => users.set(id, uploadRefs(await readFile(file, "utf8")));
+    for (const f of await readdir(this.env.contentDir)) if (f.endsWith(".md")) await read(`post:${f.replace(/\.md$/, "")}`, path.join(this.env.contentDir, f));
+    if (existsSync(this.env.pagesDir)) for (const f of await readdir(this.env.pagesDir)) if (f.endsWith(".md")) await read(`page:${f}`, path.join(this.env.pagesDir, f));
+    if (existsSync(this.env.settingsFile)) await read("settings", this.env.settingsFile);
+    return users;
+  }
+
+  /**
+   * Exclui artigos, um por vez, na mesma fila da publicação. Ordem: copia para a lixeira; só então apaga
+   * o .md, que é o que tira o artigo do site; depois, as imagens que mais ninguém usa. Se a cópia falhar,
+   * nada é apagado. O número do post nunca é reaproveitado, e o slug fica livre para um post novo.
+   */
+  deletePosts(slugs: string[]): Promise<DeleteResult> {
+    return this.serial(async () => {
+      const result: DeleteResult = { deleted: [], missing: [], failed: [] };
+      const users = await this.imageUsers();
+      for (const slug of new Set(slugs)) {
+        // O slug só serve para achar um arquivo da lista: nunca entra num caminho sem existir nela
+        if (!users.has(`post:${slug}`)) {
+          result.missing.push(slug);
+          continue;
+        }
+        try {
+          await this.deleteOne(slug, users);
+          users.delete(`post:${slug}`);
+          result.deleted.push(slug);
+        } catch (err) {
+          result.failed.push({ slug, error: (err as Error).message });
+        }
+      }
+      return result;
+    });
+  }
+
+  private async deleteOne(slug: string, users: Map<string, string[]>): Promise<void> {
+    const mdFile = path.join(this.env.contentDir, `${slug}.md`);
+    const uploads = this.env.uploadsDir;
+    const own = users.get(`post:${slug}`)!.flatMap((rel) => resolveImage(uploads, rel) ?? []);
+    const others = [...users].filter(([id]) => id !== `post:${slug}`).flatMap(([, refs]) => refs).flatMap((rel) => resolveImage(uploads, rel) ?? []);
+    const usedKeys = new Set(others.map((i) => i.key));
+    const usedFiles = new Set(others.flatMap((i) => i.files));
+    const images = [...new Map(own.map((i) => [i.key, i])).values()].filter((i) => !usedKeys.has(i.key));
+    const files = [...new Set(images.flatMap((i) => i.files))].filter((f) => !usedFiles.has(f) && existsSync(path.join(uploads, f)));
+
+    const removed = new Set(files.map((f) => `${PUBLIC_PREFIX}${f}`));
+    const media = Object.values(this.state.media).filter((m) => removed.has(m.src));
+
+    const folder = await trashFolder(this.env.trashDir, slug);
+    const partial = `${folder}.partial`;
+    await rm(partial, { recursive: true, force: true });
+    try {
+      await cp(mdFile, path.join(partial, `${slug}.md`));
+      for (const f of files) await cp(path.join(uploads, f), path.join(partial, "uploads", f));
+      await writeFile(path.join(partial, "manifest.json"), JSON.stringify({ slug, deletedAt: new Date().toISOString(), post: this.posts.get(slug) ?? null, media, files }, null, 2));
+      await rename(partial, folder);
+    } catch (err) {
+      await rm(partial, { recursive: true, force: true });
+      throw err;
+    }
+
+    await rm(mdFile);
+    this.posts.delete(slug);
+    for (const m of media) delete this.state.media[String(m.id)];
+    // Imagem com endereço de cache longo: um upload futuro com o mesmo nome ganha outro endereço
+    this.state.retiredImages = [...new Set([...(this.state.retiredImages ?? []), ...images.map((i) => i.key)])];
+    await this.saveState();
+    // Lixo que sobrar aqui é só espaço em disco: o artigo já saiu e a cópia está guardada
+    await Promise.allSettled(files.map((f) => rm(path.join(uploads, f), { force: true })));
   }
 }
