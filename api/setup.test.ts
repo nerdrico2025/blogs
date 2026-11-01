@@ -23,8 +23,7 @@ delete process.env.ADMIN_PASSWORD_HASH;
 
 const GOOD = {
   categories: ["Um", "Dois", "Três", "Quatro", "Cinco"].map((name, i) => ({ name, slug: `cat-${i + 1}`, description: `Descrição ${name}.` })),
-  authorName: "Equipe Horta",
-  authorBio: "Quem escreve sobre hortas.",
+  expertProfile: "Agrônomo ou técnico com experiência prática em hortas urbanas.",
   about: "Um blog sobre hortas em casa.",
   tagline: "Sua horta em casa",
   // Amarelo claro: precisa ser escurecido
@@ -146,6 +145,16 @@ describe("geração com IA", () => {
     assert.match(secondTry, /recusada/);
   });
 
+  test("o pedido não deixa a IA criar o autor, e a orientação volta só como texto", async () => {
+    responses.push({ status: 200, body: textMessage(JSON.stringify(GOOD)) });
+    const res = await setup("generate", generateBody, TOKEN, "10.4.0.1");
+    assert.equal(res.json().expertProfile, GOOD.expertProfile);
+    const schema = (requests.at(-1)!.body.output_config as { format: { schema: { properties: Record<string, unknown> } } }).format.schema;
+    assert.ok(!("authorName" in schema.properties) && !("authorBio" in schema.properties));
+    responses.push({ status: 200, body: textMessage(JSON.stringify({ ...GOOD, expertProfile: "<b>Ana</b> em https://x.example" })) });
+    assert.equal((await setup("generate", generateBody, TOKEN, "10.4.0.2")).json().expertProfile, "");
+  });
+
   test("sucesso: pede JSON pelo modelo configurado e corrige o contraste da paleta", async () => {
     responses.push({ status: 200, body: textMessage(JSON.stringify(GOOD)) });
     const res = await setup("generate", generateBody);
@@ -239,7 +248,11 @@ describe("publicar", () => {
     assert.equal(saved.nextCategoryId, 7);
     assert.equal(site.name, "Horta em Casa");
     assert.equal(site.contact.email, "contato@novo.example");
-    assert.equal(site.authors[site.defaultAuthor]!.name, "Equipe Horta");
+    assert.equal(site.authors[site.defaultAuthor]!.name, "Equipe Horta em Casa", "a IA não define o autor");
+    assert.equal(site.authorProfile, undefined, "os campos do autor ficam vazios");
+    assert.equal(site.article.authorBox.enabled, false, "sem autor, sem caixa");
+    assert.equal(saved.author, undefined);
+    assert.ok(!JSON.stringify(saved).includes("Agrônomo"), "a orientação não é publicada");
 
     const secretsFile = path.join(tmp, "secrets.json");
     assert.equal(statSync(secretsFile).mode & 0o777, 0o600);

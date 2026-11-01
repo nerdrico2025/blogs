@@ -1,4 +1,4 @@
-import type { AdsConfig, TrackingConfig } from "../../shared/settings.ts";
+import type { AdsConfig, AuthorProfile, TrackingConfig } from "../../shared/settings.ts";
 
 export interface Link {
   label: string;
@@ -67,6 +67,8 @@ export interface SiteConfig {
   categories: Category[];
   authors: Record<string, Author>;
   defaultAuthor: string;
+  /** Autor de referência da aba Autor. Sem valor, vale a assinatura de `authors`. */
+  authorProfile?: AuthorProfile;
   contact: { email: string };
   legal: { owner: string; city: string };
   social: Author["links"];

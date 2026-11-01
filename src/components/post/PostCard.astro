@@ -1,5 +1,7 @@
 ---
+import site from "../../../site.config.ts";
 import Picture from "../Picture.astro";
+import AuthorSignature from "../article/AuthorSignature.astro";
 import type { PostView } from "../../lib/posts.ts";
 import { formatDate, isoDate } from "../../lib/format.ts";
 
@@ -19,7 +21,7 @@ const cover = post.entry.data.cover;
   <div class="post-card-body">
     <a class="post-cat" href={`/category/${post.category.slug}/`}>{post.category.name}</a>
     <H><a href={post.url}>{post.title}</a></H>
-    <p class="post-meta"><span class="by">{post.author.name}</span> / <time datetime={isoDate(post.date)}>{formatDate(post.date)}</time> / <a href={`/category/${post.category.slug}/`}>{post.category.name}</a></p>
+    <p class="post-meta">{site.authorProfile ? <AuthorSignature /> : <span class="by">{post.author.name}</span>} / <time datetime={isoDate(post.date)}>{formatDate(post.date)}</time> / <a href={`/category/${post.category.slug}/`}>{post.category.name}</a></p>
     <p class="post-excerpt">{post.excerpt}</p>
   </div>
 </article>

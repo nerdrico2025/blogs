@@ -7,6 +7,7 @@ import type { ImageRef } from "./config-schema.ts";
 import type { PostView } from "./posts.ts";
 import { absoluteUrl } from "./format.ts";
 import { readMediaMeta } from "../../shared/media.ts";
+import { authorPhotoUrl, authorUrl, type AuthorProfile } from "../../shared/settings.ts";
 
 type Json = Record<string, unknown>;
 
@@ -93,6 +94,23 @@ export function webPage(path: string, name: string, description: string, type = 
   };
 }
 
+/** O autor cadastrado como Person, com o mesmo @id nos artigos e na página dele. */
+export function authorPerson(p: AuthorProfile): Json {
+  const sameAs = Object.values(p.links).filter(Boolean);
+  return {
+    "@type": "Person",
+    "@id": ids.person(p.slug),
+    name: p.name,
+    url: absoluteUrl(authorUrl(p)),
+    ...(p.role ? { jobTitle: p.role } : {}),
+    ...(p.bioShort ? { description: p.bioShort } : {}),
+    ...(p.photo ? { image: absoluteUrl(authorPhotoUrl(p.photo, 400)) } : {}),
+    ...(sameAs.length ? { sameAs } : {}),
+    ...(p.email ? { email: p.email } : {}),
+    ...(p.specialties.length ? { knowsAbout: p.specialties } : {}),
+  };
+}
+
 /** Imagem Open Graph da capa (1200×630 gerada junto com as variantes). */
 export function coverImage(post: PostView): ImageRef | undefined {
   const cover = post.entry.data.cover;
@@ -121,7 +139,7 @@ export function articleSeo(post: PostView): SeoProps {
       ...(images.length ? { primaryImageOfPage: { "@type": "ImageObject", url: images[0] } } : {}),
     }),
     breadcrumb(post.url, crumbs),
-    {
+    site.authorProfile ? authorPerson(site.authorProfile) : {
       "@type": "Person",
       "@id": ids.person(post.author.id),
       name: post.author.name,

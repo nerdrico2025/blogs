@@ -102,6 +102,7 @@ for (const [block, indent, note] of [
   ["affiliate", "      ", "banner lateral: imagem e link do afiliado"],
   ["cta", "      ", "caixa no meio do artigo: título, texto e link"],
   ["club", "        ", "clube/assinatura: link"],
+  ["authorBox", "      ", "caixa do autor: aparece ao cadastrar na aba Autor do painel"],
 ] as const) {
   replace(new RegExp(`(${block}: \\{\\n${indent})enabled: true,`), `$1enabled: false, // TODO: ${note}`);
 }

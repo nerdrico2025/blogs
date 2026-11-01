@@ -1,0 +1,15 @@
+---
+/** Assinatura do autor cadastrado: foto pequena, nome com link para a página dele e cargo. */
+import site from "../../../site.config.ts";
+import { authorPhotoUrl, authorUrl } from "../../../shared/settings.ts";
+
+interface Props {
+  prefix?: string;
+}
+const { prefix } = Astro.props;
+const profile = site.authorProfile!;
+---
+<span class="author-sign">
+  {profile.photo && <img src={authorPhotoUrl(profile.photo, 96)} alt="" width="24" height="24" loading="lazy" decoding="async" />}
+  <span class="author-sign-text">{prefix && `${prefix} `}<a class="author-sign-name" href={authorUrl(profile)}>{profile.name}</a>{profile.role && <span class="author-sign-role">, {profile.role}</span>}</span>
+</span>

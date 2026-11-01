@@ -4,6 +4,7 @@ import site from "../../site.config.ts";
 import { getPosts } from "../lib/posts.ts";
 import { absoluteUrl } from "../lib/format.ts";
 import { readMediaMeta } from "../../shared/media.ts";
+import { authorPhotoUrl, authorUrl } from "../../shared/settings.ts";
 
 const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
@@ -15,6 +16,7 @@ interface Url {
 
 export const GET: APIRoute = async () => {
   const posts = await getPosts();
+  const profile = site.authorProfile;
   const pages = await getCollection("pages");
   const newest = (list: typeof posts) => list.reduce<Date | undefined>((d, p) => (!d || p.updated > d ? p.updated : d), undefined);
 
@@ -26,6 +28,7 @@ export const GET: APIRoute = async () => {
       return { loc: p.url, lastmod: p.updated, images: cover ? [cover.src] : [] };
     }),
     ...pages.map((p) => ({ loc: `/${p.id}/`, lastmod: p.data.updated })),
+    ...(profile ? [{ loc: authorUrl(profile), lastmod: newest(posts), images: profile.photo ? [authorPhotoUrl(profile.photo, 400)] : [] }] : []),
   ];
 
   const body = urls

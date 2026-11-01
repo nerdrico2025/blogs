@@ -6,10 +6,10 @@ import { HOME_LIMITS, parseHome, validSlug } from "./settings-store.ts";
 
 export interface SetupProposal {
   categories: { name: string; slug: string; description: string }[];
-  authorName: string;
-  authorBio: string;
   about: string;
   tagline: string;
+  /** Orientação sobre o especialista ideal. Só aparece na revisão; nunca é publicada. */
+  expertProfile?: string;
   palette: { primary: string; highlight: string; callout: string };
   /** null: a IA não gerou blocos válidos, e eles ficam desligados. */
   home?: HomeSettings | null;
@@ -19,8 +19,7 @@ const strObject = (properties: Record<string, unknown>) => ({ type: "object", ad
 const LINK = strObject({ label: { type: "string" }, href: { type: "string" } });
 const SCHEMA = strObject({
   categories: { type: "array", items: strObject({ name: { type: "string" }, slug: { type: "string" }, description: { type: "string" } }) },
-  authorName: { type: "string" },
-  authorBio: { type: "string" },
+  expertProfile: { type: "string" },
   about: { type: "string" },
   tagline: { type: "string" },
   palette: strObject({ primary: { type: "string" }, highlight: { type: "string" }, callout: { type: "string" } }),
@@ -39,8 +38,7 @@ const SCHEMA = strObject({
 
 const SYSTEM = `Você prepara a identidade inicial de um blog novo. Responda no idioma pedido.
 - categories: de 5 a 7 categorias amplas, que comportem muitos artigos e não se sobreponham. name curto; slug em minúsculas, sem acento, só letras, números e hífen; description de SEO com no máximo 160 caracteres.
-- authorName: nome editorial genérico (por exemplo, "Equipe <nome do blog>"), sem inventar uma pessoa.
-- authorBio: de 1 a 2 frases, sem inventar credenciais.
+- expertProfile: orientação em até 600 caracteres sobre o perfil ideal de especialista para assinar este nicho: área de atuação e tipo de experiência. Descreva o perfil, nunca uma pessoa: sem nomes, fotos, credenciais específicas, instituições ou links.
 - about: texto da página Sobre em Markdown, de 2 a 4 parágrafos curtos, sem inventar fatos, números, prêmios ou equipe.
 - tagline: uma frase com até 70 caracteres.
 - palette: cores em hexadecimal #rrggbb combinando com o nicho. primary, highlight e callout precisam ter contraste de pelo menos 4,5:1 com branco.
@@ -109,7 +107,7 @@ export function validateProposal(p: SetupProposal): string[] {
     slugs.add(c.slug);
     if (!c.description?.trim() || c.description.length > 160) errors.push(`descrição de "${c.name}" precisa ter de 1 a 160 caracteres`);
   }
-  for (const key of ["authorName", "authorBio", "about", "tagline"] as const) if (!p[key]?.trim()) errors.push(`${key} vazio`);
+  for (const key of ["about", "tagline"] as const) if (!p[key]?.trim()) errors.push(`${key} vazio`);
   for (const key of ["primary", "highlight", "callout"] as const) {
     if (!isHex(p.palette?.[key])) errors.push(`cor ${key} inválida`);
     else p.palette[key] = ensureReadable(p.palette[key]);
@@ -167,6 +165,9 @@ export async function generateProposal(input: { name: string; niche: string; lan
     }
     lastErrors = validateProposal(parsed);
     if (lastErrors.length > 0) continue;
+    // Só orientação: se vier fora do combinado, a revisão fica sem ela, sem refazer o pedido
+    const expert = typeof parsed.expertProfile === "string" ? parsed.expertProfile.trim() : "";
+    parsed.expertProfile = expert.length <= 600 && !/[<>]/.test(expert) && !/https?:/i.test(expert) ? expert : "";
     const homeErrors = validateAiHome(parsed);
     if (homeErrors.length === 0) return parsed;
     // O essencial está bom: sem blocos válidos na segunda tentativa, o blog publica com eles desligados

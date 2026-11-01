@@ -157,7 +157,7 @@ export default defineSiteConfig({
     readMore: { enabled: true, beforeH2: 5, label: "Leia também" },
     related: { count: 3, kicker: "Continue lendo", title: "Você também pode gostar", linkLabel: "Ler artigo" },
     authorBox: {
-      enabled: true,
+      enabled: false, // aparece quando o autor é cadastrado na aba Autor
       kicker: "Sobre o autor",
       youtubeLabel: "YouTube",
       newsletterLabel: "Newsletter",

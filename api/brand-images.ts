@@ -5,11 +5,11 @@
  */
 import { createHash } from "node:crypto";
 import { existsSync } from "node:fs";
-import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { FastifyBaseLogger } from "fastify";
 import sharp from "sharp";
-import type { Settings } from "../shared/settings.ts";
+import { AUTHOR_PHOTO_WIDTHS, type Settings } from "../shared/settings.ts";
 import { writeFavicons } from "./favicon.ts";
 
 export const IMAGE_GENERATOR_VERSION = 1;
@@ -94,6 +94,36 @@ export function missingOriginals(assetsDir: string, brand: Brand | undefined): B
   return KINDS.filter((kind) => wasUploaded(brand, kind) && !findOriginal(assetsDir, kind));
 }
 
+const AUTHOR_ORIGINAL = "autor.png";
+
+/** Foto quadrada, recortada no ponto de interesse, em WebP. O nome muda com o conteúdo, para o cache não prender a anterior. */
+async function deriveAuthorPhoto(assetsDir: string, original: Buffer, generator: number): Promise<{ base: string }> {
+  await mkdir(assetsDir, { recursive: true });
+  const hash = createHash("sha256").update(original).update(String(generator)).digest("hex").slice(0, 10);
+  for (const width of AUTHOR_PHOTO_WIDTHS) {
+    await sharp(original, { failOn: "error", limitInputPixels: MAX_PIXELS }).resize({ width, height: width, fit: "cover", position: "attention" }).webp({ quality: 82 }).toFile(path.join(assetsDir, `autor-${hash}-${width}.webp`));
+  }
+  return { base: `/assets/autor-${hash}` };
+}
+
+/** Só imagem de verdade: foto de pessoa não precisa de SVG, e o original vai sem EXIF nem GPS. */
+export async function storeAuthorPhoto(assetsDir: string, input: Buffer): Promise<{ base: string }> {
+  const { data, ext } = await cleanOriginal(input);
+  if (ext !== "png") throw new Error("a foto precisa ser PNG, JPG ou WebP");
+  const photo = await deriveAuthorPhoto(assetsDir, data, IMAGE_GENERATOR_VERSION);
+  const file = path.join(assetsDir, ORIGINALS_DIR, AUTHOR_ORIGINAL);
+  await mkdir(path.dirname(file), { recursive: true });
+  await writeFile(file, data);
+  return photo;
+}
+
+/** "Remover foto": apaga as versões e o original, para a imagem da pessoa não ficar no servidor. */
+export async function removeAuthorPhoto(assetsDir: string): Promise<void> {
+  await rm(path.join(assetsDir, ORIGINALS_DIR, AUTHOR_ORIGINAL), { force: true });
+  if (!existsSync(assetsDir)) return;
+  for (const f of await readdir(assetsDir)) if (/^autor-[0-9a-f]{10}-\d+\.webp$/.test(f)) await rm(path.join(assetsDir, f), { force: true });
+}
+
 export interface SyncDeps {
   assetsDir: string;
   settingsFile: string;
@@ -124,15 +154,31 @@ export async function syncBrandImages(deps: SyncDeps, generator = IMAGE_GENERATO
       log.warn({ kind }, "imagem da marca não regenerada; nova tentativa no próximo arranque");
     }
   }
+  const authorOriginal = path.join(assetsDir, ORIGINALS_DIR, AUTHOR_ORIGINAL);
+  let authorPhoto: { base: string } | undefined;
+  if (settings.current.authorProfile?.photo && existsSync(authorOriginal)) {
+    try {
+      authorPhoto = await deriveAuthorPhoto(assetsDir, await readFile(authorOriginal), generator);
+    } catch {
+      failed = true;
+      log.warn({ kind: "autor" }, "foto do autor não regenerada; nova tentativa no próximo arranque");
+    }
+  }
   try {
     // Blog novo, sem settings.json: nada a refazer, e criar o arquivo esconderia o settings.json inicial do site
-    if (regenerated.length > 0 || (!failed && existsSync(deps.settingsFile))) {
-      await settings.update((s) => ({ ...s, brand: regenerated.length > 0 ? { ...s.brand, ...patch } : s.brand, ...(failed ? {} : { imageGenerator: generator }) }));
+    if (regenerated.length > 0 || authorPhoto || (!failed && existsSync(deps.settingsFile))) {
+      await settings.update((s) => ({
+        ...s,
+        brand: regenerated.length > 0 ? { ...s.brand, ...patch } : s.brand,
+        ...(authorPhoto && s.authorProfile ? { authorProfile: { ...s.authorProfile, photo: authorPhoto } } : {}),
+        ...(failed ? {} : { imageGenerator: generator }),
+      }));
     }
   } catch {
     log.warn("não foi possível gravar a versão do gerador de imagens; nova tentativa no próximo arranque");
     return [];
   }
+  if (authorPhoto && regenerated.length === 0) builds.request("foto do autor regenerada");
   if (regenerated.length > 0) {
     log.info({ regenerated, generator }, "imagens da marca regeneradas a partir dos originais");
     builds.request("imagens da marca regeneradas");

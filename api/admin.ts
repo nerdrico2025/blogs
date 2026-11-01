@@ -4,7 +4,7 @@
  */
 import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import { existsSync } from "node:fs";
-import { cp, mkdir, readFile, writeFile } from "node:fs/promises";
+import { cp, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
@@ -13,7 +13,7 @@ import site from "../site.config.ts";
 import { generateBrand } from "../scripts/lib/brand.ts";
 import { AD_POSITIONS, DEFAULT_HEADER_COLOR, contrastWarnings, type Settings } from "../shared/settings.ts";
 import { siteDir } from "../src/lib/site-id.ts";
-import { IMAGE_GENERATOR_VERSION, missingOriginals, storeBrandImage } from "./brand-images.ts";
+import { IMAGE_GENERATOR_VERSION, missingOriginals, removeAuthorPhoto, storeAuthorPhoto, storeBrandImage } from "./brand-images.ts";
 import { Attempts, Authenticator, generateAppPassword, hashPassword, isValidHash } from "./auth.ts";
 import type { BuildQueue } from "./build-queue.ts";
 import { clientIp } from "./client-ip.ts";
@@ -21,7 +21,7 @@ import type { ApiEnv } from "./env.ts";
 import { WpError } from "./errors.ts";
 import type { SecretStore } from "./secrets.ts";
 import { brokenCategoryLinks, generateProposal, validateProposal, type SetupProposal } from "./setup-ai.ts";
-import { mergeCategories, parseAds, parseColors, parseHome, parseTracking, type SettingsStore } from "./settings-store.ts";
+import { mergeCategories, parseAds, parseAuthor, parseColors, parseHome, parseTracking, type SettingsStore } from "./settings-store.ts";
 import type { Store } from "./store.ts";
 
 const COOKIE = "blog_admin";
@@ -148,6 +148,9 @@ export async function registerAdmin(app: FastifyInstance, deps: AdminDeps): Prom
         tracking: { gtmId: s.tracking?.gtmId ?? "", headCode: s.tracking?.headCode ?? "", bodyCode: s.tracking?.bodyCode ?? "" },
         ads: { headScript: s.ads?.headScript ?? "", adsTxt: s.ads?.adsTxt ?? site.adsTxt.join("\n"), slots: s.ads?.slots ?? {} },
         positions: AD_POSITIONS,
+        author: s.authorProfile ?? null,
+        // Assinatura usada enquanto não houver nome
+        authorFallback: site.authors[site.defaultAuthor]!.name,
         // A lista salva vale mesmo com os relógios desmarcados, para ninguém perder as cidades
         home: {
           tools: site.sidebar.tools,
@@ -223,6 +226,29 @@ export async function registerAdmin(app: FastifyInstance, deps: AdminDeps): Prom
     scope.post("/admin/api/home", session, async (req) => {
       const home = parseHome((req.body ?? {}) as Record<string, unknown>);
       return save("home", (s) => ({ ...s, home: { ...s.home, ...home } }));
+    });
+
+    scope.post("/admin/api/author", session, async (req) => {
+      const b = (req.body ?? {}) as Record<string, unknown>;
+      const profile = parseAuthor(b, settings.current.authorProfile);
+      if (b.removePhoto === true) {
+        delete profile.photo;
+        await removeAuthorPhoto(env.assetsDir);
+      }
+      return save("autor", (s) => ({ ...s, authorProfile: profile }));
+    });
+
+    scope.post("/admin/api/author-photo", session, async (req) => {
+      if (!Buffer.isBuffer(req.body) || req.body.length === 0) throw new WpError(415, "invalid_image", "Envie uma foto PNG, JPG ou WebP.");
+      let photo: { base: string };
+      try {
+        photo = await storeAuthorPhoto(env.assetsDir, req.body);
+      } catch {
+        throw new WpError(415, "invalid_image", "Não foi possível ler a foto. Envie um PNG, JPG ou WebP válido.");
+      }
+      // Foto enviada antes do nome: fica guardada, sem aparecer no site até o cadastro
+      const empty = parseAuthor({}, undefined);
+      return save("foto do autor", (s) => ({ ...s, imageGenerator: s.imageGenerator ?? IMAGE_GENERATOR_VERSION, authorProfile: { ...(s.authorProfile ?? empty), photo } }));
     });
 
     scope.get("/admin/api/posts", session, async () => ({ posts: await store.listArticles() }));
@@ -341,7 +367,6 @@ export async function registerAdmin(app: FastifyInstance, deps: AdminDeps): Prom
           avatar: "/assets/brand/autor.webp",
           colors: p.palette,
         },
-        author: { name: p.authorName, bio: p.authorBio },
         ...(home ? { home } : {}),
         ...merged,
       }));

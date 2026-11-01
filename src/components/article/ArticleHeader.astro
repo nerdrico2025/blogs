@@ -2,6 +2,7 @@
 import site from "../../../site.config.ts";
 import Icon from "../Icon.astro";
 import Picture from "../Picture.astro";
+import AuthorSignature from "./AuthorSignature.astro";
 import type { PostView } from "../../lib/posts.ts";
 import { formatDate, isoDate } from "../../lib/format.ts";
 
@@ -23,7 +24,7 @@ const notice = site.article.affiliateNotice;
 </nav>
 <h1>{post.title}</h1>
 <div class="article-meta" data-pagefind-ignore>
-  <span class="by">Por {post.author.name} <span aria-hidden="true">/</span> <time datetime={isoDate(post.date)}>{formatDate(post.date)}</time></span>
+  <span class="by">{site.authorProfile ? <AuthorSignature prefix="Por" /> : `Por ${post.author.name}`}{" "}<span aria-hidden="true">/</span> <time datetime={isoDate(post.date)}>{formatDate(post.date)}</time></span>
   <div class="meta-row">
     {wasUpdated && (
       <span class="updated"><Icon name="calendar" /> Atualizado em <strong><time datetime={isoDate(post.updated)}>{formatDate(post.updated)}</time></strong></span>
