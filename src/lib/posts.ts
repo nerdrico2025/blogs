@@ -11,6 +11,8 @@ export interface PostView {
   slug: string;
   url: string;
   title: string;
+  /** Título do <title> e das redes; normalmente igual ao título. */
+  seoTitle: string;
   description: string;
   excerpt: string;
   date: Date;
@@ -68,6 +70,7 @@ export function toView(entry: Post): PostView {
     slug: entry.id,
     url: postUrl(entry.id),
     title: entry.data.title,
+    seoTitle: entry.data.seoTitle ?? entry.data.title,
     description: plain(entry.data.description ?? excerpt, 158),
     excerpt,
     date: entry.data.date,

@@ -9,6 +9,8 @@ const posts = defineCollection({
   loader: glob({ pattern: "**/*.md", base: process.env.CONTENT_DIR ?? path.join(localDataDir(), "content", "posts") }),
   schema: z.object({
     title: z.string().min(1),
+    /** Título para buscadores (<title>), se diferente do título do artigo (ex.: meta title importado do WordPress). */
+    seoTitle: z.string().optional(),
     /** Meta description. Se faltar, usa o excerpt. */
     description: z.string().optional(),
     excerpt: z.string().optional(),

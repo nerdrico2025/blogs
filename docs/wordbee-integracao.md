@@ -185,3 +185,19 @@ Regras:
   texto, "Leia também" da mesma categoria, relacionados por categoria, `<blockquote>`
   como caixa de destaque e FAQ (`<h3>` + `<p>` depois de um H2 "Perguntas frequentes")
   com `FAQPage`.
+
+## Extensões para o importador de WordPress (2026-11-03)
+
+O `scripts/import-wordpress/` publica pelo mesmo caminho do Wordbee e precisou de mais algumas
+partes da WordPress REST API. São opcionais: o que o Wordbee envia continua igual e com o mesmo resultado.
+
+| O quê | Como no WP | Comportamento |
+|---|---|---|
+| Achar um post | `GET /posts?slug=a,b` (autenticado) | Lista os posts com esses slugs, qualquer status. Sem `slug`, todos, paginados (`per_page` até 100, `page`, `X-WP-Total`) |
+| Atualizar | `POST /posts/:id` | Mesmo id e slug. `title` e `content` são obrigatórios (o post guarda Markdown); o resto, se ausente, fica como está. `featured_media: 0` remove a capa. Responde `X-Post-Changed: 0` quando nada mudou e, nesse caso, não regrava nem pede build |
+| Data | `date_gmt` (UTC) ou `date` (com fuso; sem fuso, lida como UTC) | Data de publicação. No futuro: 400 |
+| Data de alteração | `modified_gmt` | Vira `updated` no frontmatter (só se for depois da publicação) |
+| SEO | `meta.seo_title`, `meta.seo_description` | `seoTitle` (o `<title>` do artigo) e `description` no frontmatter |
+| Origem | `meta.source` | Campo `source` (padrão `wordbee`; o importador usa `wordpress`) |
+| Alt da imagem | `POST /media?alt_text=…` | Alt guardado na mídia e usado na capa (sem ele, a capa usa o título do post) |
+| Upload repetido | `POST /media` com os mesmos bytes | Devolve a mídia já gravada, com 200 em vez de 201 (vale também para retry do Wordbee) |
