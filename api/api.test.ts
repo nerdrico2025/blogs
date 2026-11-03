@@ -335,6 +335,97 @@ describe("posts", () => {
   });
 });
 
+describe("importação: data, SEO, alt, busca por slug e atualização", () => {
+  const post = (url: string, payload: Record<string, unknown>) => ctx.app.inject({ method: "POST", url: `/wp-json/wp/v2${url}`, headers: AUTH, payload });
+  let imported: { id: number; link: string; slug: string };
+  let cover: number;
+
+  test("mídia com alt_text na query; mesmos bytes e mesmo nome devolvem a mesma mídia (200); outro nome, outra", async () => {
+    const data = await png(900, 500);
+    const send = (alt: string) =>
+      ctx.app.inject({ method: "POST", url: `/wp-json/wp/v2/media?alt_text=${encodeURIComponent(alt)}`, headers: { ...AUTH, "content-type": "image/png", "content-disposition": 'attachment; filename="capa-importada.png"' }, payload: data });
+    const a = await send("Ponte sobre o rio");
+    assert.equal(a.statusCode, 201, a.body);
+    assert.equal(a.json().alt_text, "Ponte sobre o rio");
+    cover = a.json().id;
+    const b = await send("Ponte sobre o rio ao entardecer");
+    assert.equal(b.statusCode, 200);
+    assert.equal(b.json().id, cover);
+    assert.equal(b.json().source_url, a.json().source_url);
+    assert.equal(b.json().alt_text, "Ponte sobre o rio ao entardecer");
+    const other = await ctx.app.inject({ method: "POST", url: "/wp-json/wp/v2/media", headers: { ...AUTH, "content-type": "image/png", "content-disposition": 'attachment; filename="outra-capa.png"' }, payload: data });
+    assert.equal(other.statusCode, 201);
+    assert.notEqual(other.json().id, cover);
+  });
+
+  test("cria com date_gmt, meta title e meta description; a capa usa o alt enviado", async () => {
+    const res = await post("/posts", {
+      title: "Post antigo do WordPress",
+      content: "<p>Texto importado.</p>",
+      status: "publish",
+      slug: "post-antigo",
+      categories: [site.categories[0]!.id],
+      featured_media: cover,
+      date_gmt: "2016-08-10T13:45:00",
+      modified_gmt: "2019-05-06T07:08:09",
+      meta: { seo_title: "Post antigo: o guia", seo_description: "Descrição do Rank Math.", source: "wordpress" },
+    });
+    assert.equal(res.statusCode, 201, res.body);
+    imported = res.json();
+    assert.equal(res.json().date, "2016-08-10T13:45:00.000Z");
+    const md = readFileSync(path.join(tmp, "posts", "post-antigo.md"), "utf8");
+    assert.match(md, /^date: 2016-08-10T13:45:00\.000Z$/m);
+    assert.match(md, /^updated: 2019-05-06T07:08:09\.000Z$/m);
+    assert.match(md, /^seoTitle: "Post antigo: o guia"$/m);
+    assert.match(md, /^description: Descrição do Rank Math\.$/m);
+    assert.match(md, /alt: Ponte sobre o rio ao entardecer/);
+    assert.match(md, /^source: wordpress$/m);
+  });
+
+  test("data no futuro ou inválida: 400", async () => {
+    const future = await post("/posts", { title: "x", content: "<p>x</p>", date_gmt: "2999-01-01T00:00:00" });
+    assert.equal(future.statusCode, 400);
+    const bad = await post("/posts", { title: "x", content: "<p>x</p>", date: "ontem" });
+    assert.equal(bad.statusCode, 400);
+  });
+
+  test("GET /posts?slug= acha o post; slug inexistente dá lista vazia", async () => {
+    const res = await ctx.app.inject({ method: "GET", url: "/wp-json/wp/v2/posts?slug=post-antigo", headers: AUTH });
+    assert.equal(res.statusCode, 200);
+    assert.equal(res.json().length, 1);
+    assert.equal(res.json()[0].id, imported.id);
+    const none = await ctx.app.inject({ method: "GET", url: "/wp-json/wp/v2/posts?slug=nao-existe", headers: AUTH });
+    assert.deepEqual(none.json(), []);
+    const anon = await ctx.app.inject({ method: "GET", url: "/wp-json/wp/v2/posts?slug=post-antigo" });
+    assert.equal(anon.statusCode, 401);
+  });
+
+  test("POST /posts/:id atualiza no mesmo slug e id, mantendo data e o que não foi enviado", async () => {
+    const res = await post(`/posts/${imported.id}`, { title: "Post antigo do WordPress", content: "<p>Texto revisado.</p>", modified_gmt: "2020-01-02T03:04:05" });
+    assert.equal(res.statusCode, 200, res.body);
+    assert.equal(res.json().id, imported.id);
+    assert.equal(res.json().link, imported.link);
+    assert.ok(!existsSync(path.join(tmp, "posts", "post-antigo-2.md")));
+    const md = readFileSync(path.join(tmp, "posts", "post-antigo.md"), "utf8");
+    assert.match(md, /Texto revisado\./);
+    assert.match(md, /^date: 2016-08-10T13:45:00\.000Z$/m);
+    assert.match(md, /^updated: 2020-01-02T03:04:05\.000Z$/m);
+    assert.match(md, /^seoTitle: "Post antigo: o guia"$/m, "o meta title continua");
+    assert.match(md, /^source: wordpress$/m);
+    assert.match(md, /^cover:/m, "a capa continua");
+  });
+
+  test("atualização idêntica não regrava; id inexistente dá 404", async () => {
+    const file = path.join(tmp, "posts", "post-antigo.md");
+    const before = readFileSync(file, "utf8");
+    const res = await post(`/posts/${imported.id}`, { title: "Post antigo do WordPress", content: "<p>Texto revisado.</p>", modified_gmt: "2020-01-02T03:04:05" });
+    assert.equal(res.statusCode, 200);
+    assert.equal(readFileSync(file, "utf8"), before);
+    const missing = await post("/posts/999999", { title: "a", content: "<p>a</p>" });
+    assert.equal(missing.statusCode, 404);
+  });
+});
+
 describe("outros", () => {
   test("rota inexistente: 404 rest_no_route", async () => {
     const res = await ctx.app.inject({ method: "GET", url: "/wp-json/wp/v2/tags", headers: AUTH });

@@ -24,6 +24,11 @@ export interface MediaRecord {
   width: number;
   height: number;
   createdAt: string;
+  /** Texto alternativo enviado em `alt_text` (opcional). */
+  alt?: string;
+  /** sha256 dos bytes e nome pedido: o mesmo arquivo, com o mesmo nome, enviado de novo devolve a mesma mídia. */
+  hash?: string;
+  name?: string;
 }
 
 interface State {
@@ -69,7 +74,20 @@ export interface CreatePostInput {
   slug?: string;
   categoryId?: number;
   featuredMedia?: number;
+  /** Data de publicação (ISO). Sem ela, vale o momento do recebimento. */
+  date?: string;
+  /** Data da última alteração (ISO), usada só na atualização. */
+  modified?: string;
+  /** Título para buscadores (<title>), quando diferente do título do artigo. */
+  seoTitle?: string;
+  /** Meta description. Sem ela, sai do excerpt ou do começo do texto. */
+  seoDescription?: string;
+  /** Origem do post (frontmatter `source`). */
+  source?: string;
 }
+
+/** Na atualização, só título e conteúdo são obrigatórios; o que faltar continua como está. */
+export type UpdatePostInput = Partial<CreatePostInput> & { title: string; content: string };
 
 async function atomicWrite(file: string, data: string | Buffer): Promise<void> {
   await mkdir(path.dirname(file), { recursive: true });
@@ -171,18 +189,33 @@ export class Store {
     return RESERVED_SLUGS.has(slug) || this.pageSlugs.has(slug);
   }
 
-  saveMedia(data: Buffer, filename: string): Promise<{ record: MediaRecord; meta: MediaMeta }> {
+  /**
+   * Grava a imagem otimizada. Os mesmos bytes com o mesmo nome de arquivo (retry, reimportação) devolvem
+   * a mídia já gravada, com `created: false`; um alt novo substitui o anterior. Com outro nome, é outra mídia.
+   */
+  saveMedia(data: Buffer, filename: string, alt?: string): Promise<{ record: MediaRecord; meta: MediaMeta; created: boolean }> {
     return this.serial(async () => {
+      const hash = createHash("sha256").update(data).digest("hex");
+      const base = safeBaseName(filename);
+      const same = Object.values(this.state.media).find((m) => m.hash === hash && m.name === base && existsSync(path.join(this.env.uploadsDir, m.src.slice(PUBLIC_PREFIX.length))));
+      if (same) {
+        const metaFile = path.join(this.env.uploadsDir, same.src.slice(PUBLIC_PREFIX.length).replace(/\.[a-z0-9]+$/, ".json"));
+        const meta = JSON.parse(await readFile(metaFile, "utf8")) as MediaMeta;
+        if (alt && alt !== same.alt) {
+          same.alt = alt;
+          await this.saveState();
+        }
+        return { record: same, meta, created: false };
+      }
       const now = new Date();
       const subdir = `${now.getUTCFullYear()}/${String(now.getUTCMonth() + 1).padStart(2, "0")}`;
-      const base = safeBaseName(filename);
       let name = base;
       const retired = new Set(this.state.retiredImages ?? []);
       for (let i = 2; existsSync(path.join(this.env.uploadsDir, subdir, `${name}.json`)) || retired.has(`${subdir}/${name}`); i++) name = `${base}-${i}`;
 
       let meta: MediaMeta;
       try {
-        meta = await processImage(data, { subdir, baseName: name, root: this.env.uploadsDir });
+        meta = await processImage(data, { subdir, baseName: name, root: this.env.uploadsDir, ...(alt ? { alt } : {}) });
       } catch (err) {
         throw new WpError(415, "rest_upload_unknown_error", `Imagem inválida ou formato não suportado: ${(err as Error).message}`);
       }
@@ -197,11 +230,69 @@ export class Store {
         width: meta.width,
         height: meta.height,
         createdAt: now.toISOString(),
+        ...(alt ? { alt } : {}),
+        hash,
+        name: base,
       };
       this.state.media[String(id)] = record;
       await this.saveState();
-      return { record, meta };
+      return { record, meta, created: true };
     });
+  }
+
+  findBySlug(slug: string): PostRecord | undefined {
+    return this.posts.get(slug);
+  }
+
+  findById(id: number): PostRecord | undefined {
+    for (const p of this.posts.values()) if (p.id === id) return p;
+    return undefined;
+  }
+
+  /** Posts com wpId, do mais recente para o mais antigo. */
+  allPosts(): PostRecord[] {
+    return [...this.posts.values()].sort((a, b) => b.date.localeCompare(a.date));
+  }
+
+  private category(categoryId: number | undefined) {
+    const category = categoryId === undefined ? site.categories[0]! : site.categories.find((c) => c.id === categoryId);
+    if (!category) throw badParam("categories", `Categoria ${categoryId} não existe.`);
+    return category;
+  }
+
+  private media(featuredMedia: number | undefined): MediaRecord | undefined {
+    const media = featuredMedia ? this.getMedia(featuredMedia) : undefined;
+    if (featuredMedia && !media) throw new WpError(400, "rest_invalid_featured_media", `Mídia ${featuredMedia} não existe.`);
+    return media;
+  }
+
+  /** Monta o arquivo .md (frontmatter + Markdown) de um post. */
+  private async render(
+    input: CreatePostInput,
+    fixed: { id: number; title: string; hash: string; date: string; updated?: string; category: string; media?: MediaRecord }
+  ): Promise<{ file: string; excerpt: string }> {
+    const markdown = await htmlToMarkdown(input.content);
+    const excerptText = input.excerpt ? plainText(input.excerpt) : "";
+    const seoDescription = input.seoDescription ? plainText(input.seoDescription) : "";
+    const description = truncate(seoDescription || excerptText || plainText(input.content), 155);
+    const seoTitle = input.seoTitle ? plainText(input.seoTitle) : "";
+    const { media } = fixed;
+    const frontmatter: Record<string, unknown> = {
+      title: fixed.title,
+      ...(seoTitle && seoTitle !== fixed.title ? { seoTitle } : {}),
+      description,
+      ...(excerptText ? { excerpt: truncate(excerptText, 300) } : {}),
+      date: fixed.date,
+      ...(fixed.updated && fixed.updated > fixed.date ? { updated: fixed.updated } : {}),
+      status: input.status,
+      category: fixed.category,
+      ...(media ? { cover: { src: media.src, alt: media.alt || fixed.title } } : {}),
+      wpId: fixed.id,
+      wpHash: fixed.hash,
+      ...(media ? { wpFeaturedMedia: media.id } : {}),
+      source: input.source || "wordbee",
+    };
+    return { file: `---\n${YAML.stringify(frontmatter, { lineWidth: 0 })}---\n\n${markdown}`, excerpt: excerptText };
   }
 
   /**
@@ -213,16 +304,8 @@ export class Store {
       const title = plainText(input.title);
       if (!title) throw badParam("title", "O título não pode ficar vazio.");
       if (!input.content.trim()) throw badParam("content", "O conteúdo não pode ficar vazio.");
-
-      const category = input.categoryId === undefined
-        ? site.categories[0]!
-        : site.categories.find((c) => c.id === input.categoryId);
-      if (!category) throw badParam("categories", `Categoria ${input.categoryId} não existe.`);
-
-      const media = input.featuredMedia ? this.getMedia(input.featuredMedia) : undefined;
-      if (input.featuredMedia && !media) {
-        throw new WpError(400, "rest_invalid_featured_media", `Mídia ${input.featuredMedia} não existe.`);
-      }
+      const category = this.category(input.categoryId);
+      const media = this.media(input.featuredMedia);
 
       const hash = contentHash(title, input.content);
       const base = slugify(input.slug || title) || `post-${this.state.nextPostId}`;
@@ -234,43 +317,60 @@ export class Store {
         slug = `${base}-${i}`;
       }
 
-      const markdown = await htmlToMarkdown(input.content);
-      const excerptText = input.excerpt ? plainText(input.excerpt) : "";
-      const bodyText = plainText(input.content);
-      const description = truncate(excerptText || bodyText, 155);
-      const date = new Date().toISOString();
+      const date = input.date ?? new Date().toISOString();
       const id = this.state.nextPostId++;
-
-      const frontmatter: Record<string, unknown> = {
-        title,
-        description,
-        ...(excerptText ? { excerpt: truncate(excerptText, 300) } : {}),
-        date,
-        status: input.status,
-        category: category.slug,
-        ...(media ? { cover: { src: media.src, alt: title } } : {}),
-        wpId: id,
-        wpHash: hash,
-        ...(media ? { wpFeaturedMedia: media.id } : {}),
-        source: "wordbee",
-      };
-      const file = `---\n${YAML.stringify(frontmatter, { lineWidth: 0 })}---\n\n${markdown}`;
+      const { file, excerpt } = await this.render(input, { id, title, hash, date, updated: input.modified, category: category.slug, media });
       await atomicWrite(path.join(this.env.contentDir, `${slug}.md`), file);
       await this.saveState();
 
-      const post: PostRecord = {
-        id,
-        slug,
-        title,
-        status: input.status,
-        category: category.slug,
-        date,
-        hash,
-        excerpt: excerptText,
-        featuredMedia: media?.id ?? 0,
-      };
+      const post: PostRecord = { id, slug, title, status: input.status, category: category.slug, date, hash, excerpt, featuredMedia: media?.id ?? 0 };
       this.posts.set(slug, post);
       return { post, created: true };
+    });
+  }
+
+  /**
+   * Atualiza um post existente (POST /posts/:id). O slug e o id não mudam. Campos ausentes
+   * continuam como estão; título e conteúdo são sempre reenviados, porque o post guarda Markdown.
+   * `changed: false` quando o arquivo resultante é idêntico ao atual (nada é gravado).
+   */
+  updatePost(id: number, input: UpdatePostInput): Promise<{ post: PostRecord; changed: boolean }> {
+    return this.serial(async () => {
+      const current = this.findById(id);
+      if (!current) throw new WpError(404, "rest_post_invalid_id", "ID de post inválido.");
+      const title = plainText(input.title);
+      if (!title) throw badParam("title", "O título não pode ficar vazio.");
+      if (!input.content.trim()) throw badParam("content", "O conteúdo não pode ficar vazio.");
+
+      const mdFile = path.join(this.env.contentDir, `${current.slug}.md`);
+      const raw = await readFile(mdFile, "utf8");
+      const old = (YAML.parse(raw.match(/^---\n([\s\S]*?)\n---/)?.[1] ?? "") ?? {}) as Record<string, unknown>;
+
+      const category = input.categoryId === undefined ? findCategory(site.categories, current.category) ?? this.category(undefined) : this.category(input.categoryId);
+      const featured = input.featuredMedia === undefined ? current.featuredMedia || undefined : input.featuredMedia || undefined;
+      const media = this.media(featured);
+      const merged: CreatePostInput = {
+        title: input.title,
+        content: input.content,
+        status: input.status ?? current.status,
+        excerpt: input.excerpt ?? (current.excerpt || undefined),
+        seoTitle: input.seoTitle ?? (typeof old.seoTitle === "string" ? old.seoTitle : undefined),
+        // Sem meta description nova, ela volta a sair do excerpt ou do texto
+        seoDescription: input.seoDescription,
+        source: input.source ?? (typeof old.source === "string" ? old.source : undefined),
+      };
+      const hash = contentHash(title, input.content);
+      const date = input.date ?? current.date;
+      const oldUpdated = old.updated ? new Date(String(old.updated)).toISOString() : undefined;
+      const bodyChanged = hash !== current.hash;
+      const updated = input.modified ?? (bodyChanged ? new Date().toISOString() : oldUpdated);
+
+      const { file, excerpt } = await this.render(merged, { id, title, hash, date, updated, category: category.slug, media });
+      const post: PostRecord = { ...current, title, status: merged.status, category: category.slug, date, hash, excerpt, featuredMedia: media?.id ?? 0 };
+      if (file === raw) return { post: current, changed: false };
+      await atomicWrite(mdFile, file);
+      this.posts.set(current.slug, post);
+      return { post, changed: true };
     });
   }
 

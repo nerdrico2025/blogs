@@ -183,7 +183,7 @@ export function articleSeo(post: PostView): SeoProps {
   }
 
   return {
-    title: post.title,
+    title: post.seoTitle,
     description: post.description,
     path: post.url,
     image,

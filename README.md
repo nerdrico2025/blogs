@@ -24,6 +24,7 @@ api/                     servidor: API do Wordbee, site estático, builds, agend
 shared/settings.ts       configurações do /admin por cima do site.config.ts
 shared/media.ts          processamento de imagens (JPEG e webp até 1600 px, variantes de 160, 480, 800 e 1200 px)
 scripts/                 new-site, seed, rebuild, backup, api:password, simulate-wordbee
+scripts/import-wordpress/ importador de posts de um site WordPress (ver o README da pasta)
 Dockerfile               imagem única para todos os blogs
 deploy/                  alternativa sem Easypanel (Nginx, systemd, scripts)
 ```
@@ -42,6 +43,7 @@ npm run check                     # checagem de tipos
 npm test                          # testes (API, servidor estático, trava, backup, S3)
 npm run new-site -- <nome> --name "Nome" --domain dominio.com.br   # novo blog
 npm run api:password              # senha de aplicação + hash para o Wordbee
+npm run import-wordpress -- --from https://antigo.com.br --blog <nome> --categories cats.txt --dry-run --limit 3
 ```
 
 Sem `SITE`, vale `exemplo`.

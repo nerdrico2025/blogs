@@ -1,0 +1,10 @@
+# Mapeamento de categorias: WordPress de origem => blog de destino.
+# À esquerda, o slug (ou o nome) da categoria antiga; à direita, o slug, o nome ou o id da categoria do blog.
+# Num post com várias categorias vale a PRIMEIRA regra deste arquivo que bater: ponha as mais específicas antes.
+# "*" vale para qualquer categoria sem regra (sem ela, o post sem regra falha e aparece no relatório).
+# Também aceita JSON: { "antiga": "nova", "*": "padrao" }
+nova-york => roteiros
+lugares => roteiros
+economia-milhas => dinheiro
+documentacao-viagem => planejamento
+* => dicas

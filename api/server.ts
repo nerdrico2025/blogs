@@ -4,6 +4,10 @@
  *   GET  /wp-json/wp/v2/categories
  *   POST /wp-json/wp/v2/media   (corpo binário)
  *   POST /wp-json/wp/v2/posts   (JSON)
+ * e, para o importador de WordPress (scripts/import-wordpress), mais estes do mesmo padrão:
+ *   GET  /wp-json/wp/v2/posts?slug=…   (achar o post já importado)
+ *   POST /wp-json/wp/v2/posts/:id      (atualizar)
+ *   campos opcionais date_gmt, modified_gmt e meta.seo_title/seo_description; alt_text no upload
  * mais GET /health e, se SERVE_STATIC não for "false", o site estático e as imagens (api/static.ts).
  * Ver docs/wordbee-integracao.md.
  */
@@ -44,6 +48,69 @@ function filenameFrom(header: string | undefined): string {
   }
   const plain = header.match(/filename\s*=\s*"?([^";]+)"?/i);
   return plain ? plain[1]!.trim() : "imagem";
+}
+
+/**
+ * Data do WP: `date_gmt` (UTC, sem fuso) ou `date` (com fuso; sem fuso, é lida como UTC).
+ * Data no futuro não é aceita: agendamento está fora do escopo.
+ */
+function wpDate(body: Record<string, unknown>, gmtField: string, localField: string, future: boolean): string | undefined {
+  const gmt = body[gmtField];
+  const local = body[localField];
+  const raw = typeof gmt === "string" && gmt ? gmt : typeof local === "string" && local ? local : undefined;
+  if (raw === undefined) return undefined;
+  const field = raw === gmt ? gmtField : localField;
+  const withZone = /(Z|[+-]\d{2}:?\d{2})$/i.test(raw) ? raw : `${raw}Z`;
+  const date = new Date(withZone);
+  if (!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(raw) || Number.isNaN(date.getTime())) throw badParam(field, "Use uma data ISO 8601, ex.: 2024-05-31T14:00:00.");
+  if (!future && date.getTime() > Date.now() + 60_000) throw badParam(field, "Data no futuro não é suportada (agendamento está fora da v1).");
+  return date.toISOString();
+}
+
+/** Campos comuns da criação e da atualização. Na atualização, ausente = mantém. */
+function postFields(body: Record<string, unknown>, update: boolean) {
+  const title = text(body.title);
+  const content = text(body.content);
+  if (title === undefined) throw badParam("title", "Envie o título.");
+  if (content === undefined) throw badParam("content", "Envie o conteúdo.");
+
+  let status: "publish" | "draft" | undefined;
+  if (body.status !== undefined || !update) {
+    const statusIn = body.status === undefined ? "draft" : String(body.status);
+    if (statusIn === "future") throw badParam("status", "Agendamento (future) não é suportado; publique na hora.");
+    if (!["publish", "draft", "pending", "private"].includes(statusIn)) throw badParam("status", `Status desconhecido: ${statusIn}.`);
+    status = statusIn === "publish" ? "publish" : "draft";
+  }
+
+  let categoryId: number | undefined;
+  if (body.categories !== undefined) {
+    const cats = Array.isArray(body.categories) ? body.categories : [body.categories];
+    if (cats.length > 1) throw badParam("categories", "Envie no máximo uma categoria.");
+    if (cats.length === 1) {
+      categoryId = Number(cats[0]);
+      if (!Number.isInteger(categoryId)) throw badParam("categories", "O id da categoria precisa ser inteiro.");
+    }
+  }
+  // Na atualização, featured_media 0 remove a imagem destacada (como no WP)
+  const featured = body.featured_media === undefined ? undefined : body.featured_media === 0 && !update ? undefined : Number(body.featured_media);
+  if (featured !== undefined && !Number.isInteger(featured)) throw badParam("featured_media", "O id da mídia precisa ser inteiro.");
+
+  const meta = body.meta && typeof body.meta === "object" ? (body.meta as Record<string, unknown>) : {};
+  const str = (v: unknown) => (typeof v === "string" && v.trim() ? v : undefined);
+  return {
+    title,
+    content,
+    status,
+    excerpt: text(body.excerpt),
+    slug: typeof body.slug === "string" ? body.slug : undefined,
+    categoryId,
+    featuredMedia: featured,
+    date: wpDate(body, "date_gmt", "date", false),
+    modified: wpDate(body, "modified_gmt", "modified", true),
+    seoTitle: str(meta.seo_title),
+    seoDescription: str(meta.seo_description),
+    source: str(meta.source),
+  };
 }
 
 function postJson(post: PostRecord, store: Store) {
@@ -199,17 +266,20 @@ export async function buildApp(env: ApiEnv, opts: { logger?: boolean } = {}): Pr
     }
     if (req.body.length === 0) throw new WpError(400, "rest_upload_no_data", "Nenhum dado recebido.");
     const filename = filenameFrom(req.headers["content-disposition"]);
-    const { record, meta } = await store.saveMedia(req.body, filename);
+    // Como no WP, campos do anexo podem ir na query string do upload binário
+    const altIn = (req.query as Record<string, unknown>).alt_text;
+    const alt = typeof altIn === "string" ? altIn.replace(/\s+/g, " ").trim().slice(0, 300) : "";
+    const { record, meta, created } = await store.saveMedia(req.body, filename, alt || undefined);
     const sourceUrl = site.url + record.src;
-    req.log.info({ mediaId: record.id, src: record.src }, "mídia salva");
-    return reply.status(201).send({
+    req.log.info({ mediaId: record.id, src: record.src, created }, created ? "mídia salva" : "mídia repetida; devolvendo a existente");
+    return reply.status(created ? 201 : 200).send({
       id: record.id,
       date: record.createdAt,
       slug: record.src.split("/").pop()!.replace(/\.[a-z0-9]+$/, ""),
       type: "attachment",
       link: sourceUrl,
       title: { rendered: filename },
-      alt_text: "",
+      alt_text: record.alt ?? "",
       media_type: "image",
       mime_type: record.mime,
       source_url: sourceUrl,
@@ -217,42 +287,37 @@ export async function buildApp(env: ApiEnv, opts: { logger?: boolean } = {}): Pr
     });
   });
 
+  app.get(`${WP}/posts`, { preHandler: requireAuth, config: limited }, async (req, reply) => {
+    const q = req.query as Record<string, unknown>;
+    const slugs = q.slug === undefined ? [] : (Array.isArray(q.slug) ? q.slug : [q.slug]).flatMap((v) => String(v).split(",")).map((v) => v.trim()).filter(Boolean);
+    const perPage = q.per_page === undefined ? 10 : Number(q.per_page);
+    const page = q.page === undefined ? 1 : Number(q.page);
+    if (!Number.isInteger(perPage) || perPage < 1 || perPage > 100) throw badParam("per_page", "Use um número de 1 a 100.");
+    if (!Number.isInteger(page) || page < 1) throw badParam("page", "Use um número a partir de 1.");
+    const all = slugs.length ? slugs.flatMap((sl) => store.findBySlug(sl) ?? []) : store.allPosts();
+    const total = all.length;
+    reply.header("X-WP-Total", String(total)).header("X-WP-TotalPages", String(Math.max(1, Math.ceil(total / perPage))));
+    return all.slice((page - 1) * perPage, page * perPage).map((p) => postJson(p, store));
+  });
+
   app.post(`${WP}/posts`, { preHandler: requireAuth, config: limited }, async (req, reply) => {
-    const body = (req.body ?? {}) as Record<string, unknown>;
-    const title = text(body.title);
-    const content = text(body.content);
-    if (title === undefined) throw badParam("title", "Envie o título.");
-    if (content === undefined) throw badParam("content", "Envie o conteúdo.");
-
-    const statusIn = body.status === undefined ? "draft" : String(body.status);
-    if (statusIn === "future") throw badParam("status", "Agendamento (future) não é suportado; publique na hora.");
-    if (!["publish", "draft", "pending", "private"].includes(statusIn)) throw badParam("status", `Status desconhecido: ${statusIn}.`);
-    const status = statusIn === "publish" ? "publish" : "draft";
-
-    let categoryId: number | undefined;
-    if (body.categories !== undefined) {
-      const cats = Array.isArray(body.categories) ? body.categories : [body.categories];
-      if (cats.length > 1) throw badParam("categories", "Envie no máximo uma categoria.");
-      if (cats.length === 1) {
-        categoryId = Number(cats[0]);
-        if (!Number.isInteger(categoryId)) throw badParam("categories", "O id da categoria precisa ser inteiro.");
-      }
-    }
-    const featured = body.featured_media === undefined || body.featured_media === 0 ? undefined : Number(body.featured_media);
-    if (featured !== undefined && !Number.isInteger(featured)) throw badParam("featured_media", "O id da mídia precisa ser inteiro.");
-
-    const { post, created } = await store.createPost({
-      title,
-      content,
-      status,
-      excerpt: text(body.excerpt),
-      slug: typeof body.slug === "string" ? body.slug : undefined,
-      categoryId,
-      featuredMedia: featured,
-    });
+    const f = postFields((req.body ?? {}) as Record<string, unknown>, false);
+    const { post, created } = await store.createPost({ ...f, status: f.status! });
     req.log.info({ postId: post.id, slug: post.slug, status: post.status, created }, created ? "post criado" : "post repetido; devolvendo o existente");
     if (created) builds.request(`post ${post.id} (${post.slug})`);
     return reply.status(created ? 201 : 200).send(postJson(post, store));
+  });
+
+  app.post(`${WP}/posts/:id`, { preHandler: requireAuth, config: limited }, async (req, reply) => {
+    const id = Number((req.params as { id: string }).id);
+    if (!Number.isInteger(id)) throw new WpError(404, "rest_post_invalid_id", "ID de post inválido.");
+    const { slug: _ignored, ...f } = postFields((req.body ?? {}) as Record<string, unknown>, true);
+    const { post, changed } = await store.updatePost(id, f);
+    req.log.info({ postId: post.id, slug: post.slug, changed }, changed ? "post atualizado" : "post sem mudanças");
+    if (changed) builds.request(`post ${post.id} (${post.slug}) atualizado`);
+    // Fora do padrão do WP, só informativo: diz ao importador se algo mudou
+    reply.header("X-Post-Changed", changed ? "1" : "0");
+    return postJson(post, store);
   });
 
   await registerAdmin(app, { env, store, builds, settings, secrets });
