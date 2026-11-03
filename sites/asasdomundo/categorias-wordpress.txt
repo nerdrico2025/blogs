@@ -1,0 +1,19 @@
+# Mapeamento de categorias: WordPress antigo (asasdomundo.com.br) => blog asasdomundo.
+# Formato de scripts/import-wordpress/categorias.exemplo.txt. Num post com várias categorias vale a
+# PRIMEIRA regra que bater: os temas específicos vêm antes de "lugares" e "diario-de-bordo".
+# Sem "*": post sem regra falha e aparece no relatório.
+
+# Temas
+economia-milhas => dinheiro
+nomade-digital => nomade-digital
+equipamentos-viagem => equipamentos
+documentacao-viagem => documentacao
+viagem-necessidades-especiais => acessibilidade
+
+# Destinos e relatos
+nova-york => roteiros
+washington-dc => roteiros
+america => roteiros
+caminho-de-santiago => roteiros
+lugares => roteiros
+diario-de-bordo => roteiros
