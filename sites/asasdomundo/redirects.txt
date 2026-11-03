@@ -8,12 +8,13 @@
 # >>> importado do WordPress (scripts/import-wordpress). Gerado: não edite dentro deste bloco.
 /category/diario-de-bordo/ /category/roteiros/
 /category/diario-de-bordo/caminho-de-santiago/ /category/roteiros/
-/category/documentacao-viagem/ /category/documentacao/
+/category/documentacao-viagem/ /category/planejamento/
 /category/economia-milhas/ /category/dinheiro/
-/category/equipamentos-viagem/ /category/equipamentos/
+/category/equipamentos-viagem/ /category/dicas/
 /category/lugares/ /category/roteiros/
 /category/lugares/america/ /category/roteiros/
 /category/lugares/america/nova-york/ /category/roteiros/
 /category/lugares/america/washington-dc/ /category/roteiros/
-/category/viagem-necessidades-especiais/ /category/acessibilidade/
+/category/nomade-digital/ /category/dicas/
+/category/viagem-necessidades-especiais/ /category/planejamento/
 # <<< fim da importação do WordPress
