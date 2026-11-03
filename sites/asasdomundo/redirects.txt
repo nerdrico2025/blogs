@@ -4,3 +4,16 @@
 #
 # /sobre-nos/ /sobre/
 # /quem-somos/ /sobre/
+
+# >>> importado do WordPress (scripts/import-wordpress). Gerado: não edite dentro deste bloco.
+/category/diario-de-bordo/ /category/roteiros/
+/category/diario-de-bordo/caminho-de-santiago/ /category/roteiros/
+/category/documentacao-viagem/ /category/documentacao/
+/category/economia-milhas/ /category/dinheiro/
+/category/equipamentos-viagem/ /category/equipamentos/
+/category/lugares/ /category/roteiros/
+/category/lugares/america/ /category/roteiros/
+/category/lugares/america/nova-york/ /category/roteiros/
+/category/lugares/america/washington-dc/ /category/roteiros/
+/category/viagem-necessidades-especiais/ /category/acessibilidade/
+# <<< fim da importação do WordPress
