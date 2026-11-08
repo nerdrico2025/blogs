@@ -69,6 +69,8 @@ export interface AuthorProfile {
   /** `base` é o caminho sem a largura: <base>-<largura>.webp */
   photo?: { base: string };
   photoAlt: string;
+  /** Título da caixa no fim dos artigos (vem da aba Textos, não é gravado aqui). */
+  kicker?: string;
   credentials: string[];
   specialties: string[];
   links: Partial<Record<(typeof AUTHOR_LINKS)[number], string>>;
@@ -107,6 +109,15 @@ export interface Settings {
   ads?: { headScript?: string; adsTxt?: string; slots?: Partial<Record<AdPosition, AdSlot>> };
   categories?: Category[];
   nextCategoryId?: number;
+  /** Domínio público (https://dominio, sem barra). Vale mais que SITE_URL e que o site.config.ts. */
+  siteUrl?: string;
+  contact?: { email?: string };
+  legal?: { owner?: string; city?: string };
+  /** Textos fixos do layout, editáveis na aba Textos. */
+  texts?: { cookies?: string; affiliateNotice?: string; authorBoxKicker?: string };
+  analytics?: { gaId?: string; adsenseClient?: string };
+  /** Data do último "Reiniciar para novo domínio": enquanto existir, o painel mostra o checklist. */
+  resetAt?: string;
 }
 
 export function settingsFile(): string {
@@ -268,7 +279,7 @@ export function applySettings(base: SiteConfig, s: Settings): SiteConfig {
   const name = s.brand?.name?.trim();
   const out: SiteConfig = structuredClone(name && name !== base.name ? replaceDeep(base, base.name, name) : base);
   // O domínio não passa pela troca de nome
-  out.url = base.url;
+  out.url = s.siteUrl?.trim() || base.url;
   if (name) out.name = name;
   if (s.lang?.trim()) {
     out.lang = s.lang.trim();
@@ -308,13 +319,27 @@ export function applySettings(base: SiteConfig, s: Settings): SiteConfig {
     out.nav = replaceDeep(buildNav(base, s.categories), base.name, out.name);
   }
 
+  if (s.contact?.email?.trim()) out.contact = { ...out.contact, email: s.contact.email.trim() };
+  if (s.legal?.owner?.trim()) out.legal = { ...out.legal, owner: s.legal.owner.trim() };
+  if (s.legal?.city?.trim()) out.legal = { ...out.legal, city: s.legal.city.trim() };
+  const t = s.texts;
+  if (t?.cookies?.trim()) out.cookies = { ...out.cookies, text: t.cookies.trim() };
+  if (t?.affiliateNotice !== undefined) {
+    const text = t.affiliateNotice.trim();
+    out.article = { ...out.article, affiliateNotice: { enabled: Boolean(text), text: text || out.article.affiliateNotice.text } };
+  }
+  if (t?.authorBoxKicker?.trim()) out.article = { ...out.article, authorBox: { ...out.article.authorBox, kicker: t.authorBoxKicker.trim() } };
+  if (s.analytics) out.analytics = { gaId: s.analytics.gaId ?? out.analytics.gaId, adsenseClient: s.analytics.adsenseClient ?? out.analytics.adsenseClient };
+
   if (s.tracking) out.tracking = { gtmId: s.tracking.gtmId ?? "", headCode: s.tracking.headCode ?? "", bodyCode: s.tracking.bodyCode ?? "" };
   if (s.ads) {
     out.ads = { headScript: s.ads.headScript ?? "", slots: s.ads.slots ?? {} };
     if (s.ads.adsTxt?.trim()) out.adsTxt = s.ads.adsTxt.split("\n").map((l) => l.trim()).filter(Boolean);
   }
   // Definido mesmo vazio: a recarga no servidor copia as chaves por cima, e apagar o nome precisa valer
-  out.authorProfile = s.authorProfile?.name?.trim() ? s.authorProfile : undefined;
+  // O título da caixa (aba Textos) vale também para o autor cadastrado; sem ele, o componente usa "Sobre o autor"
+  const kicker = s.texts?.authorBoxKicker?.trim();
+  out.authorProfile = s.authorProfile?.name?.trim() ? { ...s.authorProfile, ...(kicker ? { kicker } : {}) } : undefined;
 
   const h = s.home;
   if (h?.tools) out.sidebar.tools = { ...h.tools, icon: h.tools.icon ?? out.sidebar.tools.icon };

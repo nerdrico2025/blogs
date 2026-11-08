@@ -4,15 +4,15 @@ description: "Aviso legal sobre o caráter informativo do conteúdo do {{site.na
 updated: 2026-10-27
 ---
 
-O **{{site.name}}** publica conteúdo informativo. Nada neste site constitui aconselhamento jurídico, financeiro, médico ou de imigração.
+O **{{site.name}}** publica conteúdo informativo. Nada neste site constitui aconselhamento profissional (jurídico, financeiro, médico ou de outra área).
 
 ## Informações sujeitas a mudança
 
-Regras de entrada em países, exigências de vistos e vacinas, tarifas, impostos sobre câmbio e políticas de companhias aéreas e hotéis mudam com frequência. As informações valem para a data de atualização indicada em cada artigo. Antes de viajar, confirme sempre nos canais oficiais (consulados, embaixadas, Receita Federal, ANAC, companhias aéreas).
+Preços, regras, prazos e condições de produtos e serviços mudam com frequência. As informações valem para a data de atualização indicada em cada artigo. Antes de decidir, confirme sempre nos canais oficiais das empresas e dos órgãos responsáveis.
 
 ## Valores e cotações
 
-Preços e cotações exibidos, inclusive na faixa de cotações do topo do site, são aproximados e servem apenas como referência.
+Preços e valores citados são aproximados e servem apenas como referência.
 
 ## Opiniões
 

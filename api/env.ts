@@ -37,7 +37,12 @@ export interface ApiEnv {
   /** Raiz do projeto Astro (onde fica package.json). */
   projectDir: string;
   contentDir: string;
+  /** Páginas fixas em uso: as do volume, se já foram editadas no /admin; senão, as de sites/<SITE>/pages. */
   pagesDir: string;
+  /** Onde o /admin grava as páginas fixas (ao lado do settings.json). */
+  volumePagesDir: string;
+  /** Os 301 da migração ficam no repositório (sites/<SITE>/redirects.txt), mesmo com as páginas no volume. */
+  redirectsFile: string;
   uploadsDir: string;
   stateFile: string;
   settingsFile: string;
@@ -111,6 +116,7 @@ export function loadEnv(overrides: Partial<ApiEnv> = {}): ApiEnv {
   const site = siteId();
   const local = localDataDir(projectDir);
   const minute = createHash("sha256").update(site).digest().readUInt16BE(0) % 60;
+  const volumePages = path.join(path.dirname(settingsFile()), "pages");
   const env: ApiEnv = {
     site,
     host: process.env.HOST ?? process.env.API_HOST ?? "127.0.0.1",
@@ -120,8 +126,10 @@ export function loadEnv(overrides: Partial<ApiEnv> = {}): ApiEnv {
     passwordHash: cleanEnvValue(process.env.WP_APP_PASSWORD_HASH),
     projectDir,
     contentDir: path.resolve(process.env.CONTENT_DIR ?? path.join(local, "content/posts")),
-    // Blog sem pasta em sites/: as páginas fixas ficam no volume, ao lado do settings.json
-    pagesDir: path.resolve(process.env.PAGES_DIR ?? (hasSiteFolder(projectDir) ? path.join(siteDir(projectDir), "pages") : path.join(path.dirname(settingsFile()), "pages"))),
+    // Blog sem pasta em sites/, ou páginas já editadas no /admin: as páginas fixas ficam no volume, ao lado do settings.json
+    pagesDir: path.resolve(process.env.PAGES_DIR ?? (hasSiteFolder(projectDir) && !existsSync(volumePages) ? path.join(siteDir(projectDir), "pages") : volumePages)),
+    volumePagesDir: volumePages,
+    redirectsFile: path.join(hasSiteFolder(projectDir) ? siteDir(projectDir) : path.dirname(settingsFile()), "redirects.txt"),
     uploadsDir: path.resolve(process.env.UPLOADS_DIR ?? path.join(local, "uploads")),
     stateFile: path.resolve(process.env.STATE_FILE ?? path.join(local, "data/api-state.json")),
     settingsFile: settingsFile(),

@@ -53,7 +53,7 @@ const SETUP_PAGE = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8
 
 export async function registerStatic(app: FastifyInstance, env: ApiEnv, isConfigured: () => boolean = () => true): Promise<void> {
   await mkdir(env.uploadsDir, { recursive: true });
-  const redirects = loadRedirects(path.join(path.dirname(env.pagesDir), "redirects.txt"));
+  const redirects = loadRedirects(env.redirectsFile);
 
   const notFoundPage = (reply: FastifyReply) => {
     const page = path.join(env.currentLink, "404.html");

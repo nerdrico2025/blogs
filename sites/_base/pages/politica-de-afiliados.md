@@ -4,7 +4,7 @@ description: "Como funcionam os links de parceiros no {{site.name}} e como isso 
 updated: 2026-10-27
 ---
 
-Alguns links do **{{site.name}}** são de programas de afiliados. Quando você compra ou reserva por um desses links, o site pode receber uma comissão. **O preço para você não muda.**
+Alguns links do **{{site.name}}** são de programas de afiliados. Quando você compra ou contrata por um desses links, o site pode receber uma comissão. **O preço para você não muda.**
 
 ## Por que usamos links de afiliados
 

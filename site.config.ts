@@ -22,7 +22,10 @@ const config: SiteConfig = applySettings(base, readSettings());
 
 /** A API muda as configurações sem reiniciar: o mesmo objeto é atualizado para todos que o importam. */
 export function reloadSite(settings: Settings): void {
-  Object.assign(config, applySettings(base, settings));
+  const next = applySettings(base, settings);
+  // Chave que deixou de existir (ex.: logoDark depois de "Reiniciar para novo domínio") sai do objeto
+  for (const key of Object.keys(config) as (keyof SiteConfig)[]) if (!(key in next)) delete config[key];
+  Object.assign(config, next);
 }
 
 /** Os valores do site.config.ts, sem o settings.json. */

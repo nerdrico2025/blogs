@@ -4,15 +4,17 @@
  */
 import { createHash, randomBytes, timingSafeEqual } from "node:crypto";
 import { existsSync } from "node:fs";
-import { cp, readFile, writeFile } from "node:fs/promises";
+import { cp, mkdir, readdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
+import sharp from "sharp";
 import YAML from "yaml";
 import site from "../site.config.ts";
 import { generateBrand } from "../scripts/lib/brand.ts";
 import { AD_POSITIONS, DEFAULT_HEADER_COLOR, contrastWarnings, type Settings } from "../shared/settings.ts";
-import { siteDir } from "../src/lib/site-id.ts";
+import { hasSiteFolder, siteDir } from "../src/lib/site-id.ts";
+import { runBackup } from "./backup.ts";
 import { IMAGE_GENERATOR_VERSION, missingOriginals, removeAuthorPhoto, storeAuthorPhoto, storeBrandImage } from "./brand-images.ts";
 import { Attempts, Authenticator, generateAppPassword, hashPassword, isValidHash } from "./auth.ts";
 import type { BuildQueue } from "./build-queue.ts";
@@ -21,7 +23,7 @@ import type { ApiEnv } from "./env.ts";
 import { WpError } from "./errors.ts";
 import type { SecretStore } from "./secrets.ts";
 import { brokenCategoryLinks, generateProposal, validateProposal, type SetupProposal } from "./setup-ai.ts";
-import { mergeCategories, parseAds, parseAuthor, parseColors, parseHome, parseTracking, type SettingsStore } from "./settings-store.ts";
+import { mergeCategories, parseAds, parseAdsenseClient, parseAuthor, parseColors, parseGaId, parseHome, parseSiteUrl, parseTexts, parseTracking, type SettingsStore } from "./settings-store.ts";
 import type { Store } from "./store.ts";
 
 const COOKIE = "blog_admin";
@@ -30,6 +32,23 @@ const UI = path.join(path.dirname(fileURLToPath(import.meta.url)), "admin-ui");
 const UI_FILES: Record<string, string> = { "admin.css": "text/css", "admin.js": "text/javascript", "color.js": "text/javascript", "setup.js": "text/javascript" };
 const digest = (s: string) => createHash("sha256").update(s).digest();
 const WORDBEE_USER = "wordbee";
+/** Marcadores aceitos nas páginas fixas (src/lib/placeholders.ts). Outro marcador faria a publicação falhar. */
+const PAGE_PLACEHOLDERS = new Set(["site.name", "site.url", "site.domain", "contact.email", "legal.owner", "legal.city"]);
+const PAGE_LIMITS = { title: 120, description: 300, body: 60_000 };
+const SHARE_IMAGE = { width: 1200, height: 630 };
+
+/** Arquivos (não pastas) dentro de uma pasta, contando as subpastas. */
+async function countFiles(dir: string): Promise<number> {
+  if (!existsSync(dir)) return 0;
+  let n = 0;
+  for (const e of await readdir(dir, { withFileTypes: true, recursive: true })) if (e.isFile()) n++;
+  return n;
+}
+
+const cleanUrl = (v: string | undefined) => (v ?? "").trim().replace(/\/+$/, "");
+const hostOf = (url: string) => new URL(url).host.toLowerCase();
+/** O que a pessoa digitou para confirmar: aceita com ou sem https:// e barra no fim. */
+const typedHost = (v: unknown) => String(v ?? "").trim().toLowerCase().replace(/^https?:\/\//, "").replace(/\/+$/, "");
 
 export interface AdminDeps {
   env: ApiEnv;
@@ -117,7 +136,7 @@ export async function registerAdmin(app: FastifyInstance, deps: AdminDeps): Prom
     });
 
     // Um endereço para cada tela do painel; quem escolhe o que mostrar é o admin.js
-    for (const screen of ["artigos", "categorias", "autor", "marca", "home", "anuncios", "rastreamento", "wordbee"]) {
+    for (const screen of ["artigos", "categorias", "paginas", "autor", "marca", "home", "textos", "anuncios", "rastreamento", "dominio", "wordbee"]) {
       for (const url of [`/admin/${screen}`, `/admin/${screen}/`]) {
         scope.get(url, async (_req, reply) => {
           if (!settings.isConfigured()) return reply.redirect("/admin/setup", 302);
@@ -148,7 +167,21 @@ export async function registerAdmin(app: FastifyInstance, deps: AdminDeps): Prom
       const c = site.theme.colors;
       return {
         name: site.name,
+        tagline: site.tagline,
+        description: site.description,
         url: site.url,
+        domain: { saved: s.siteUrl ?? "", env: cleanUrl(process.env.SITE_URL), effective: site.url },
+        shareImage: site.seo.defaultImage.src,
+        texts: {
+          contactEmail: site.contact.email,
+          legalOwner: site.legal.owner,
+          legalCity: site.legal.city,
+          cookies: site.cookies.text,
+          affiliateNotice: site.article.affiliateNotice.enabled ? site.article.affiliateNotice.text : "",
+          authorBoxKicker: site.article.authorBox.kicker,
+        },
+        analytics: { gaId: site.analytics.gaId, adsenseClient: site.analytics.adsenseClient },
+        checklist: s.resetAt ? checklist(s) : null,
         logo: site.logo.src,
         logoDark: site.logoDark?.src ?? "",
         missingOriginals: missingOriginals(env.assetsDir, s.brand),
@@ -181,6 +214,20 @@ export async function registerAdmin(app: FastifyInstance, deps: AdminDeps): Prom
       };
     };
 
+    /** Depois de "Reiniciar para novo domínio": o que falta preencher, com a tela onde se faz. */
+    function checklist(s: Settings) {
+      return [
+        { screen: "marca", label: "Marca: nome, logotipo e favicon", done: Boolean(s.brand?.name && s.brand?.logo && s.brand?.favicon) },
+        { screen: "marca", label: "Nicho: frase e descrição do blog", done: Boolean(s.tagline && s.description) },
+        { screen: "dominio", label: "Domínio novo", done: Boolean(s.siteUrl) },
+        { screen: "categorias", label: "Categorias do novo nicho", done: Boolean(s.categories?.length) },
+        { screen: "paginas", label: "Páginas fixas (Sobre, Contato e textos legais)", done: env.pagesDir === env.volumePagesDir },
+        { screen: "autor", label: "Autor e e-mail de contato", done: Boolean(s.authorProfile?.name && s.contact?.email) },
+        { screen: "anuncios", label: "AdSense e ads.txt", done: Boolean(s.analytics?.adsenseClient || s.ads?.adsTxt?.trim()) },
+        { screen: "rastreamento", label: "Google Tag Manager", done: Boolean(s.tracking?.gtmId) },
+      ];
+    }
+
     /** Valida, grava de forma atômica e pede o rebuild (a fila respeita a trava global). */
     const save = async (reason: string, fn: (s: Settings) => Settings) => {
       await settings.update(fn);
@@ -204,7 +251,10 @@ export async function registerAdmin(app: FastifyInstance, deps: AdminDeps): Prom
       if (colors.header) colors.header = colors.header.toLowerCase();
       if (colors.header === DEFAULT_HEADER_COLOR) delete colors.header;
       const name = typeof b.name === "string" ? b.name.trim().slice(0, 80) : "";
-      return save("marca", (s) => ({ ...s, brand: { ...s.brand, name, colors } }));
+      const text = (v: unknown, max: number) => (typeof v === "string" ? v.replace(/\s+/g, " ").trim().slice(0, max) : undefined);
+      const tagline = text(b.tagline, 120);
+      const description = text(b.description, 300);
+      return save("marca", (s) => ({ ...s, brand: { ...s.brand, name, colors }, ...(tagline === undefined ? {} : { tagline }), ...(description === undefined ? {} : { description }) }));
     });
 
     const imageUpload = (kind: "logo" | "logoDark" | "favicon") => async (req: FastifyRequest) => {
@@ -223,14 +273,50 @@ export async function registerAdmin(app: FastifyInstance, deps: AdminDeps): Prom
     scope.post("/admin/api/logo-dark", session, imageUpload("logoDark"));
     scope.post("/admin/api/favicon", session, imageUpload("favicon"));
 
+    scope.post("/admin/api/share-image", session, async (req) => {
+      if (!Buffer.isBuffer(req.body) || req.body.length === 0) throw new WpError(415, "invalid_image", "Envie uma imagem PNG, JPG ou WebP.");
+      let data: Buffer;
+      try {
+        // 1200 × 630, recortada no ponto de interesse, sem metadados (EXIF e GPS)
+        data = await sharp(req.body, { failOn: "error", limitInputPixels: 50_000_000 }).rotate().resize({ ...SHARE_IMAGE, fit: "cover", position: "attention" }).jpeg({ quality: 85, mozjpeg: true }).toBuffer();
+      } catch {
+        throw new WpError(415, "invalid_image", "Não foi possível ler a imagem. Envie um PNG, JPG ou WebP válido.");
+      }
+      const name = `og-${createHash("sha256").update(data).digest("hex").slice(0, 10)}.jpg`;
+      await mkdir(env.assetsDir, { recursive: true });
+      const tmp = path.join(env.assetsDir, `${name}.${process.pid}.tmp`);
+      await writeFile(tmp, data);
+      await rename(tmp, path.join(env.assetsDir, name));
+      return save("imagem de compartilhamento", (s) => ({ ...s, brand: { ...s.brand, defaultImage: `/assets/${name}` } }));
+    });
+
+    scope.post("/admin/api/domain", session, async (req) => {
+      const siteUrl = parseSiteUrl(((req.body ?? {}) as Record<string, unknown>).siteUrl);
+      return save("domínio", (s) => {
+        const next = { ...s };
+        if (siteUrl) next.siteUrl = siteUrl;
+        else delete next.siteUrl;
+        return next;
+      });
+    });
+
+    scope.post("/admin/api/texts", session, async (req) => {
+      const texts = parseTexts((req.body ?? {}) as Record<string, unknown>);
+      return save("textos", (s) => ({ ...s, ...texts }));
+    });
+
     scope.post("/admin/api/tracking", session, async (req) => {
-      const tracking = parseTracking((req.body ?? {}) as Record<string, unknown>);
-      return save("rastreamento", (s) => ({ ...s, tracking }));
+      const b = (req.body ?? {}) as Record<string, unknown>;
+      const tracking = parseTracking(b);
+      const gaId = b.gaId === undefined ? undefined : parseGaId(b.gaId);
+      return save("rastreamento", (s) => ({ ...s, tracking, ...(gaId === undefined ? {} : { analytics: { ...s.analytics, gaId } }) }));
     });
 
     scope.post("/admin/api/ads", session, async (req) => {
-      const ads = parseAds((req.body ?? {}) as Record<string, unknown>);
-      return save("anúncios", (s) => ({ ...s, ads }));
+      const b = (req.body ?? {}) as Record<string, unknown>;
+      const ads = parseAds(b);
+      const adsenseClient = b.adsenseClient === undefined ? undefined : parseAdsenseClient(b.adsenseClient);
+      return save("anúncios", (s) => ({ ...s, ads, ...(adsenseClient === undefined ? {} : { analytics: { ...s.analytics, adsenseClient } }) }));
     });
 
     scope.post("/admin/api/home", session, async (req) => {
@@ -280,8 +366,127 @@ export async function registerAdmin(app: FastifyInstance, deps: AdminDeps): Prom
 
     scope.post("/admin/api/categories", session, async (req) => {
       const body = (req.body ?? {}) as { categories?: unknown };
-      const merged = mergeCategories(site.categories, body.categories, settings.current.nextCategoryId);
+      const merged = mergeCategories(site.categories, body.categories, settings.current.nextCategoryId, (slug) => store.postsInCategory(slug));
       return save("categorias", (s) => ({ ...s, ...merged }));
+    });
+
+    // --- Páginas fixas: editadas aqui, ficam no volume (env.volumePagesDir), por cima das de sites/<SITE>/pages ---
+    const readPage = async (file: string) => {
+      const raw = await readFile(path.join(env.pagesDir, file), "utf8");
+      const m = raw.match(/^---\n([\s\S]*?)\n---\n?([\s\S]*)$/);
+      const data = (m ? (YAML.parse(m[1]!) as Record<string, unknown>) : {}) ?? {};
+      return { slug: file.replace(/\.md$/, ""), data, body: (m ? m[2]! : raw).replace(/^\n+/, "") };
+    };
+    const listPages = async () => {
+      if (!existsSync(env.pagesDir)) return [];
+      const files = (await readdir(env.pagesDir)).filter((f) => f.endsWith(".md")).sort();
+      return Promise.all(files.map(async (f) => {
+        const p = await readPage(f);
+        return { slug: p.slug, title: String(p.data.title ?? p.slug), description: String(p.data.description ?? ""), body: p.body };
+      }));
+    };
+    const checkPlaceholders = (label: string, text: string) => {
+      for (const m of text.matchAll(/(?:\{\{|%7B%7B)\s*([a-z.]+)\s*(?:\}\}|%7D%7D)/gi)) {
+        if (!PAGE_PLACEHOLDERS.has(m[1]!)) throw new WpError(400, "invalid_settings", `${label}: o marcador ${m[0]} não existe. Use ${[...PAGE_PLACEHOLDERS].map((k) => `{{${k}}}`).join(", ")}.`);
+      }
+    };
+
+    scope.get("/admin/api/pages", session, async () => ({ pages: await listPages(), edited: env.pagesDir === env.volumePagesDir }));
+
+    scope.post("/admin/api/pages", session, async (req) => {
+      const b = (req.body ?? {}) as Record<string, unknown>;
+      const slug = String(b.slug ?? "");
+      // Só as páginas que já existem: o slug nunca vira caminho sem estar na lista
+      const pages = await listPages();
+      if (!pages.some((p) => p.slug === slug)) throw new WpError(404, "page_not_found", "Página não encontrada. Atualize a tela e tente de novo.");
+      const field = (key: string, label: string, max: number) => {
+        const v = b[key];
+        if (typeof v !== "string") throw new WpError(400, "invalid_settings", `${label}: valor inválido.`);
+        if (v.length > max) throw new WpError(400, "invalid_settings", `${label}: texto longo demais (máximo ${max} caracteres).`);
+        return v;
+      };
+      const title = field("title", "Título", PAGE_LIMITS.title).trim();
+      const description = field("description", "Descrição", PAGE_LIMITS.description).replace(/\s+/g, " ").trim();
+      const body = field("body", "Texto da página", PAGE_LIMITS.body).replace(/\r\n/g, "\n").trim();
+      if (!title) throw new WpError(400, "invalid_settings", "Título: preencha o título da página.");
+      if (!description) throw new WpError(400, "invalid_settings", "Descrição: preencha a descrição (aparece no Google).");
+      checkPlaceholders("Título", title);
+      checkPlaceholders("Descrição", description);
+      checkPlaceholders("Texto da página", body);
+      // Primeira edição: as páginas do repositório vão para o volume, e de lá em diante valem as do volume
+      if (env.pagesDir !== env.volumePagesDir) {
+        if (!existsSync(env.volumePagesDir)) await cp(env.pagesDir, env.volumePagesDir, { recursive: true });
+        env.pagesDir = env.volumePagesDir;
+      }
+      const current = await readPage(`${slug}.md`);
+      const data = { ...current.data, title, description, updated: new Date().toISOString().slice(0, 10) };
+      const file = path.join(env.pagesDir, `${slug}.md`);
+      const tmp = `${file}.${process.pid}.tmp`;
+      await writeFile(tmp, `---\n${YAML.stringify(data, { lineWidth: 0 })}---\n\n${body}\n`);
+      await rename(tmp, file);
+      await store.reloadPages();
+      builds.request(`página ${slug}`);
+      return { pages: await listPages(), edited: true, state: stateJson() };
+    });
+
+    // --- Reiniciar para novo domínio ---
+    const resetSummary = async () => ({
+      allowed: hasSiteFolder(env.projectDir),
+      domain: hostOf(site.url),
+      posts: store.postCount,
+      uploads: await countFiles(env.uploadsDir),
+      assets: await countFiles(env.assetsDir),
+      trash: existsSync(env.trashDir) ? (await readdir(env.trashDir)).length : 0,
+      settings: existsSync(env.settingsFile),
+      pages: existsSync(env.volumePagesDir),
+      cache: existsSync(env.buildCacheDir),
+      // Com o prefixo igual ao SITE, os backups do domínio novo caem na mesma pasta do bucket que os do antigo
+      s3PrefixWarning: Boolean(env.s3 && env.s3.prefix === env.site),
+      s3: Boolean(env.s3),
+    });
+
+    scope.get("/admin/api/reset", session, async () => resetSummary());
+
+    scope.post("/admin/api/reset", session, async (req) => {
+      const summary = await resetSummary();
+      // Blog sem pasta: sem o settings.json ele voltaria ao assistente, e o painel ficaria inacessível
+      if (!summary.allowed) throw new WpError(409, "reset_unavailable", "Disponível só para blogs com pasta em sites/ (variável SITE preenchida).");
+      if (typedHost(((req.body ?? {}) as Record<string, unknown>).confirm) !== summary.domain) {
+        throw new WpError(400, "reset_confirm", `Para confirmar, digite o domínio atual exatamente: ${summary.domain}`);
+      }
+      let backup;
+      try {
+        backup = await runBackup(env, "reinicio");
+      } catch (err) {
+        req.log.error({ err: (err as Error).message }, "reinício cancelado: o backup falhou");
+        throw new WpError(500, "reset_backup_failed", "O backup não pôde ser feito, então nada foi apagado. Veja os logs do serviço e tente de novo.");
+      }
+      req.log.warn({ domain: summary.domain, backup: path.basename(backup.file), posts: summary.posts }, "reinício para novo domínio: apagando o conteúdo");
+      const { posts } = await store.clearContent();
+      for (const dir of [env.buildCacheDir, env.trashDir, env.assetsDir, env.volumePagesDir]) await rm(dir, { recursive: true, force: true });
+      await rm(env.settingsFile, { force: true });
+      env.pagesDir = path.join(siteDir(env.projectDir), "pages");
+      await store.reloadPages();
+      settings.reload();
+      await settings.update((s) => ({ ...s, resetAt: new Date().toISOString() }));
+      builds.request("reinício para novo domínio");
+      return {
+        backup: path.basename(backup.file),
+        uploaded: backup.uploaded,
+        removed: { posts, uploads: summary.uploads, assets: summary.assets, trash: summary.trash },
+        s3PrefixWarning: summary.s3PrefixWarning,
+        state: stateJson(),
+      };
+    });
+
+    // Só esconde a lista: nada muda no site, então não há publicação
+    scope.post("/admin/api/checklist", session, async () => {
+      await settings.update((s) => {
+        const next = { ...s };
+        delete next.resetAt;
+        return next;
+      });
+      return stateJson();
     });
 
     const newWordbeePassword = async () => {

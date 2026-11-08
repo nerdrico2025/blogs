@@ -27,10 +27,14 @@ export interface BackupResult {
   removed: number;
 }
 
-export async function runBackup(env: ApiEnv): Promise<BackupResult> {
+/**
+ * `label` muda o começo do nome: "reinicio" gera reinicio-<site>-<data>.tar.gz, que a retenção
+ * (só blog-*.tar.gz) nunca apaga.
+ */
+export async function runBackup(env: ApiEnv, label = "blog"): Promise<BackupResult> {
   await mkdir(env.backupDir, { recursive: true });
   const stamp = new Date().toISOString().replace(/[-:]/g, "").replace(/\.\d+Z$/, "Z");
-  const name = `blog-${env.site}-${stamp}.tar.gz`;
+  const name = `${label}-${env.site}-${stamp}.tar.gz`;
   const file = path.join(env.backupDir, name);
 
   // Pasta temporária com links para as três origens: o arquivo fica com content/, uploads/ e data/

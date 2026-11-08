@@ -434,6 +434,39 @@ Repita para cada blog (de preferência em lotes de 2 a 3, observando a memória 
 
 ---
 
+## 8.1 Blog "camaleão" (um domínio por vez, tudo pelo /admin)
+
+Um serviço só, com `SITE=camaleao`, reaproveitado para aprovar um domínio de cada vez. O layout é o
+do asasdomundo; o que muda a cada rodada é preenchido no `/admin` e fica no volume (`/data/settings.json`,
+`/data/assets/`, `/data/pages/`), que vale mais que o repositório.
+
+| O quê | Onde no /admin |
+|---|---|
+| Nome, frase, descrição, cores, logotipo, favicon, imagem de compartilhamento | Marca |
+| Domínio (vale mais que `SITE_URL`) | Domínio |
+| Categorias (criar, renomear, excluir as que não têm artigos) | Categorias |
+| Sobre, Contato, Aviso Legal, Termos, Privacidade, Cookies, Afiliados | Páginas |
+| Autor e foto | Autor |
+| E-mail de contato, responsável, cidade, aviso de cookies, aviso de parceiros, título da caixa do autor | Textos |
+| Caixas da lateral, faixa do topo, rodapé, texto da busca | Home |
+| ID do AdSense, ads.txt, script da rede, posições de anúncio | Anúncios |
+| Google Analytics, Tag Manager, outros códigos | Rastreamento |
+
+**Trocar de domínio:** `/admin` → **Domínio** → **Reiniciar para novo domínio** → digitar o domínio atual.
+Antes de apagar, o painel grava `/data/backups/reinicio-camaleao-<data>.tar.gz` (posts, imagens,
+settings, assets e páginas), que a limpeza automática não apaga. Depois apaga posts, imagens, cache,
+lixeira, `settings.json`, assets e as páginas editadas, e publica o site vazio, com os textos neutros do
+modelo. Continuam: `secrets.json`, `api-state.json`, as variáveis do Easypanel e o login do painel.
+Em seguida, o painel mostra a lista do que preencher.
+
+Fora do painel, a cada domínio novo:
+1. Easypanel → aba **Domains**: adicionar o domínio novo (porta 8080) e tirar o antigo. Nada mais muda no serviço.
+2. Cloudflare: DNS do domínio novo (seção 5).
+3. Wordbee: cadastrar o site novo (as categorias têm números novos).
+4. Se usar backup no S3 com `BACKUP_S3_PREFIX` igual a `camaleao`, troque o prefixo para não misturar os backups dos domínios.
+
+---
+
 ## 9. Operação do dia a dia
 
 ### 9.1 Atualizar o código (um blog por vez)

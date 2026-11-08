@@ -152,6 +152,7 @@ export class Store {
   }
 
   async reloadPages(): Promise<void> {
+    this.pageSlugs.clear();
     if (!existsSync(this.env.pagesDir)) return;
     for (const f of await readdir(this.env.pagesDir)) if (f.endsWith(".md")) this.pageSlugs.add(f.replace(/\.md$/, ""));
   }
@@ -175,6 +176,34 @@ export class Store {
     let n = 0;
     for (const p of this.posts.values()) if (findCategory(site.categories, p.category)?.slug === slug && p.status === "publish") n++;
     return n;
+  }
+
+  /** Artigos gravados com este slug de categoria, em qualquer status (inclusive rascunhos). */
+  postsInCategory(slug: string): number {
+    let n = 0;
+    for (const p of this.posts.values()) if (p.category === slug) n++;
+    return n;
+  }
+
+  /**
+   * "Reiniciar para novo domínio": apaga todos os posts e imagens, na mesma fila da publicação.
+   * O api-state.json fica: os números de post e de mídia nunca se repetem.
+   */
+  clearContent(): Promise<{ posts: number }> {
+    return this.serial(async () => {
+      let posts = 0;
+      if (existsSync(this.env.contentDir)) {
+        for (const f of await readdir(this.env.contentDir)) {
+          if (!f.endsWith(".md")) continue;
+          await rm(path.join(this.env.contentDir, f), { force: true });
+          posts++;
+        }
+      }
+      this.posts.clear();
+      await rm(this.env.uploadsDir, { recursive: true, force: true });
+      await mkdir(this.env.uploadsDir, { recursive: true });
+      return { posts };
+    });
   }
 
   get postCount(): number {

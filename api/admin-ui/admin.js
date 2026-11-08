@@ -3,10 +3,10 @@ const $ = (id) => document.getElementById(id);
 const LABELS = { header: "Topo do site", beforeContent: "Antes do conteúdo", inContent: "Dentro do conteúdo", afterContent: "Depois do conteúdo", sidebarTop: "Lateral, no topo", sidebarBottom: "Lateral, no fim", footer: "Rodapé", mobileSticky: "Banner fixo no celular" };
 const BUILD = { idle: "publicado", waiting: "na fila", "waiting-slot": "aguardando vaga (outros blogs publicando)", building: "publicando agora" };
 const SCREENS = [
-  ["Conteúdo", [["artigos", "Artigos"], ["categorias", "Categorias"], ["autor", "Autor"]]],
-  ["Aparência", [["marca", "Marca"], ["home", "Home"]]],
+  ["Conteúdo", [["artigos", "Artigos"], ["categorias", "Categorias"], ["paginas", "Páginas"], ["autor", "Autor"]]],
+  ["Aparência", [["marca", "Marca"], ["home", "Home"], ["textos", "Textos"]]],
   ["Monetização e dados", [["anuncios", "Anúncios"], ["rastreamento", "Rastreamento"]]],
-  ["Integração", [["wordbee", "Wordbee"]]],
+  ["Site", [["dominio", "Domínio"], ["wordbee", "Wordbee"]]],
 ];
 const SCREEN_NAMES = Object.fromEntries(SCREENS.flatMap(([, list]) => list));
 const DEFAULT_SCREEN = "artigos";
@@ -164,6 +164,8 @@ function showScreen(slug, focus) {
   $("msg").replaceChildren();
   updateDirty();
   if (slug === "artigos") loadPosts();
+  if (slug === "paginas") loadPages();
+  if (slug === "dominio") loadReset();
   window.scrollTo(0, 0);
   if (focus) $("screen-title").focus({ preventScroll: true });
 }
@@ -239,6 +241,7 @@ function renderSlots() {
   }
 }
 
+/** Categoria sem id ainda não foi salva; com id, só sai se não tiver artigos (o servidor confere). */
 function catRow(c) {
   const row = make("div", { className: "card" });
   if (c.id) row.dataset.id = c.id;
@@ -254,6 +257,13 @@ function catRow(c) {
   desc.style.minHeight = "64px";
   desc.dataset.f = "description";
   field(row, "Descrição", desc, "Aparece na página da categoria e nos buscadores.");
+  const rm = make("button", { type: "button", className: "ghost", textContent: c.id ? "Excluir categoria" : "Remover" });
+  rm.onclick = () => {
+    if (c.id && !confirm(`Excluir a categoria "${c.name}"? Só funciona se ela não tiver artigos. A exclusão vale ao clicar em Salvar e publicar.`)) return;
+    row.remove();
+    updateDirty();
+  };
+  row.append(rm);
   return row;
 }
 
@@ -370,9 +380,52 @@ for (const f of COLOR_FIELDS) {
   f.text.addEventListener("blur", () => commitColor(f));
 }
 
+function renderChecklist() {
+  const list = state.checklist;
+  $("checklist").hidden = !list;
+  if (!list) return;
+  $("checklist-items").replaceChildren(...list.map((item) => {
+    const li = make("li", { className: item.done ? "done" : "" });
+    const a = make("a", { href: `/admin/${item.screen}`, textContent: item.label });
+    a.onclick = (e) => {
+      e.preventDefault();
+      if (item.screen === screen || !confirmLeave()) return;
+      history.pushState(null, "", `/admin/${item.screen}`);
+      showScreen(item.screen, true);
+    };
+    li.append(make("span", { className: "mark", textContent: item.done ? "Feito" : "Falta" }), " ", a);
+    return li;
+  }));
+}
+$("checklist-hide").onclick = async () => {
+  try {
+    state = await post("/admin/api/checklist", {});
+    renderChecklist();
+  } catch (err) {
+    show($("msg"), err.message, "err");
+  }
+};
+
 function fill() {
   $("title").textContent = state.name;
   $("b-name").value = state.name;
+  $("b-tagline").value = state.tagline;
+  $("b-description").value = state.description;
+  $("b-share-preview").src = state.shareImage;
+  $("d-url").value = state.domain.saved;
+  $("d-info").textContent = state.domain.saved
+    ? `Em uso: ${state.domain.effective}. Apague o campo para voltar ao domínio da variável SITE_URL${state.domain.env ? ` (${state.domain.env})` : ""}.`
+    : `Em uso: ${state.domain.effective}${state.domain.env ? ", que vem da variável SITE_URL do Easypanel" : ""}. Preencha para trocar por aqui.`;
+  const x = state.texts;
+  $("x-email").value = x.contactEmail;
+  $("x-owner").value = x.legalOwner;
+  $("x-city").value = x.legalCity;
+  $("x-cookies").value = x.cookies;
+  $("x-affiliate").value = x.affiliateNotice;
+  $("x-kicker").value = x.authorBoxKicker;
+  $("t-ga").value = state.analytics.gaId;
+  $("a-client").value = state.analytics.adsenseClient;
+  renderChecklist();
   $("b-logo-preview").src = state.logo;
   $("b-favicon-preview").src = state.favicon;
   $("c-primary").value = state.colors.primary;
@@ -465,7 +518,7 @@ $("f-brand").onsubmit = (e) => {
     show($("msg"), "Corrija o código de cor marcado antes de salvar.", "err");
     return invalid[0].text.focus();
   }
-  saved(post("/admin/api/brand", { name: $("b-name").value, colors: { primary: $("c-primary").value, highlight: $("c-highlight").value, callout: $("c-callout").value, header: $("c-header").value } }));
+  saved(post("/admin/api/brand", { name: $("b-name").value, tagline: $("b-tagline").value, description: $("b-description").value, colors: { primary: $("c-primary").value, highlight: $("c-highlight").value, callout: $("c-callout").value, header: $("c-header").value } }));
 };
 const IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp", "image/svg+xml"];
 const LOGO_MAX_BYTES = 200 * 1024;
@@ -517,11 +570,15 @@ function upload(input, url, info, maxBytes, warningFor) {
     const warning = warningFor(file, await imageSize(file));
     show(info, label, "ok");
     if (warning) info.append(make("div", { className: "msg warn", textContent: warning }));
-    // O envio salva só a imagem: nome e cores ainda não salvos continuam no formulário
+    // O envio salva só a imagem: nome, frase e cores ainda não salvos continuam no formulário
     const name = $("b-name").value;
+    const tagline = $("b-tagline").value;
+    const description = $("b-description").value;
     const typed = COLOR_FIELDS.map((f) => f.text.value);
     const restore = () => {
       $("b-name").value = name;
+      $("b-tagline").value = tagline;
+      $("b-description").value = description;
       COLOR_FIELDS.forEach((f, i) => {
         f.text.value = typed[i];
         commitColor(f);
@@ -540,6 +597,11 @@ $("c-header-reset").onclick = () => {
   commitColor(f);
 };
 upload($("b-favicon"), "/admin/api/favicon", $("b-favicon-info"), Infinity, faviconWarning);
+function shareWarning(_file, size) {
+  if (!size || (size.width >= 1200 && Math.abs(size.width / size.height - 1200 / 630) < 0.05)) return "";
+  return `A imagem tem ${size.width} × ${size.height} px. Ela foi recortada para 1200 × 630 px; confira se nada importante ficou de fora.`;
+}
+upload($("b-share"), "/admin/api/share-image", $("b-share-info"), Infinity, shareWarning);
 const POST_STATUS = { publish: "Publicado", draft: "Rascunho", future: "Agendado", trash: "Na lixeira" };
 const plainTitle = (s) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 let posts = [];
@@ -709,7 +771,7 @@ $("f-tracking").onsubmit = (e) => {
   e.preventDefault();
   const hasGtmCode = /googletagmanager\.com\/gtm\.js/i.test($("t-head").value + $("t-body").value);
   if ($("t-gtm").value.trim() && hasGtmCode && !confirm("O ID do Tag Manager está preenchido e um dos campos de código também traz o código do Tag Manager. Isso pode duplicar as medições. Salvar assim mesmo?")) return;
-  saved(post("/admin/api/tracking", { gtmId: $("t-gtm").value, headCode: $("t-head").value, bodyCode: $("t-body").value }));
+  saved(post("/admin/api/tracking", { gaId: $("t-ga").value, gtmId: $("t-gtm").value, headCode: $("t-head").value, bodyCode: $("t-body").value }));
 };
 $("f-ads").onsubmit = (e) => {
   e.preventDefault();
@@ -719,9 +781,129 @@ $("f-ads").onsubmit = (e) => {
     for (const el of d.querySelectorAll("[data-f]")) s[el.dataset.f] = el.type === "checkbox" ? el.checked : el.value;
     slots[d.dataset.position] = s;
   }
-  saved(post("/admin/api/ads", { headScript: $("a-head").value, adsTxt: $("a-txt").value, slots }));
+  saved(post("/admin/api/ads", { adsenseClient: $("a-client").value, headScript: $("a-head").value, adsTxt: $("a-txt").value, slots }));
 };
 $("add-cat").onclick = () => $("cats").append(catRow({}));
+
+$("f-texts").onsubmit = (e) => {
+  e.preventDefault();
+  saved(post("/admin/api/texts", { contactEmail: $("x-email").value, legalOwner: $("x-owner").value, legalCity: $("x-city").value, cookies: $("x-cookies").value, affiliateNotice: $("x-affiliate").value, authorBoxKicker: $("x-kicker").value }));
+};
+$("f-domain").onsubmit = (e) => {
+  e.preventDefault();
+  saved(post("/admin/api/domain", { siteUrl: $("d-url").value }));
+};
+
+/* Páginas fixas: uma por vez, escolhida na lista */
+let pages = [];
+function fillPage(slug) {
+  const p = pages.find((x) => x.slug === slug) || pages[0];
+  if (!p) return;
+  $("pg-select").value = p.slug;
+  $("pg-title").value = p.title;
+  $("pg-description").value = p.description;
+  $("pg-body").value = p.body;
+  markSaved();
+}
+function renderPages(edited, keep) {
+  $("pg-select").replaceChildren(...pages.map((p) => make("option", { value: p.slug, textContent: p.title })));
+  $("pg-origin").textContent = edited ? "Estas páginas já foram editadas aqui e ficam guardadas no servidor." : "Ainda são os textos padrão do modelo. Ao salvar a primeira página, todas passam a ser guardadas no servidor.";
+  fillPage(keep);
+}
+async function loadPages() {
+  try {
+    const r = await api("/admin/api/pages");
+    pages = r.pages;
+    renderPages(r.edited, $("pg-select").value);
+  } catch (err) {
+    if (err.status === 401) return enter();
+    show($("msg"), err.message, "err");
+  }
+}
+let pageShown = "";
+$("pg-select").onfocus = () => (pageShown = $("pg-select").value);
+$("pg-select").onchange = () => {
+  const next = $("pg-select").value;
+  // A troca de página não pode levar embora o que foi digitado na anterior
+  if (isDirty($("f-pages")) && !confirm("Esta página tem alterações não salvas. Trocar sem salvar?")) {
+    $("pg-select").value = pageShown;
+    return;
+  }
+  pageShown = next;
+  fillPage(next);
+};
+$("f-pages").onsubmit = async (e) => {
+  e.preventDefault();
+  const slug = $("pg-select").value;
+  $("save-btn").disabled = true;
+  try {
+    const r = await post("/admin/api/pages", { slug, title: $("pg-title").value, description: $("pg-description").value, body: $("pg-body").value });
+    pages = r.pages;
+    state = r.state;
+    renderChecklist();
+    renderPages(r.edited, slug);
+    show($("msg"), "Página salva. O site está sendo publicado com a mudança.", "ok");
+    watchPublish($("msg").firstChild);
+  } catch (err) {
+    if (err.status === 401) return enter();
+    show($("msg"), err.message, "err");
+  } finally {
+    $("save-btn").disabled = false;
+  }
+};
+
+/* Reiniciar para novo domínio */
+async function loadReset() {
+  try {
+    const r = await api("/admin/api/reset");
+    $("r-domain").textContent = r.domain;
+    const items = [
+      `${r.posts} artigo(s)`,
+      `${r.uploads} arquivo(s) de imagem dos artigos`,
+      r.assets ? `${r.assets} arquivo(s) da marca (logotipo, favicon, foto do autor)` : "",
+      r.settings ? "todas as personalizações deste painel (marca, cores, frase, categorias, textos, anúncios, Tag Manager, domínio)" : "",
+      r.pages ? "as páginas fixas editadas aqui (voltam ao texto padrão)" : "",
+      r.trash ? `${r.trash} artigo(s) na lixeira` : "",
+      r.cache ? "o cache de cotações e vídeos" : "",
+    ].filter(Boolean);
+    const box = $("r-summary");
+    box.replaceChildren(make("p", { textContent: "Antes de apagar, um backup com tudo é guardado em /data/backups. Depois, será apagado:" }), make("ul"));
+    box.lastChild.replaceChildren(...items.map((t) => make("li", { textContent: t })));
+    if (r.s3PrefixWarning) box.append(make("div", { className: "msg warn", textContent: "Os backups vão para o mesmo lugar do Object Storage usado pelo domínio atual. Antes de reiniciar, troque a variável BACKUP_S3_PREFIX no Easypanel (por exemplo, para o nome do novo domínio), para não misturar os backups dos dois sites." }));
+    if (!r.allowed) box.append(make("div", { className: "msg err", textContent: "Este blog foi criado pelo assistente e não pode ser reiniciado por aqui." }));
+    $("r-go").disabled = !r.allowed;
+  } catch (err) {
+    if (err.status === 401) return enter();
+    show($("msg"), err.message, "err");
+  }
+}
+$("r-go").onclick = async () => {
+  const typed = $("r-confirm").value.trim();
+  if (!typed) {
+    $("r-confirm").focus();
+    return show($("msg"), "Digite o domínio atual para confirmar.", "err");
+  }
+  if (!confirm("Última confirmação: apagar os artigos, as imagens e as personalizações deste blog? O backup é feito antes.")) return;
+  $("r-go").disabled = true;
+  show($("r-result"), "Fazendo o backup e apagando. Isso pode levar alguns minutos; não feche esta página.", "warn");
+  try {
+    const r = await post("/admin/api/reset", { confirm: typed });
+    state = r.state;
+    fill();
+    markSaved();
+    $("r-confirm").value = "";
+    const notes = [`Pronto. Backup guardado: ${r.backup}${r.uploaded ? " (também enviado ao Object Storage)" : ""}.`, `Apagados: ${r.removed.posts} artigo(s) e ${r.removed.uploads} arquivo(s) de imagem. O site está sendo publicado vazio.`];
+    show($("r-result"), notes, "ok");
+    if (r.s3PrefixWarning) $("r-result").append(make("div", { className: "msg warn", textContent: "Lembre de trocar a variável BACKUP_S3_PREFIX no Easypanel, para os backups do novo domínio irem para outra pasta." }));
+    $("r-result").append(make("div", { className: "msg warn", textContent: "Próximo passo: siga a lista que apareceu no topo. No Easypanel, adicione o novo domínio na aba Domains; na Cloudflare, aponte o DNS para o servidor; no Wordbee, cadastre o novo site." }));
+    loadReset();
+  } catch (err) {
+    if (err.status === 401) return enter();
+    show($("r-result"), err.message, "err");
+  } finally {
+    $("r-go").disabled = false;
+  }
+};
 $("f-cats").onsubmit = (e) => {
   e.preventDefault();
   const categories = [...$("cats").children].map((row) => {
