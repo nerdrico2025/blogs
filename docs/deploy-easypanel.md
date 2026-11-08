@@ -426,6 +426,15 @@ Repita para cada blog (de preferência em lotes de 2 a 3, observando a memória 
 9. Testes: `curl` da seção 7.1 e `simulate-wordbee.ts` (7.2); apague o post de teste.
 10. Wordbee: cadastrar o site (7.3), testar conexão e publicar o primeiro artigo real.
 
+### Checklist: novo blog
+
+- [ ] **Pasta:** `npm run new-site -- <nome> --name "Nome" --domain dominio.com.br --categories "..."` → revisar `sites/<nome>/` → commit e push.
+- [ ] **Serviço:** Easypanel → **+ Service → App** com nome `<nome>` (um serviço próprio por blog); GitHub `nerdrico2025/blogs`, branch `main`, build path `/`, tipo **Dockerfile**.
+- [ ] **Volume:** **Mounts → Volume** `<nome>-data` em `/data` (nunca compartilhado).
+- [ ] **Trava de build:** **Mounts → Bind** `/shared/build-locks` em `/shared/build-locks`.
+- [ ] **Variáveis:** `SITE=<nome>`, `SITE_URL=https://dominio.com.br`, `WP_USER=wordbee`, `WP_APP_PASSWORD_HASH` (`npm run api:password`), `ADMIN_USER` e `ADMIN_PASSWORD_HASH` (`npm run admin:password`), `GLOBAL_BUILD_LOCK_DIR=/shared/build-locks`, `GLOBAL_BUILD_SLOTS=2`.
+- [ ] **Domínio:** **Domains → Add domain** → `dominio.com.br`, HTTPS, porta **8080**; memória 1 GB, zero downtime desligado → **Deploy**.
+
 ---
 
 ## 8.1 Blog "camaleão" (um domínio por vez, tudo pelo /admin)

@@ -1,0 +1,48 @@
+{
+  "brand": {
+    "name": "Renda Dinheiro",
+    "colors": {
+      "primary": "#15803d"
+    }
+  },
+  "tagline": "Renda extra e finanças pessoais sem complicação",
+  "categories": [
+    {
+      "id": 2,
+      "name": "Renda extra",
+      "slug": "renda-extra",
+      "description": "Formas de ganhar dinheiro além do salário, com o que dá para começar já."
+    },
+    {
+      "id": 3,
+      "name": "Trabalho online",
+      "slug": "trabalho-online",
+      "description": "Freelas, vendas pela internet e trabalhos remotos que pagam de verdade."
+    },
+    {
+      "id": 4,
+      "name": "Investimentos",
+      "slug": "investimentos",
+      "description": "Tesouro Direto, renda fixa, fundos e ações explicados para iniciantes."
+    },
+    {
+      "id": 5,
+      "name": "Economia",
+      "slug": "economia",
+      "description": "Como gastar menos no dia a dia sem perder qualidade de vida."
+    },
+    {
+      "id": 6,
+      "name": "Dívidas e orçamento",
+      "slug": "dividas",
+      "description": "Orçamento mensal, reserva de emergência e como sair das dívidas."
+    },
+    {
+      "id": 7,
+      "name": "Cartões e bancos",
+      "slug": "cartoes",
+      "description": "Contas digitais, cartões de crédito, tarifas e programas de pontos."
+    }
+  ],
+  "nextCategoryId": 8
+}
