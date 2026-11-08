@@ -1,15 +1,9 @@
 # Deploy no Easypanel: passo a passo
 
-> **Atenção: este guia ainda não foi executado num servidor real.** A imagem Docker foi
-> construída e testada localmente (ARM64, no Mac):
-> - build da imagem e build do site dentro do container;
-> - simulação completa do Wordbee e política de cache conferida com `curl`;
-> - trava de build entre dois containers;
-> - backup enviado a um servidor S3 de teste.
->
-> Não foram testados: o Easypanel em si, a Cloudflare, o Wordbee real e a imagem x86_64 (a
-> arquitetura do VPS da Contabo). Os nomes de botões e abas do Easypanel podem variar um
-> pouco entre versões. Se algo não bater, anote o que apareceu e me mande.
+> **Este guia já foi executado no Easypanel** (VPS da Contabo, imagem x86_64), com o blog
+> `asasdomundo`: serviço App, variáveis, volume, build do site no container, API do Wordbee com
+> senha e importação de 73 posts. Os nomes de botões e abas do Easypanel podem variar um pouco
+> entre versões. Se algo não bater, anote o que apareceu e me mande.
 
 Cada blog é um **serviço App** no Easypanel, criado a partir do mesmo repositório
 (`nerdrico2025/blogs`) e do mesmo `Dockerfile`. O que muda de um blog para outro são as
@@ -464,6 +458,66 @@ Fora do painel, a cada domínio novo:
 2. Cloudflare: DNS do domínio novo (seção 5).
 3. Wordbee: cadastrar o site novo (as categorias têm números novos).
 4. Se usar backup no S3 com `BACKUP_S3_PREFIX` igual a `camaleao`, troque o prefixo para não misturar os backups dos domínios.
+
+---
+
+## 8.2 Camaleão: rodada de aprovação
+
+Uma rodada = um domínio. A ordem importa: **primeiro** o domínio no Easypanel (`SITE`/`SITE_URL`),
+**depois** o reinício pelo `/admin`, **por último** o rebuild com tudo preenchido.
+
+**1. Easypanel (serviço `camaleao`)**
+1. **Environment:** confira `SITE=camaleao` (nunca muda) e troque `SITE_URL=https://<domínio novo>` → **Save**.
+2. **Domains:** **Add domain** → `<domínio novo>`, HTTPS ligado, porta **8080**, caminho `/`. Se houver
+   `www`, adicione também. Apague o domínio da rodada anterior.
+3. Se usar backup no S3: troque `BACKUP_S3_PREFIX` para o nome do domínio novo.
+4. **Deploy.** Espere o status ficar verde.
+
+**2. Cloudflare (domínio novo)**
+1. **Add a domain** → `<domínio novo>` → plano Free; troque os nameservers no registrador (5.2).
+2. **DNS → Records:** `A @` e `A www` → IP do VPS, **nuvem cinza**.
+3. Espere o cadeado (`https://<domínio novo>/health` abrindo). Depois, se quiser, ligue o proxy com
+   Full (strict), Bot Fight Mode desligado e a regra de Skip para `/wp-json/` (5.5).
+
+**3. `/admin` (`https://<domínio novo>/admin`, usuário `admin`)**
+1. **Domínio → Reiniciar para novo domínio:** leia o resumo, digite o domínio que aparece em negrito →
+   **Fazer backup e reiniciar** → confirmar. O backup `reinicio-camaleao-<data>.tar.gz` fica em `/data/backups`.
+2. Siga a lista que aparece no topo, clicando em cada item:
+   - **Marca:** nome, frase, descrição, cores, logotipo, favicon, imagem de compartilhamento → **Salvar e publicar**.
+   - **Domínio:** deixe vazio para valer o `SITE_URL`, ou preencha o domínio novo → **Salvar e publicar**.
+   - **Categorias:** renomeie a "Geral" e crie as do nicho → **Salvar e publicar**.
+   - **Páginas:** Sobre, Contato e os textos legais, uma por vez → **Salvar e publicar**.
+   - **Autor** e **Textos** (e-mail de contato, responsável, cidade) → **Salvar e publicar**.
+   - **Anúncios:** ID do AdSense e ads.txt. **Rastreamento:** Tag Manager → **Salvar e publicar**.
+   - Clique em **Terminei, esconder esta lista**.
+
+**4. Rebuild final**
+Cada "Salvar" já publica. Por último, confira na barra lateral do painel "Site: publicado" e em
+`https://<domínio novo>/health` `lastBuild.ok: true`. Se quiser forçar, Easypanel → **Console** →
+`npm run rebuild`.
+
+**5. Wordbee**
+**Sites WordPress → Adicionar:** URL `https://<domínio novo>`, usuário `wordbee`, a senha de aplicação
+do camaleão → **Testar conexão** (as categorias novas aparecem) → publique os artigos da aprovação.
+
+**6. Search Console e AdSense**
+1. Search Console → **Adicionar propriedade → Domínio** → `<domínio novo>` → verifique pelo registro TXT
+   na Cloudflare → **Sitemaps** → `https://<domínio novo>/sitemap.xml` → **Enviar**.
+2. AdSense → **Sites → Adicionar site** → `<domínio novo>` → pedir a revisão. Confira antes se
+   `https://<domínio novo>/ads.txt` abre.
+
+**7. Mover o domínio aprovado para o blog real**
+Com o AdSense aprovado:
+1. Crie o blog real (seção 8), com o próprio serviço, volume e `SITE=<nome>`, `SITE_URL=https://<domínio aprovado>`.
+2. No **camaleão**: **Domains** → apague o domínio aprovado → **Deploy**.
+3. No **blog real**: **Domains** → **Add domain** → `<domínio aprovado>`, porta 8080 → **Deploy**.
+   A Cloudflare não muda (mesmo VPS, mesmo IP). Faça **Caching → Purge Everything**.
+4. No `/admin` do blog real: o mesmo ID do AdSense, o mesmo ads.txt e o mesmo Tag Manager da aprovação.
+5. Artigos da aprovação: estão no backup do próximo reinício do camaleão (`content/` e `uploads/`).
+   Para levá-los, copie essas pastas para o volume do blog real e rode `npm run rebuild` no console dele.
+6. Wordbee: edite o site do domínio aprovado com a senha do blog real (a do camaleão deixa de valer ali).
+7. Search Console: a propriedade continua a mesma; envie de novo o `sitemap.xml`.
+8. O camaleão fica livre para a próxima rodada (volte ao passo 1).
 
 ---
 
