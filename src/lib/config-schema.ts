@@ -73,6 +73,8 @@ export interface SiteConfig {
   legal: { owner: string; city: string };
   social: Author["links"];
   nav: Link[];
+  /** Tira do menu as categorias sem nenhum artigo publicado. Sem valor (padrão), o menu mostra todas. */
+  hideEmptyCategories?: boolean;
   ticker: Toggle & {
     ratesSource: "static" | "awesomeapi";
     /** `code` é a moeda (USD, EUR…) e `value` o texto de reserva. */

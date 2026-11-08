@@ -3,9 +3,17 @@ import site from "../../../site.config.ts";
 import Icon from "../Icon.astro";
 import Ticker from "./Ticker.astro";
 import { headerLogo } from "../../../shared/settings.ts";
+import { getPosts } from "../../lib/posts.ts";
 
 const path = Astro.url.pathname;
 const logo = headerLogo(site);
+// Opção por blog: link de categoria sem artigo publicado sai do menu (os outros links ficam)
+let nav = site.nav;
+if (site.hideEmptyCategories) {
+  const used = new Set((await getPosts()).map((p) => p.category.slug));
+  const empty = new Set(site.categories.filter((c) => !used.has(c.slug)).map((c) => `/category/${c.slug}/`));
+  nav = nav.filter((item) => !empty.has(item.href));
+}
 ---
 <Ticker />
 <header class="site-header">
@@ -24,7 +32,7 @@ const logo = headerLogo(site);
         </button>
       </div>
       <ul>
-        {site.nav.map((item) => (
+        {nav.map((item) => (
           <li><a href={item.href} aria-current={path.startsWith(item.href) ? "page" : undefined}>{item.label}</a></li>
         ))}
       </ul>
