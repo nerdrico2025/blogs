@@ -17,7 +17,7 @@ const profile = site.authorProfile;
       ? <img class="author-photo" src={authorPhotoUrl(profile.photo, 192)} alt={profile.photoAlt || profile.name} width="90" height="90" loading="lazy" decoding="async" />
       : <span aria-hidden="true"></span>}
     <div>
-      <span class="kicker">Sobre o autor</span>
+      <span class="kicker">{profile.kicker || "Sobre o autor"}</span>
       <h2 class="author-name" id="author-name"><a href={authorUrl(profile)}>{profile.name}</a></h2>
       {profile.role && <p class="author-role">{profile.role}</p>}
       {profile.bioShort && <p class="author-bio">{profile.bioShort}</p>}

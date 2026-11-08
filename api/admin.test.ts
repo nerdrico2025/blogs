@@ -139,11 +139,23 @@ describe("configurações", () => {
     assert.equal(old.statusCode, 301);
     assert.equal(old.headers.location, "/category/renomeada/page/2/");
 
-    // Apagar ou tomar slug antigo é recusado
-    assert.equal((await post("/admin/api/categories", { categories: cats.slice(1) })).statusCode, 400);
+    // Tomar slug antigo ou inventar id é recusado
     const taken = cats.map((c, i) => (i === 1 ? { ...c, slug: original[0]!.slug } : c));
     assert.equal((await post("/admin/api/categories", { categories: taken })).statusCode, 400);
     assert.equal((await post("/admin/api/categories", { categories: cats.map((c, i) => (i === 0 ? { ...c, id: 9999 } : c)) })).statusCode, 400);
+
+    // Categoria com artigo (mesmo rascunho) não sai; sem artigos, sai, e o id dela não volta
+    const withPost = await ctx.app.inject({ method: "POST", url: "/wp-json/wp/v2/posts", headers: WP_AUTH, payload: { title: "Na renomeada", content: "<p>x</p>", status: "draft", categories: [cats[0]!.id] } });
+    assert.equal(withPost.statusCode, 201, withPost.body);
+    const refused = await post("/admin/api/categories", { categories: cats.slice(1) });
+    assert.equal(refused.statusCode, 400);
+    assert.match(refused.json().message, /tem 1 artigo/);
+    const removed = await post("/admin/api/categories", { categories: cats.slice(0, -1) });
+    assert.equal(removed.statusCode, 200, removed.body);
+    assert.ok(!removed.json().categories.some((c: { slug: string }) => c.slug === "nova"));
+    const again = await post("/admin/api/categories", { categories: [...cats.slice(0, -1), { name: "Outra", slug: "outra", description: "" }] });
+    assert.equal(again.json().categories.at(-1).id, maxId + 2);
+    await post("/admin/api/posts/delete", { slugs: ["na-renomeada"] });
   });
 
   test("senha do Wordbee por variável não pode ser trocada no painel", async () => {

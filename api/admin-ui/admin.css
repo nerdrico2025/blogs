@@ -60,6 +60,10 @@ input[type=url],input[type=email],input[type=search]{width:100%;padding:10px;bor
 .in-app input,.in-app select,.in-app textarea{border-color:#94a3b8}
 .in-app button{min-height:44px}
 button.danger{background:#b91c1c;color:#fff}
+.share-preview{max-height:96px;border-radius:6px;border:1px solid var(--b)}
+.checklist{border-color:#f59e0b;background:#fffbeb}.checklist ul{list-style:none;margin:8px 0;padding:0}.checklist li{display:flex;align-items:center;gap:8px;min-height:40px}
+.checklist .mark{flex:none;min-width:52px;text-align:center;font-size:12px;font-weight:700;padding:2px 8px;border-radius:999px;background:#fde68a;color:#713f12}
+.checklist li.done .mark{background:#dcfce7;color:#14532d}.checklist li.done a{color:var(--m)}
 .savebar{position:fixed;bottom:0;left:240px;right:0;z-index:20;background:#fff;border-top:1px solid var(--b);box-shadow:0 -2px 10px rgba(15,23,42,.08);padding:0 24px;display:flex;flex-wrap:wrap;gap:0 16px;align-items:center;justify-content:space-between}
 .savebar:has(#msg:empty):has(#save-actions[hidden]){display:none}
 #msg{flex:1 1 300px;min-width:0;max-height:30vh;overflow-y:auto}#msg .msg{margin:8px 0;font-size:14px}

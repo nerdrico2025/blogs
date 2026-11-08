@@ -1,0 +1,9 @@
+{
+  "brand": {
+    "name": "Novo Blog",
+    "colors": {
+      "primary": "#1363df"
+    }
+  },
+  "tagline": "Artigos e guias práticos"
+}

@@ -4,8 +4,9 @@
  * Uso: npm run new-site -- <nome> --name "Nome do Blog" --domain dominio.com.br [--tagline "..."] [--accent "#1363df"]
  *        [--categories "Nome|slug|Descrição;Outra|outra|Descrição"] [--categories-file categorias.json]
  *   <nome>  pasta e valor da variável SITE (letras minúsculas, números e hífen)
- * As categorias vão para sites/<nome>/settings.json, com ids estáveis a partir de 2.
- * O arquivo JSON é uma lista de { "name", "slug", "description" }.
+ * As categorias vão para sites/<nome>/settings.json e para o site.config.ts, com ids estáveis a partir de 2.
+ * Sem --categories, o blog nasce com uma categoria "Geral". O arquivo JSON é uma lista de { "name", "slug", "description" }.
+ * Os textos nascem neutros (sem o assunto do modelo): o layout é o do sites/exemplo, as páginas fixas são as do sites/_base.
  */
 import { cp, readFile, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
@@ -62,9 +63,11 @@ const target = path.resolve("sites", id);
 if (existsSync(target)) fail(`sites/${id} já existe.`);
 
 const name = values.name;
-const tagline = values.tagline ?? "Viagens bem planejadas, sem complicação";
+const tagline = values.tagline ?? "Artigos e guias práticos";
+const cats: NewCategory[] = categories ?? [{ name: "Geral", slug: "geral", description: "Todos os artigos." }];
 
-await cp(path.join(model, "pages"), path.join(target, "pages"), { recursive: true });
+// Páginas fixas neutras (sites/_base), com os marcadores {{site.name}} e {{contact.email}}
+await cp(path.resolve("sites/_base/pages"), path.join(target, "pages"), { recursive: true });
 await cp(path.join(model, "redirects.txt"), path.join(target, "redirects.txt"));
 const brand = await generateBrand(path.join(target, "public", "brand"), { name, tagline, accent });
 
@@ -82,6 +85,10 @@ replace(/^\/\*\*[\s\S]*?\*\/\n/, `/**
 `);
 replace(/name: "Rota Leve",/, `name: ${q(name)},`);
 replace(/tagline: "[^"]*",/, `tagline: ${q(tagline)},`);
+replace(/description:\n\s+"[^"]*",/, `description: ${q(`${name}: artigos e guias práticos, escritos com cuidado e atualizados com frequência.`)}, // TODO: descreva o assunto do blog`);
+// Categorias e menu do modelo (viagem) dão lugar às do blog novo
+replace(/categories: \[\n[\s\S]*?\n  \],/, `categories: [\n${cats.map((c, i) => `    { id: ${i + 2}, slug: ${q(c.slug)}, name: ${q(c.name)}, description: ${q(c.description)} },`).join("\n")}\n  ],`);
+replace(/nav: \[\n[\s\S]*?\n  \],/, `nav: [\n${cats.map((c) => `    { label: ${q(c.name)}, href: ${q(`/category/${c.slug}/`)} },`).join("\n")}\n  ],`);
 replace(/url: "https:\/\/rotaleve\.example",/, `url: ${q(`https://${domain}`)},`);
 replace(/logo: \{ src: "\/brand\/logo\.svg", width: \d+, height: \d+, alt: "Rota Leve" \},/, `logo: { src: "/brand/logo.svg", width: ${brand.logoWidth}, height: ${brand.logoHeight}, alt: ${q(name)} },`);
 if (values.accent) replace(/accent: "#1363df",/, `accent: ${q(accent)},`);
@@ -89,7 +96,7 @@ replace(/"clara-menezes": \{\n\s+name: "Clara Menezes",\n\s+role: "[^"]*",\n\s+b
       // TODO: nome, função, bio e foto (public/brand/autor.webp) de quem assina os posts
       name: ${q(`Equipe ${name}`)},
       role: "Equipe editorial",
-      bio: ${q(`Equipe do ${name}. TODO: escreva uma bio curta.`)},
+      bio: ${q(`Equipe do ${name}.`)}, // TODO: escreva uma bio curta (ou cadastre o autor na aba Autor do painel)
       avatar: "/brand/autor.webp",
       links: {}, // TODO: { youtube: "https://www.youtube.com/@...", instagram: "..." }`);
 replace(/\n\s+links: \{ youtube: "https:\/\/www\.youtube\.com\/@rotaleve-exemplo", instagram: "[^"]*" \},/, "");
@@ -125,7 +132,17 @@ replace(/callout: \{\n[\s\S]*?\n    \},/, `callout: {
       button: { label: "Conhecer os guias", href: "/sobre/" },
     },`);
 replace(/placeholder: "[^"]*"/, `placeholder: "O que você procura?"`);
-replace(/(footer: \{\n\s+text: )"[^"]*",/, `$1${q(`${name} é um blog independente. Conteúdo informativo; confirme preços e regras com as empresas antes de comprar.`)},`);
+// Textos dos blocos que nascem desligados: neutros, para não aparecer viagem quando forem ligados
+replace(/clocks: \[\n[\s\S]*?\n    \],/, `clocks: [{ label: "Brasília", timezone: "America/Sao_Paulo" }],`);
+replace(/alt: "Espaço publicitário de exemplo: seguro viagem",/, `alt: "Espaço publicitário",`);
+replace(/alt: "Espaço publicitário de exemplo: chip internacional",/, `alt: "Espaço publicitário",`);
+replace(/text: "Um e-mail por semana com roteiros, promoções de passagens e dicas para economizar.",/, `text: "Um e-mail por semana com os artigos novos.",`);
+replace(/title: "Como montar um roteiro de viagem em 30 minutos",/, `title: "Último vídeo do canal",`);
+replace(/label: "Planeje com calma",\n(\s+)title: "[^"]*",\n\s+text: "[^"]*",\n\s+button: \{ label: "[^"]*", href: "[^"]*" \},/, `label: "Vale a leitura",\n$1title: "Conheça o nosso guia",\n$1text: "Um material completo para aprofundar o assunto.",\n$1button: { label: "Ver o guia", href: "/sobre/" },`);
+replace(/kicker: "Sobre a autora",/, `kicker: "Quem escreve",`);
+replace(/text: "Alertas de promoções de passagens e roteiros exclusivos para assinantes.",/, `text: "Conteúdo exclusivo para assinantes.",`);
+replace(/alt: "Rota Leve: viagens bem planejadas" \},/, `alt: ${q(name)} },`);
+replace(/(footer: \{\n\s+text: )"[^"]*",/, `$1${q(`${name} é um blog independente. Conteúdo informativo, sem relação com as marcas citadas.`)},`);
 replace(/defaultAuthor: "clara-menezes",/, `defaultAuthor: "autor",`);
 config = config
   .replaceAll("Rota Leve", name)
@@ -140,8 +157,8 @@ await writeFile(path.join(target, "site.config.ts"), config);
 // settings.json inicial: é o ponto de partida até o /admin gravar o /data/settings.json
 const settings: Settings = { brand: { name, colors: { primary: accent } }, tagline };
 if (categories) {
-  settings.categories = categories.map((c, i) => ({ id: i + 2, ...c }));
-  settings.nextCategoryId = categories.length + 2;
+  settings.categories = cats.map((c, i) => ({ id: i + 2, ...c }));
+  settings.nextCategoryId = cats.length + 2;
 }
 await writeFile(path.join(target, "settings.json"), JSON.stringify(settings, null, 2) + "\n");
 

@@ -31,6 +31,12 @@ export class SettingsStore {
     this.current = readSettings(file);
   }
 
+  /** Relê do disco (depois de "Reiniciar para novo domínio", sem o arquivo, volta ao settings.json inicial do site). */
+  reload(): void {
+    this.current = readSettings(this.file);
+    reloadSite(this.current);
+  }
+
   isConfigured(): boolean {
     return hasSiteFolder(this.projectDir) || this.current.configured === true;
   }
@@ -206,6 +212,44 @@ export function parseHome(b: Record<string, unknown>): HomeSettings {
   return home;
 }
 
+/** https://dominio (com subdomínio, se houver), sem caminho nem barra no fim. Vazio = vale SITE_URL. */
+export function parseSiteUrl(v: unknown): string {
+  const raw = str(v, "Domínio", 200).trim().replace(/\/+$/, "").toLowerCase();
+  if (!raw) return "";
+  const url = /^https?:\/\//.test(raw) ? raw : `https://${raw}`;
+  if (!/^https?:\/\/[a-z0-9.-]+\.[a-z]{2,}(:\d+)?$/.test(url)) throw invalid("Domínio: use só o endereço, como meublog.com.br, sem caminho.");
+  return url;
+}
+
+const EMAIL = /^[^\s@<>"'&?]+@[^\s@<>"'&?]+\.[^\s@<>"'&?]+$/;
+
+export function parseGaId(v: unknown): string {
+  const gaId = str(v, "ID do Google Analytics", 30).trim().toUpperCase();
+  if (gaId && !/^G-[A-Z0-9]+$/.test(gaId)) throw invalid("O ID do Google Analytics tem o formato G-XXXXXXX.");
+  return gaId;
+}
+
+export function parseAdsenseClient(v: unknown): string {
+  const id = str(v, "ID do AdSense", 40).trim().toLowerCase();
+  if (id && !/^ca-pub-\d{10,20}$/.test(id)) throw invalid("O ID do AdSense tem o formato ca-pub-0000000000000000.");
+  return id;
+}
+
+/** Aba Textos: contato, dados jurídicos e textos fixos do layout. Campo vazio = vale o site.config.ts. */
+export function parseTexts(b: Record<string, unknown>): Pick<Settings, "contact" | "legal" | "texts"> {
+  const email = str(b.contactEmail, "E-mail de contato", 200).trim();
+  if (email && !EMAIL.test(email)) throw invalid("E-mail de contato: confira o endereço.");
+  return {
+    contact: { email },
+    legal: { owner: str(b.legalOwner, "Responsável pelo site", 120).trim(), city: str(b.legalCity, "Cidade", 80).trim() },
+    texts: {
+      cookies: str(b.cookies, "Texto do aviso de cookies", 500).trim(),
+      affiliateNotice: str(b.affiliateNotice, "Aviso de links de parceiros", 500).trim(),
+      authorBoxKicker: str(b.authorBoxKicker, "Título da caixa do autor", 40).trim(),
+    },
+  };
+}
+
 export const AUTHOR_LIMITS = { name: 80, role: 80, bioShort: 200, bioFull: 5000, alt: 160, credentials: 6, credential: 160, specialties: 8, specialty: 60, url: 500, email: 200 };
 const LINK_LABELS: Record<(typeof AUTHOR_LINKS)[number], string> = { site: "Site", instagram: "Instagram", linkedin: "LinkedIn", youtube: "YouTube", x: "X" };
 
@@ -258,7 +302,7 @@ export function validSlug(slug: string): boolean {
  * Categorias: nenhum id some ou muda; categoria nova ganha um id inédito (nunca reaproveitado,
  * mesmo por `nextCategoryId`). Slug trocado vira alias, para os posts antigos e as URLs antigas.
  */
-export function mergeCategories(existing: Category[], input: unknown, nextId: number | undefined): { categories: Category[]; nextCategoryId: number } {
+export function mergeCategories(existing: Category[], input: unknown, nextId: number | undefined, postsIn: (slug: string) => number = () => 1): { categories: Category[]; nextCategoryId: number } {
   if (!Array.isArray(input)) throw invalid("Lista de categorias inválida.");
   const byId = new Map(existing.map((c) => [c.id, c]));
   let next = Math.max(nextId ?? 0, ...existing.map((c) => c.id + 1), 2);
@@ -280,7 +324,12 @@ export function mergeCategories(existing: Category[], input: unknown, nextId: nu
     aliases.delete(slug);
     return { id, slug, name, description, ...(aliases.size ? { aliases: [...aliases] } : {}) };
   });
-  for (const c of existing) if (!seen.has(c.id)) throw invalid(`A categoria "${c.name}" não pode ser apagada: o Wordbee guarda o id dela.`);
+  // Só sai categoria sem artigos; o id dela nunca volta a ser usado (nextCategoryId)
+  for (const c of existing) {
+    if (seen.has(c.id)) continue;
+    const n = [c.slug, ...(c.aliases ?? [])].reduce((sum, s) => sum + postsIn(s), 0);
+    if (n > 0) throw invalid(`A categoria "${c.name}" tem ${n} artigo(s) e não pode ser excluída. Mova ou exclua os artigos antes.`);
+  }
   const taken = new Map<string, number>();
   for (const c of categories) {
     for (const s of [c.slug, ...(c.aliases ?? [])]) {

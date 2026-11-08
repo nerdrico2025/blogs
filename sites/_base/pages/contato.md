@@ -12,5 +12,5 @@ Respondemos em até cinco dias úteis. Para correções, envie o link do artigo 
 
 ## Antes de escrever
 
-- **Dúvidas sobre compras, reservas ou reembolsos:** fale diretamente com a empresa que vendeu o produto ou serviço. O {{site.name}} não vende produtos nem serviços.
+- **Dúvidas sobre compras, pedidos ou reembolsos:** fale diretamente com a empresa que vendeu o produto ou serviço. O {{site.name}} não vende produtos nem serviços.
 - **Privacidade e dados pessoais:** veja a [Política de Privacidade](/politica-de-privacidade/).

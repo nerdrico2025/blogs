@@ -31,10 +31,24 @@
   <div class="content" id="content" tabindex="-1">
   <h1 id="screen-title" tabindex="-1"></h1>
 
+  <section class="card checklist" id="checklist" hidden aria-labelledby="checklist-title">
+    <h2 id="checklist-title">Blog reiniciado: o que preencher agora</h2>
+    <p class="hint">Cada item abre a tela certa. Os marcados já foram preenchidos.</p>
+    <ul id="checklist-items"></ul>
+    <p><button type="button" class="ghost" id="checklist-hide">Terminei, esconder esta lista</button></p>
+  </section>
+
   <form data-tab="Marca" id="f-brand">
     <details class="sec" data-sec="marca-nome" open><summary><h2>Nome do blog</h2></summary><div class="sec-body">
       <label for="b-name">Nome do blog</label><input id="b-name" maxlength="80">
       <p class="hint">Aparece no topo, no rodapé e no título das páginas.</p>
+    </div></details>
+
+    <details class="sec" data-sec="marca-nicho" open><summary><h2>Frase e descrição (o assunto do blog)</h2></summary><div class="sec-body">
+      <label for="b-tagline">Frase curta</label><input id="b-tagline" maxlength="120">
+      <p class="hint">Uma linha sobre o assunto do blog. Aparece na home e no título da página inicial.</p>
+      <label for="b-description">Descrição</label><textarea id="b-description" class="text" maxlength="300" style="min-height:80px"></textarea>
+      <p class="hint">Duas frases sobre o que o blog publica. É o texto que o Google mostra para a página inicial.</p>
     </div></details>
 
     <details class="sec" data-sec="marca-imagens" id="sec-images" open><summary><h2>Logotipos e favicon</h2></summary><div class="sec-body grid2">
@@ -49,6 +63,10 @@
       <div>
         <label for="b-favicon">Favicon (o ícone da aba do navegador)</label><img class="preview" id="b-favicon-preview" alt="Favicon atual"><input type="file" id="b-favicon" accept="image/png,image/jpeg,image/webp,image/svg+xml">
         <p class="hint">Use PNG ou SVG quadrado, de 512 × 512 px, com figura simples e sem texto pequeno.</p><div id="b-favicon-reupload" hidden><div class="msg warn">Reenvie o favicon para gerar todos os formatos</div><p><button type="button" class="ghost" id="b-favicon-reupload-btn">Reenviar favicon</button></p></div><div id="b-favicon-info" aria-live="polite"></div>
+      </div>
+      <div>
+        <label for="b-share">Imagem de compartilhamento</label><img class="preview share-preview" id="b-share-preview" alt="Imagem de compartilhamento atual"><input type="file" id="b-share" accept="image/png,image/jpeg,image/webp">
+        <p class="hint">Aparece quando alguém compartilha uma página sem foto de capa (WhatsApp, Facebook). PNG, JPG ou WebP, de preferência 1200 × 630 px. Outros tamanhos são recortados.</p><div id="b-share-info" aria-live="polite"></div>
       </div>
     </div></details>
 
@@ -131,7 +149,7 @@
     <details class="sec" data-sec="autor-dados" open><summary><h2>Quem é</h2></summary><div class="sec-body">
       <div class="grid2">
         <div><label for="au-name">Nome</label><input id="au-name" maxlength="80" autocomplete="off"><p class="hint">Vazio: a assinatura volta a ser a da equipe.</p></div>
-        <div><label for="au-role">Cargo ou título</label><input id="au-role" maxlength="80" placeholder="Ex.: Consultor de viagens"><p class="hint">Aparece ao lado do nome.</p></div>
+        <div><label for="au-role">Cargo ou título</label><input id="au-role" maxlength="80" placeholder="Ex.: Editora do blog"><p class="hint">Aparece ao lado do nome.</p></div>
       </div>
       <h3>Prévia da assinatura no artigo</h3>
       <div class="author-preview" id="au-preview" aria-live="off"><img id="au-pv-photo" alt="" width="36" height="36" hidden><span>Por <strong id="au-pv-name"></strong><span id="au-pv-role"></span></span></div>
@@ -179,8 +197,62 @@
     </div>
   </section>
 
+  <form data-tab="Textos" id="f-texts">
+    <p class="hint">Campo vazio volta ao texto padrão do modelo.</p>
+    <details class="sec" data-sec="textos-contato" open><summary><h2>Contato e dados do responsável</h2></summary><div class="sec-body">
+      <label for="x-email">E-mail de contato</label><input id="x-email" type="email" maxlength="200">
+      <p class="hint">Aparece na página Contato e nos textos legais, no lugar de {{contact.email}}.</p>
+      <div class="grid2">
+        <div><label for="x-owner">Responsável pelo site</label><input id="x-owner" maxlength="120"><p class="hint">Nome da pessoa ou empresa, usado nos textos legais ({{legal.owner}}).</p></div>
+        <div><label for="x-city">Cidade</label><input id="x-city" maxlength="80" placeholder="Ex.: São Paulo, SP"><p class="hint">Usada nos Termos de Uso ({{legal.city}}).</p></div>
+      </div>
+    </div></details>
+    <details class="sec" data-sec="textos-avisos" open><summary><h2>Avisos fixos</h2></summary><div class="sec-body">
+      <label for="x-cookies">Texto do aviso de cookies</label><textarea id="x-cookies" class="text" maxlength="500" style="min-height:80px"></textarea>
+      <p class="hint">Aparece na faixa de cookies, na primeira visita.</p>
+      <label for="x-affiliate">Aviso de links de parceiros</label><textarea id="x-affiliate" class="text" maxlength="500" style="min-height:80px"></textarea>
+      <p class="hint">Aparece no topo dos artigos. Vazio: o aviso não aparece.</p>
+      <label for="x-kicker">Título da caixa do autor</label><input id="x-kicker" maxlength="40" placeholder="Ex.: Quem escreve">
+      <p class="hint">Aparece no fim dos artigos, acima do nome de quem assina.</p>
+    </div></details>
+  </form>
+
+  <form data-tab="Páginas" id="f-pages">
+    <p class="hint">Sobre, Contato e textos legais. Os marcadores {{site.name}}, {{site.domain}}, {{contact.email}}, {{legal.owner}} e {{legal.city}} são trocados pelos dados do blog ao publicar.</p>
+    <p class="hint" id="pg-origin"></p>
+    <label for="pg-select">Página</label><select id="pg-select"></select>
+    <label for="pg-title">Título</label><input id="pg-title" maxlength="120" required>
+    <label for="pg-description">Descrição</label><input id="pg-description" maxlength="300" required>
+    <p class="hint">O texto que o Google mostra para esta página.</p>
+    <label for="pg-body">Texto da página</label><textarea id="pg-body" class="text" style="min-height:420px"></textarea>
+    <p class="hint">Uma linha em branco separa parágrafos. ## no começo da linha cria um subtítulo; - cria um item de lista; **texto** deixa em negrito.</p>
+  </form>
+
+  <form data-tab="Domínio" id="f-domain">
+    <details class="sec" data-sec="dominio-endereco" open><summary><h2>Domínio do blog</h2></summary><div class="sec-body">
+      <label for="d-url">Domínio</label><input id="d-url" maxlength="200" placeholder="meublog.com.br" autocapitalize="none" autocorrect="off" spellcheck="false">
+      <p class="hint" id="d-info"></p>
+      <div class="msg warn">Este campo muda os endereços do site (Google, compartilhamento, sitemap). Para o domínio abrir, ele também precisa estar na aba Domains do serviço no Easypanel e apontar para o servidor na Cloudflare.</div>
+    </div></details>
+  </form>
+  <section data-tab="Domínio">
+    <details class="sec" data-sec="dominio-reinicio" id="sec-reset"><summary><h2>Reiniciar para novo domínio</h2></summary><div class="sec-body">
+      <p>Apaga o conteúdo e a personalização deste blog, para usar o mesmo serviço com outro domínio e outro assunto. O visual (estrutura e layout) continua o mesmo.</p>
+      <div id="r-summary"></div>
+      <p class="hint">Continuam: o login do painel, a senha do Wordbee, as variáveis do Easypanel, a numeração interna de posts e os backups antigos.</p>
+      <label for="r-confirm">Para confirmar, digite o domínio atual: <strong id="r-domain"></strong></label>
+      <input id="r-confirm" autocapitalize="none" autocorrect="off" spellcheck="false" autocomplete="off">
+      <p><button type="button" class="danger" id="r-go">Fazer backup e reiniciar</button></p>
+      <div id="r-result" aria-live="polite"></div>
+    </div></details>
+  </section>
+
   <form data-tab="Rastreamento" id="f-tracking">
     <p class="hint">Tudo aqui só carrega depois que o visitante aceita as estatísticas no banner de cookies.</p>
+    <details class="sec" data-sec="rast-ga" open><summary><h2>Google Analytics</h2></summary><div class="sec-body">
+      <label for="t-ga">ID do Google Analytics</label><input id="t-ga" placeholder="G-XXXXXXX">
+      <p class="hint">Use este campo ou o Tag Manager, não os dois, para não contar as visitas em dobro.</p>
+    </div></details>
     <details class="sec" data-sec="rast-gtm" open><summary><h2>Google Tag Manager</h2></summary><div class="sec-body">
       <label for="t-gtm">ID do Google Tag Manager</label><input id="t-gtm" placeholder="GTM-XXXXXXX">
       <p class="hint">O ID do Tag Manager já insere o código completo.</p>
@@ -196,6 +268,10 @@
 
   <form data-tab="Anúncios" id="f-ads">
     <p class="hint">Só carregam depois que o visitante aceita publicidade no banner de cookies. Códigos que usam <code>document.write</code> não funcionam.</p>
+    <details class="sec" data-sec="ads-adsense" open><summary><h2>Conta do AdSense</h2></summary><div class="sec-body">
+      <label for="a-client">ID do editor do AdSense</label><input id="a-client" placeholder="ca-pub-0000000000000000" autocapitalize="none" spellcheck="false">
+      <p class="hint">Fica no painel do AdSense, em Conta. Coloca no site a marca que o Google pede para aprovar o domínio.</p>
+    </div></details>
     <details class="sec" data-sec="ads-rede" open><summary><h2>Rede de anúncios</h2></summary><div class="sec-body grid2">
       <div><label for="a-head">Script do AdSense ou da rede (vai no &lt;head&gt;)</label><textarea id="a-head"></textarea><p class="hint">O código que a rede manda colocar em todas as páginas.</p></div>
       <div><label for="a-txt">Conteúdo do ads.txt</label><textarea id="a-txt" placeholder="google.com, pub-0000000000000000, DIRECT, f08c47fec0942fa0"></textarea><p class="hint">Uma linha por rede, como a rede informar.</p></div>
@@ -206,7 +282,7 @@
   </form>
 
   <form data-tab="Categorias" id="f-cats">
-    <p class="hint">Você pode renomear e mudar a descrição e o slug. Categorias não podem ser apagadas, porque o Wordbee guarda o número delas. Quando o slug muda, o endereço antigo redireciona para o novo.</p>
+    <p class="hint">Você pode criar, renomear e mudar a descrição e o slug. Só dá para excluir categoria sem artigos; o número dela não volta a ser usado, porque o Wordbee guarda esse número. Quando o slug muda, o endereço antigo redireciona para o novo.</p>
     <div id="cats" class="grid2"></div>
     <p><button type="button" class="ghost" id="add-cat">Adicionar categoria</button></p>
   </form>

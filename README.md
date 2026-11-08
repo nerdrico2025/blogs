@@ -74,14 +74,22 @@ npm run new-site -- <nome> --name "Nome do Blog" --domain dominio.com.br \
 # ou --categories-file categorias.json, com uma lista de { "name", "slug", "description" }
 ```
 
-Isso cria `sites/<nome>/` com um `settings.json` inicial (categorias com ids a partir de 2, nome e cor). Publique
+Isso cria `sites/<nome>/` com o layout do `sites/exemplo`, textos neutros (sem o assunto do modelo), as páginas
+fixas do `sites/_base` e um `settings.json` inicial (categorias com ids a partir de 2, nome e cor). Publique
 com `SITE=<nome>` e `SITE_URL`.
+
+### Blog "camaleão": um domínio por vez, tudo pelo /admin
+
+`sites/camaleao/` é um blog neutro para reaproveitar o mesmo serviço em vários domínios, um de cada vez. Marca,
+assunto, textos, categorias, páginas fixas, domínio e anúncios são preenchidos no `/admin`; para trocar de
+domínio, **Domínio → Reiniciar para novo domínio** faz o backup e apaga o conteúdo. Passo a passo em
+`docs/deploy-easypanel.md`, seção 8.1.
 
 ### Variáveis
 
 | Variável | Quando | Para quê |
 |---|---|---|
-| `SITE_URL` | sempre | Domínio público |
+| `SITE_URL` | sempre | Domínio público. O domínio salvo no `/admin` (tela Domínio) vale mais |
 | `SITE` | blog com pasta | Pasta em `sites/`. Vazia = assistente |
 | `SETUP_TOKEN`, `ANTHROPIC_API_KEY`, `AI_MODEL` | só no assistente | Código de acesso, chave e modelo da IA |
 | `ADMIN_USER`, `ADMIN_PASSWORD_HASH` | opcionais no assistente; necessárias para ter `/admin` num blog com pasta | Login do painel (`npm run admin:password`) |
@@ -90,13 +98,16 @@ com `SITE=<nome>` e `SITE_URL`.
 ### O que o Wordbee enxerga
 
 Um site WordPress comum, nos mesmos 4 endpoints de `/wp-json/wp/v2`: `users/me`, `categories`, `media` e `posts`.
-- **Categorias:** as do `/admin`. Os ids nunca mudam nem são apagados; renomear não exige mudar nada no Wordbee.
+- **Categorias:** as do `/admin`. Os ids nunca mudam nem são reaproveitados; só sai categoria sem artigos; renomear não exige mudar nada no Wordbee.
 - **Imagens:** o `source_url` é um JPEG otimizado, com `mime_type` `image/jpeg`; o arquivo enviado não é guardado.
 - **Senha:** ao gerar outra em `/admin`, a anterior para de valer na hora; atualize o cadastro no Wordbee.
 
 ## Painel /admin
 
-Menu lateral em grupos, com um endereço para cada tela: Conteúdo (`/admin/artigos`, `/admin/categorias`, `/admin/autor`), Aparência (`/admin/marca`, `/admin/home`), Monetização e dados (`/admin/anuncios`, `/admin/rastreamento`) e Integração (`/admin/wordbee`). `/admin/` abre Artigos.
+Menu lateral em grupos, com um endereço para cada tela: Conteúdo (`/admin/artigos`, `/admin/categorias`, `/admin/paginas`, `/admin/autor`), Aparência (`/admin/marca`, `/admin/home`, `/admin/textos`), Monetização e dados (`/admin/anuncios`, `/admin/rastreamento`) e Site (`/admin/dominio`, `/admin/wordbee`). `/admin/` abre Artigos.
+
+As páginas fixas editadas em **Páginas** ficam em `/data/pages/` e, a partir da primeira edição, valem mais que as de
+`sites/<nome>/pages/` (os `redirects.txt` continuam vindo do repositório).
 
 Login próprio, com bloqueio depois de 5 tentativas erradas. Cada "Salvar" valida, grava `/data/settings.json` de
 forma atômica e pede um build (respeitando a trava global); o estado aparece no topo da tela. Campo vazio = vale o
