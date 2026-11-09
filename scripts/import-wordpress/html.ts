@@ -29,14 +29,14 @@ const KNOWN_SHORTCODES =
 /**
  * Remove shortcodes e mantém o texto entre a abertura e o fechamento ([caption]<img> legenda[/caption]).
  * Para não apagar texto como "[1]" ou "[sic]", só sai o que é shortcode conhecido, tem atributos
- * (nome="valor") ou tem fechamento [/nome] no mesmo texto.
+ * (nome="valor", também com as aspas curvas ou as entidades que o WordPress põe no lugar) ou tem fechamento [/nome] no mesmo texto.
  */
 export function stripShortcodes(html: string): { html: string; removed: string[] } {
   const closed = new Set([...html.matchAll(/\[\/([a-z][\w-]*)\]/gi)].map((m) => m[1]!.toLowerCase()));
   const removed = new Set<string>();
   const out = html.replace(/\[(\/?)([a-z][\w-]*)((?:\s+[^\]]*)?)\/?\]/gi, (all, close: string, name: string, attrs: string) => {
     const n = name.toLowerCase();
-    if (close || closed.has(n) || KNOWN_SHORTCODES.test(n) || /=\s*["'\w]/.test(attrs)) {
+    if (close || closed.has(n) || KNOWN_SHORTCODES.test(n) || /=\s*(?:["'\w‘’“”′″]|&#?\w+;)/.test(attrs)) {
       removed.add(n);
       return "";
     }

@@ -341,7 +341,7 @@ describe("áudio e relatório de imagens", () => {
   test("sumário antigo sai, títulos ficam, índice à mão é listado e o MP3 errado vira o áudio certo", async () => {
     const toc = `<div id="ez-toc-container" class="ez-toc-v2_0_87"><p class="ez-toc-title">Índice do Artigo</p><a href="#" class="ez-toc-toggle"><span class="eztoc-hide">Toggle</span></a><nav><ul><li><a href="{BASE}/2024/01/com-sumario/#um">Um</a></li></ul></nav></div>`;
     const g = fakeWordPress("Site G", [
-      { id: 61, slug: "com-sumario", title: "Com sumário", html: `<p>Abertura.</p>${toc}<h2><span class="ez-toc-section" id="um"></span>Um<span class="ez-toc-section-end"></span></h2><p>Texto.</p><h3>Baixe</h3><p><a href="{BASE}/wp-content/uploads/errado.mp3">Versão MP3</a></p><p><a href="{BASE}/wp-content/uploads/z.zip">Zip</a></p>`, category: 1 },
+      { id: 61, slug: "com-sumario", title: "Com sumário", html: `<p>Abertura.</p><p>[thrive_leads id=&#8217;9762&#8242;]</p>${toc}<h2><span class="ez-toc-section" id="um"></span>Um<span class="ez-toc-section-end"></span></h2><p>Texto.</p><h3>Baixe</h3><p><a href="{BASE}/wp-content/uploads/errado.mp3">Versão MP3</a></p><p><a href="{BASE}/wp-content/uploads/z.zip">Zip</a></p>`, category: 1 },
       { id: 62, slug: "indice-a-mao", title: "Índice à mão", html: `<ul><li><a href="#a">A</a></li><li><a href="#b">B</a></li><li><a href="#c">C</a></li></ul><p>Texto.</p>`, category: 1 },
     ]);
     const base = await g.start("127.0.0.1");
@@ -351,7 +351,7 @@ describe("áudio e relatório de imagens", () => {
       const r = await importer(base, "noticias => dicas\n", ["--drop-links", rules], path.join(tmp, "redirects-toc.txt"));
       assert.equal(r.code, 0, r.out);
       const md = file("com-sumario");
-      assert.doesNotMatch(md, /Índice do Artigo|Toggle|errado\.mp3|z\.zip|Zip/);
+      assert.doesNotMatch(md, /Índice do Artigo|Toggle|errado\.mp3|z\.zip|Zip|thrive_leads/);
       assert.match(md, /## Um/);
       assert.match(md, /### Baixe/);
       const src = /\[Versão MP3\]\((\/wp-content\/uploads\/\d{4}\/\d{2}\/certo\.mp3)\)/.exec(md)?.[1];
