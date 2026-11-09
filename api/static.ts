@@ -34,6 +34,15 @@ const DATED = /^\/\d{4}\/\d{2}\/(?:\d{2}\/)?([a-z0-9-]+)\/?$/;
  * Redirecionamentos 301 de um blog migrado: sites/<SITE>/redirects.txt, uma regra por linha,
  * "/caminho-antigo/ /caminho-novo/" (linhas vazias e com # são ignoradas).
  */
+/**
+ * Regra do redirects.txt para um caminho já decodificado, com ou sem a barra no fim. Acentos são comparados
+ * na forma composta (NFC): o WordPress pode ter gravado "ç" como "c" + cedilha e o navegador mandar "%C3%A7".
+ */
+export function findRedirect(redirects: Map<string, string>, p: string): string | undefined {
+  const n = p.normalize("NFC");
+  return redirects.get(n) ?? redirects.get(n.endsWith("/") ? n.slice(0, -1) : `${n}/`);
+}
+
 export function loadRedirects(file: string): Map<string, string> {
   const map = new Map<string, string>();
   if (!existsSync(file)) return map;
@@ -44,7 +53,7 @@ export function loadRedirects(file: string): Map<string, string> {
     if (!from?.startsWith("/") || !to || !(to.startsWith("/") || /^https?:\/\//.test(to))) {
       throw new Error(`redirects.txt: linha inválida: "${line}" (use "/antigo /novo")`);
     }
-    map.set(from, to);
+    map.set(from.normalize("NFC"), to);
   }
   return map;
 }
@@ -82,7 +91,7 @@ export async function registerStatic(app: FastifyInstance, env: ApiEnv, isConfig
     // Caminhos do WordPress que não existem aqui e arquivos ocultos
     if (BLOCKED.test(p) && !p.startsWith("/.well-known/")) return notFoundPage(reply);
     // Migração: lista do blog, com ou sem barra no fim
-    const target = redirects.get(p) ?? redirects.get(p.endsWith("/") ? p.slice(0, -1) : `${p}/`);
+    const target = findRedirect(redirects, p);
     if (target) return reply.redirect(target, 301);
     // Link antigo com data, quando o post existe aqui
     const dated = p.match(DATED);

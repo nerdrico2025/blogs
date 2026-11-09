@@ -434,6 +434,7 @@ Repita para cada blog (de preferência em lotes de 2 a 3, observando a memória 
 - [ ] **Trava de build:** **Mounts → Bind** `/shared/build-locks` em `/shared/build-locks`.
 - [ ] **Variáveis:** `SITE=<nome>`, `SITE_URL=https://dominio.com.br`, `WP_USER=wordbee`, `WP_APP_PASSWORD_HASH` (`npm run api:password`), `ADMIN_USER` e `ADMIN_PASSWORD_HASH` (`npm run admin:password`), `GLOBAL_BUILD_LOCK_DIR=/shared/build-locks`, `GLOBAL_BUILD_SLOTS=2`.
 - [ ] **Domínio:** **Domains → Add domain** → `dominio.com.br`, HTTPS, porta **8080**; memória 1 GB, zero downtime desligado → **Deploy**.
+- [ ] **Domínio antigo (opcional):** `ALIAS_HOSTS=antigo.com.br,www.antigo.com.br` — só preencher quando o DNS do domínio antigo apontar para este serviço. Adicione também esse domínio em **Domains** (porta 8080). Cada pedido nele recebe 301 para o domínio em uso, com o mesmo caminho (ou o destino do `redirects.txt`) e a query. O domínio principal na lista é ignorado; o endereço provisório do Easypanel e os outros blogs não são afetados.
 
 ---
 

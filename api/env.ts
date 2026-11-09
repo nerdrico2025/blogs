@@ -43,6 +43,8 @@ export interface ApiEnv {
   volumePagesDir: string;
   /** Os 301 da migração ficam no repositório (sites/<SITE>/redirects.txt), mesmo com as páginas no volume. */
   redirectsFile: string;
+  /** Domínios antigos que só redirecionam (ALIAS_HOSTS): minúsculos, sem porta. Vazio = sem alias. */
+  aliasHosts: string[];
   uploadsDir: string;
   stateFile: string;
   settingsFile: string;
@@ -104,6 +106,18 @@ function s3FromEnv(): S3Config | null {
   };
 }
 
+/** Host sem diferença de maiúsculas, sem porta e sem ponto no fim ("Velho.com.br:443" → "velho.com.br"). */
+export function hostKey(host: string): string {
+  const h = host.trim().toLowerCase();
+  const bare = h.startsWith("[") ? h.slice(0, h.indexOf("]") + 1) : h.replace(/:\d+$/, "");
+  return bare.replace(/\.$/, "");
+}
+
+/** "velho.com.br, https://www.velho.com.br/" → ["velho.com.br", "www.velho.com.br"] */
+function parseHosts(v: string | undefined): string[] {
+  return [...new Set((v ?? "").split(/[\s,]+/).map((h) => hostKey(h.replace(/^https?:\/\//i, "").replace(/\/.*$/, ""))).filter(Boolean))];
+}
+
 function trustProxy(): number {
   const v = process.env.TRUST_PROXY ?? "1";
   if (v === "true") return 1;
@@ -130,6 +144,7 @@ export function loadEnv(overrides: Partial<ApiEnv> = {}): ApiEnv {
     pagesDir: path.resolve(process.env.PAGES_DIR ?? (hasSiteFolder(projectDir) && !existsSync(volumePages) ? path.join(siteDir(projectDir), "pages") : volumePages)),
     volumePagesDir: volumePages,
     redirectsFile: path.join(hasSiteFolder(projectDir) ? siteDir(projectDir) : path.dirname(settingsFile()), "redirects.txt"),
+    aliasHosts: parseHosts(process.env.ALIAS_HOSTS),
     uploadsDir: path.resolve(process.env.UPLOADS_DIR ?? path.join(local, "uploads")),
     stateFile: path.resolve(process.env.STATE_FILE ?? path.join(local, "data/api-state.json")),
     settingsFile: settingsFile(),
