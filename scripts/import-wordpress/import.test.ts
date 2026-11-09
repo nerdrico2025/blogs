@@ -18,6 +18,9 @@ describe("limpeza do HTML", () => {
   });
 
   test("shortcodes saem; o texto dentro fica; [1] e [sic] ficam", () => {
+    const curly = stripShortcodes(`<p>[thrive_leads id=&#8217;9762&#8242;]</p><p>[huge_it_slider id=”2″]</p><p>[NOME], leia o [artigo] e [Clique aqui para saber mais] [1]</p>`);
+    assert.equal(curly.html, `<p></p><p></p><p>[NOME], leia o [artigo] e [Clique aqui para saber mais] [1]</p>`);
+    assert.deepEqual(curly.removed, ["thrive_leads", "huge_it_slider"]);
     const { html, removed } = stripShortcodes(`[caption id="a" align="x"]<img src="a.jpg"> Legenda[/caption] Nota [1] e [sic]. [gallery ids="1,2"] [toc]`);
     assert.equal(html, `<img src="a.jpg"> Legenda Nota [1] e [sic].  `);
     assert.deepEqual(removed.sort(), ["caption", "gallery", "toc"]);
