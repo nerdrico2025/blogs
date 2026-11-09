@@ -12,6 +12,7 @@ import path from "node:path";
 import { parseArgs } from "node:util";
 import sharp from "sharp";
 import { BlogApi, type BlogCategory, type BlogMedia } from "./blog.ts";
+import { categoryBase, categoryUrl } from "../../shared/settings.ts";
 import { finishHtml, imageKey, originalCandidates, prepareHtml, type ImageRef } from "./html.ts";
 import { CategoryMapper, manualRedirects, parseCategoryMap, SKIP, slugKey, writeRedirects } from "./mapping.ts";
 import { fetchWithRetry, pathOf, readPages, readRest, readXml, type SourcePost, type SourceSite } from "./source.ts";
@@ -207,7 +208,7 @@ function resolveLink(p: string): string | null {
   if (slug) return `/${slug}/`;
   const cat = catByPath.get(p);
   const target = cat && mapper.forCategory(cat);
-  if (target) return `/category/${target.slug}/`;
+  if (target) return categoryUrl(site, target.slug);
   let rule = manualRule(p);
   if (!rule) return null;
   if (rule.status === 302 || rule.status === 307) return p;
@@ -303,6 +304,50 @@ function handleImage(ref: ImageRef): Promise<ImageResult> {
   return job;
 }
 
+// ---------------------------------------------------------------- áudio
+const AUDIO_TYPES: Record<string, string> = { mp3: "audio/mpeg", m4a: "audio/mp4", ogg: "audio/ogg", oga: "audio/ogg", opus: "audio/ogg", wav: "audio/wav", aac: "audio/aac" };
+/** O mesmo limite padrão do servidor (MAX_AUDIO_UPLOAD_MB). */
+const MAX_AUDIO_BYTES = Number(process.env.MAX_AUDIO_UPLOAD_MB ?? 64) * 1024 * 1024;
+const AUDIO_TIMEOUT = 300_000;
+const MB = (n: number) => `${(n / 1048576).toFixed(1)} MB`;
+
+interface AudioResult {
+  ok: boolean;
+  url: string;
+  /** Caminho novo (/wp-content/uploads/…). Na simulação, não existe. */
+  target?: string;
+  bytes?: number;
+  error?: string;
+}
+const audioCache = new Map<string, Promise<AudioResult>>();
+
+function handleAudio(url: string): Promise<AudioResult> {
+  const key = imageKey(url);
+  let job = audioCache.get(key);
+  if (!job) {
+    job = (async (): Promise<AudioResult> => {
+      try {
+        const ext = new URL(url).pathname.split(".").pop()!.toLowerCase();
+        const res = await fetchWithRetry(url, dryRun ? { method: "HEAD" } : {}, dryRun ? 30_000 : AUDIO_TIMEOUT, 2);
+        const type = (res.headers.get("content-type") ?? "").split(";")[0]!.trim().toLowerCase();
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        if (!type.startsWith("audio/") && type !== "application/octet-stream") throw new Error(`não é áudio (${type || "sem tipo"})`);
+        const declared = Number(res.headers.get("content-length") ?? 0);
+        if (declared > MAX_AUDIO_BYTES) throw new Error(`${MB(declared)}, acima do limite de ${MB(MAX_AUDIO_BYTES)}`);
+        if (dryRun) return { ok: true, url, bytes: declared };
+        const data = Buffer.from(await res.arrayBuffer());
+        const name = decodeURIComponent(new URL(url).pathname.split("/").pop() ?? "audio");
+        const media = await api.uploadMedia(data, AUDIO_TYPES[ext]!, name, "", AUDIO_TIMEOUT);
+        return { ok: true, url, target: new URL(media.source_url).pathname, bytes: data.length };
+      } catch (err) {
+        return { ok: false, url, error: (err as Error).message };
+      }
+    })();
+    audioCache.set(key, job);
+  }
+  return job;
+}
+
 async function pool<T, R>(items: T[], size: number, fn: (item: T) => Promise<R>): Promise<R[]> {
   const out: R[] = new Array(items.length);
   let next = 0;
@@ -333,6 +378,15 @@ const report = {
   images: [] as { post: string; url: string; error: string }[],
   imagesOk: 0,
   altGenerated: 0,
+  /** Sem imagem destacada na origem. */
+  noCover: [] as string[],
+  /** A imagem destacada existe na origem, mas não baixa. */
+  coverFailed: [] as { post: string; url: string; error: string }[],
+  /** Imagens do corpo que não baixam e saem do texto, por post. */
+  bodyLost: new Map<string, number>(),
+  audios: [] as { post: string; result: AudioResult }[],
+  /** Links do corpo que ainda ficaram com /category/ num blog com outro prefixo. */
+  legacyCategoryLinks: [] as { post: string; href: string }[],
 };
 const redirects = new Map<string, string>();
 const addRedirect = (from: string, to: string) => {
@@ -395,11 +449,25 @@ async function importPost(post: SourcePost, n: number): Promise<void> {
       if (ref.altGenerated) report.altGenerated++;
     }
   });
-  const html = finishHtml(prep, (url) => {
-    const r = byKey.get(imageKey(url));
-    return r?.ok ? (dryRun ? url : r.target!) : null;
-  });
+  const audioResults = await pool(prep.audios, 2, handleAudio);
+  for (const result of audioResults) report.audios.push({ post: post.slug, result });
+  const audioByKey = new Map(audioResults.map((r) => [imageKey(r.url), r]));
+  const html = finishHtml(
+    prep,
+    (url) => {
+      const r = byKey.get(imageKey(url));
+      return r?.ok ? (dryRun ? url : r.target!) : null;
+    },
+    (url) => audioByKey.get(imageKey(url))?.target ?? null
+  );
   const featured = featuredRef ? byKey.get(imageKey(featuredRef.url)) : undefined;
+  if (!featuredRef) report.noCover.push(post.slug);
+  else if (!featured?.ok) report.coverFailed.push({ post: post.slug, url: featuredRef.url, error: featured?.error ?? "" });
+  const lostInBody = prep.images.filter((i) => !byKey.get(imageKey(i.url))?.ok).length;
+  if (lostInBody) report.bodyLost.set(post.slug, lostInBody);
+  if (categoryBase(site) !== "category") {
+    for (const m of html.matchAll(/href="(\/category\/[^"]*)"/g)) report.legacyCategoryLinks.push({ post: post.slug, href: m[1]! });
+  }
 
   const featuredId = featured?.ok ? featured.id : undefined;
 
@@ -453,6 +521,7 @@ async function importPost(post: SourcePost, n: number): Promise<void> {
     if (saved.slug !== post.slug) warn(`${post.slug}: o slug estava ocupado (página fixa ou reservado) e virou ${saved.slug}`);
   }
   addRedirect(oldPath, pathOf(link));
+  for (const r of audioResults) if (r.target) addRedirectForImage(r.url, r.target);
   refs.forEach((ref, i) => {
     const r = results[i]!;
     if (r.ok && r.target) {
@@ -496,7 +565,7 @@ for (const post of source.posts) {
 // Categorias antigas → novas (vale para todas as mapeadas, não só as dos posts importados)
 for (const c of source.categories) {
   const target = mapper.forCategory(c);
-  if (target) addRedirect(c.path, `/category/${target.slug}/`);
+  if (target) addRedirect(c.path, categoryUrl(site, target.slug));
 }
 
 const red = await writeRedirects(redirectsFile, redirects, dryRun, origin);
@@ -527,6 +596,21 @@ console.log(`Conflitos:    ${report.conflicts.length}${report.conflicts.length ?
 for (const c of report.conflicts) console.log(`  - ${c.slug}: post ${c.existing} (${c.link})`);
 console.log(`Imagens:      ${report.imagesOk} ${dryRun ? "disponíveis para baixar" : "enviadas"} (${report.altGenerated} com alt gerado), ${report.images.length} ${dryRun ? "que não baixariam" : "que não baixaram"}`);
 for (const i of report.images) console.log(`  - ${i.post}: ${i.url} (${i.error})`);
+console.log(`Posts sem capa: ${report.noCover.length + report.coverFailed.length} (sem imagem destacada na origem: ${report.noCover.length}; capa que não baixa: ${report.coverFailed.length})`);
+for (const slug of report.noCover) console.log(`  - sem imagem na origem: ${slug}`);
+for (const c of report.coverFailed) console.log(`  - capa não baixa: ${c.post}: ${c.url} (${c.error})`);
+const lostTotal = [...report.bodyLost.values()].reduce((a, b) => a + b, 0);
+console.log(`Posts que perdem imagens no corpo: ${report.bodyLost.size} (${lostTotal} imagens)`);
+for (const [slug, count] of report.bodyLost) console.log(`  - ${slug}: ${count}`);
+const audioOk = report.audios.filter((a) => a.result.ok);
+const audioBad = report.audios.filter((a) => !a.result.ok);
+console.log(`Áudios:       ${audioOk.length} ${dryRun ? "disponíveis para copiar" : "copiados"}, ${audioBad.length} com erro (o mesmo arquivo conta uma vez por post)`);
+for (const a of audioOk) console.log(`  - ${a.post}: ${a.result.url} (${MB(a.result.bytes ?? 0)})${a.result.target ? ` → ${a.result.target}` : ""}`);
+for (const a of audioBad) console.log(`  - FALHA ${a.post}: ${a.result.url} (${a.result.error})`);
+if (categoryBase(site) !== "category") {
+  console.log(`Links do corpo com o prefixo antigo /category/: ${report.legacyCategoryLinks.length}`);
+  for (const l of report.legacyCategoryLinks) console.log(`  - ${l.post}: ${l.href}`);
+}
 console.log(`Redirects:    ${red.added} nov${red.added === 1 ? "o" : "os"}, ${red.total} no bloco gerado de ${path.relative(process.cwd(), redirectsFile)}${dryRun ? " (não gravado)" : ""}`);
 if (dryRun) for (const [from, to] of redirects) console.log(`  ${from} → ${to}`);
 for (const s of red.skipped) console.log(`  ignorado: ${s}`);

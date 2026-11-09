@@ -11,38 +11,38 @@
 # os links curtos (307) continuam passando pelo blog.
 
 # Posts excluídos: notícias de IA (excluir-nerdrico.txt)
-/ia-na-busca-de-emprego-5-dicas-para-se-destacar-em-2025/ /category/ferramentas/
-/spotify-revoluciona-com-ia-5-novidades-que-vao-mudar-sua-experiencia-musical/ /category/ferramentas/
-/revolucao-optica-da-ibm-ia-mais-rapida-e-sustentavel-em-2024/ /category/ferramentas/
-/ia-para-o-bem-5-insights-da-conferencia-ai-for-good/ /category/ferramentas/
-/utah-lidera-regulamentacao-de-ia-nos-eua-o-que-muda/ /category/ferramentas/
-/india-lanca-primeira-ia-espacial-revolucao-na-analise-de-dados-orbitais/ /category/ferramentas/
-/ia-na-tecnologia-b2b-3-mudancas-de-reativa-para-antecipatoria/ /category/ferramentas/
-/nvidia-explode-lucro-dobra-com-chips-de-ia-em-2024/ /category/ferramentas/
-/urgente-por-que-a-ia-e-o-ponto-cego-na-formacao-medica/ /category/ferramentas/
-/ftc-proibe-rytr-o-fim-das-avaliacoes-falsas-geradas-por-ia/ /category/ferramentas/
-/ia-para-pmes-hub-da-sba-revoluciona-negocios-em-2025/ /category/ferramentas/
-/ia-revoluciona-ensaios-clinicos-5-avancos-surpreendentes/ /category/ferramentas/
-/deepseek-o-que-e/ /category/ferramentas/
+/ia-na-busca-de-emprego-5-dicas-para-se-destacar-em-2025/ /categoria/ferramentas/
+/spotify-revoluciona-com-ia-5-novidades-que-vao-mudar-sua-experiencia-musical/ /categoria/ferramentas/
+/revolucao-optica-da-ibm-ia-mais-rapida-e-sustentavel-em-2024/ /categoria/ferramentas/
+/ia-para-o-bem-5-insights-da-conferencia-ai-for-good/ /categoria/ferramentas/
+/utah-lidera-regulamentacao-de-ia-nos-eua-o-que-muda/ /categoria/ferramentas/
+/india-lanca-primeira-ia-espacial-revolucao-na-analise-de-dados-orbitais/ /categoria/ferramentas/
+/ia-na-tecnologia-b2b-3-mudancas-de-reativa-para-antecipatoria/ /categoria/ferramentas/
+/nvidia-explode-lucro-dobra-com-chips-de-ia-em-2024/ /categoria/ferramentas/
+/urgente-por-que-a-ia-e-o-ponto-cego-na-formacao-medica/ /categoria/ferramentas/
+/ftc-proibe-rytr-o-fim-das-avaliacoes-falsas-geradas-por-ia/ /categoria/ferramentas/
+/ia-para-pmes-hub-da-sba-revoluciona-negocios-em-2025/ /categoria/ferramentas/
+/ia-revoluciona-ensaios-clinicos-5-avancos-surpreendentes/ /categoria/ferramentas/
+/deepseek-o-que-e/ /categoria/ferramentas/
 
 # Posts excluídos: eventos e promoções que já passaram
-/nerd-rico-na-brasil-game-show/ /category/estrategias/
-/formula-de-lancamento-ao-vivo-dez-2013/ /category/estrategias/
-/vh-bonus/ /category/estrategias/
-/uma-noticia-boa-e-uma-excelente-para-voce/ /category/estrategias/
-/quem-vai-afiliados-brasil-2014/ /category/estrategias/
-/ebramad-com-inscricoes-abertas/ /category/estrategias/
-/video-o-fim-da-grande-familia/ /category/estrategias/
-/promocoes-secretas-da-black-friday-2018/ /category/estrategias/
-/maestria-ao-vivo-2019/ /category/estrategias/
-/digital-sem-barreiras-e-o-novo-formula-de-lancamento/ /category/estrategias/
-/curso-digital-sem-barreiras-10-motivos-para-voce-comprar-hoje/ /category/estrategias/
+/nerd-rico-na-brasil-game-show/ /categoria/estrategias/
+/formula-de-lancamento-ao-vivo-dez-2013/ /categoria/estrategias/
+/vh-bonus/ /categoria/estrategias/
+/uma-noticia-boa-e-uma-excelente-para-voce/ /categoria/estrategias/
+/quem-vai-afiliados-brasil-2014/ /categoria/estrategias/
+/ebramad-com-inscricoes-abertas/ /categoria/estrategias/
+/video-o-fim-da-grande-familia/ /categoria/estrategias/
+/promocoes-secretas-da-black-friday-2018/ /categoria/estrategias/
+/maestria-ao-vivo-2019/ /categoria/estrategias/
+/digital-sem-barreiras-e-o-novo-formula-de-lancamento/ /categoria/estrategias/
+/curso-digital-sem-barreiras-10-motivos-para-voce-comprar-hoje/ /categoria/estrategias/
 
 # Páginas do WordPress que não vieram para o blog
 /historia-nerdrico/ /sobre/
 /contato-2/ /contato/
 /agencia-para-mentores/ /contato/
-/ferramentas/ /category/ferramentas/
+/ferramentas/ /categoria/ferramentas/
 /marketingdigital/ /
 /novo-blog/ /
 /conteudos/ /
@@ -51,9 +51,9 @@
 /empreendedores-digitais-de-santa-catarina-estao-usando-a-inteligencia-artificial-para-transformar-o-seu-negocio-em-uma-maquina-de-fazer-dinheiro/ /sobre/
 /lucrando-com-plr/lucrando-com-plr-politicas-de-privacidade/ /politica-de-privacidade/
 /lucrando-com-plr/lucrando-com-plr-termos-de-uso/ /termos-de-uso/
-/exercicio-de-prosperidade-e-riqueza/ /category/mentalidade/
-/exercicio-de-prosperidade-e-riqueza/efeito-arrasa-quarteirao-grupo-desafio/ /category/mentalidade/
-/exercicio-de-prosperidade-e-riqueza/o-livro-que-transformou-a-minha-vida-aos-18-anos/ /category/mentalidade/
+/exercicio-de-prosperidade-e-riqueza/ /categoria/mentalidade/
+/exercicio-de-prosperidade-e-riqueza/efeito-arrasa-quarteirao-grupo-desafio/ /categoria/mentalidade/
+/exercicio-de-prosperidade-e-riqueza/o-livro-que-transformou-a-minha-vida-aos-18-anos/ /categoria/mentalidade/
 /osegredodeobama/ /o-segredo-de-obama/
 /6-dicas-ganhar-dinheiro-enviando-emails/ /6-dicas-escrever-e-mails-que-vendam/
 /como-abrir-um-negocio-com-pouco-dinheiro/ /como-abrir-negocio-pouco-dinheiro/
@@ -112,6 +112,47 @@
 /blog/e-mail-marketing-de-resultados-talento-pratica/ /e-mail-marketing-de-resultados-talento-pratica/
 /blog/10-coisas-se-fazer-antes-de-enviar-um-e-mail-para-sua-lista/ /10-coisas-se-fazer-antes-de-enviar-um-e-mail-para-sua-lista/
 /blog/6-dicas-escrever-e-mails-que-vendam/ /6-dicas-escrever-e-mails-que-vendam/
+
+# Prefixo antigo das categorias: /category/<slug>/ e a paginação (o número de páginas vem da importação, 10 posts por página)
+/category/email-marketing/ /categoria/email-marketing/
+/category/email-marketing/page/2/ /categoria/email-marketing/page/2/
+/category/email-marketing/page/3/ /categoria/email-marketing/page/3/
+/category/email-marketing/page/4/ /categoria/email-marketing/page/4/
+/category/email-marketing/page/5/ /categoria/email-marketing/page/5/
+/category/copywriting/ /categoria/copywriting/
+/category/estrategias/ /categoria/estrategias/
+/category/estrategias/page/2/ /categoria/estrategias/page/2/
+/category/estrategias/page/3/ /categoria/estrategias/page/3/
+/category/estrategias/page/4/ /categoria/estrategias/page/4/
+/category/estrategias/page/5/ /categoria/estrategias/page/5/
+/category/estrategias/page/6/ /categoria/estrategias/page/6/
+/category/estrategias/page/7/ /categoria/estrategias/page/7/
+/category/estrategias/page/8/ /categoria/estrategias/page/8/
+/category/produtos-digitais/ /categoria/produtos-digitais/
+/category/produtos-digitais/page/2/ /categoria/produtos-digitais/page/2/
+/category/trafego/ /categoria/trafego/
+/category/ferramentas/ /categoria/ferramentas/
+/category/ferramentas/page/2/ /categoria/ferramentas/page/2/
+/category/ferramentas/page/3/ /categoria/ferramentas/page/3/
+/category/mentalidade/ /categoria/mentalidade/
+/category/mentalidade/page/2/ /categoria/mentalidade/page/2/
+/category/mentalidade/page/3/ /categoria/mentalidade/page/3/
+/category/mentalidade/page/4/ /categoria/mentalidade/page/4/
+
+# Slugs das categorias da origem com o prefixo /category/ (a origem usava /secao/<slug>/, regras geradas pelo importador)
+/category/blog/ /categoria/estrategias/
+/category/copy/ /categoria/copywriting/
+/category/e-mail-marketing/ /categoria/email-marketing/
+/category/entrevistas/ /categoria/mentalidade/
+/category/estrategia/ /categoria/estrategias/
+/category/funil-de-vendas/ /categoria/estrategias/
+/category/leadlovers/ /categoria/email-marketing/
+/category/marketing-de-afiliados/ /categoria/produtos-digitais/
+/category/milionerd-cast/ /categoria/mentalidade/
+/category/mindset/ /categoria/mentalidade/
+/category/nerdshow/ /categoria/mentalidade/
+/category/plr/ /categoria/produtos-digitais/
+/category/storytelling/ /categoria/copywriting/
 
 # >>> importado do WordPress (scripts/import-wordpress). Gerado: não edite dentro deste bloco.
 # <<< fim da importação do WordPress

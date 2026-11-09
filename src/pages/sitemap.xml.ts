@@ -4,7 +4,7 @@ import site from "../../site.config.ts";
 import { getPosts } from "../lib/posts.ts";
 import { absoluteUrl } from "../lib/format.ts";
 import { readMediaMeta } from "../../shared/media.ts";
-import { authorPhotoUrl, authorUrl } from "../../shared/settings.ts";
+import { authorPhotoUrl, authorUrl, categoryUrl } from "../../shared/settings.ts";
 
 const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 
@@ -22,7 +22,7 @@ export const GET: APIRoute = async () => {
 
   const urls: Url[] = [
     { loc: "/", lastmod: newest(posts) },
-    ...site.categories.map((c) => ({ loc: `/category/${c.slug}/`, lastmod: newest(posts.filter((p) => p.category.slug === c.slug)) })),
+    ...site.categories.map((c) => ({ loc: categoryUrl(site, c.slug), lastmod: newest(posts.filter((p) => p.category.slug === c.slug)) })),
     ...posts.map((p) => {
       const cover = p.entry.data.cover ? readMediaMeta(p.entry.data.cover.src) : null;
       return { loc: p.url, lastmod: p.updated, images: cover ? [cover.src] : [] };

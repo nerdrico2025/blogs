@@ -174,6 +174,7 @@ Tabela completa (só as quatro primeiras são obrigatórias; as demais têm padr
 | `TRUST_PROXY` | `1` | Proxies confiáveis à frente (o Traefik). O IP real do visitante vem do `X-Forwarded-For`, e do `CF-Connecting-IP` quando a conexão vem da Cloudflare |
 | `RATE_LIMIT_PER_MINUTE` | `120` | Limite de requisições por IP na API |
 | `MAX_UPLOAD_MB` | `16` | Tamanho máximo de imagem enviada (a resolução tem limite fixo de 50 MP) |
+| `MAX_AUDIO_UPLOAD_MB` | `64` | Tamanho máximo de áudio enviado (usado pelo importador do WordPress) |
 | `DAILY_REBUILD_UTC_HOUR` | `7` | Hora (UTC) do rebuild diário (04:00 em Brasília). O minuto é calculado pelo `SITE`, para os blogs não buildarem juntos |
 | `DAILY_BACKUP_UTC_HOUR` | `6` | Hora (UTC) do backup diário (03:00 em Brasília), também com minuto por blog |
 | `BACKUP_RETENTION_DAYS` | `14` | Dias de backup guardados em `/data/backups` |
@@ -441,8 +442,10 @@ Repita para cada blog (de preferência em lotes de 2 a 3, observando a memória 
 - **Pasta:** `sites/nerdrico/` (marca "Nerd Rico", cor provisória `#6d28d9`, 7 categorias, `hideEmptyCategories` ligado).
 - **Serviço:** `nerdrico`, volume `nerdrico-data`, `SITE=nerdrico`, `SITE_URL=https://nerdrico.com.br` (o mesmo domínio da origem: importe com `--api` no endereço provisório do Easypanel).
 - **Importação:** `--categories sites/nerdrico/categorias-wordpress.txt --exclude sites/nerdrico/excluir-nerdrico.txt` (24 posts de fora: notícias de IA e posts datados). "Blog" é a última regra do mapeamento, como reserva.
+- **URLs de categoria:** `categoryBase: "categoria"` no `site.config.ts`: as páginas ficam em `/categoria/<slug>/` (nomes e slugs não mudam). `/category/<slug>/` e a paginação dão 301 pelas regras do `redirects.txt`; os outros blogs seguem em `/category/`.
+- **Áudio:** o importador copia os MP3 hospedados na origem para o volume (`/data/uploads`), com limite próprio (`MAX_AUDIO_UPLOAD_MB`, padrão 64) e entrega com Range (206).
 - **Páginas fixas:** Sobre, Contato, Política de Privacidade, Termos de Uso, História do Nerd Rico (`/historia-do-nerd-rico/`, imagens em `public/historia/`) e a ajuda da lista de confiáveis do Gmail. Razão social, CNPJ e cidade ainda não informados: as páginas mostram "(… a informar)" e `npm test` lista as pendências.
-- **Redirects manuais** (`sites/nerdrico/redirects.txt`, fora do bloco gerado): 91 regras, 83 de 301 (posts excluídos, páginas antigas, páginas de venda para o aluno.nerdrico.com.br, slugs antigos) e 8 de 307 (links curtos de afiliado, como na origem).
+- **Redirects manuais** (`sites/nerdrico/redirects.txt`, fora do bloco gerado): 128 regras, 120 de 301 (posts excluídos, páginas antigas, páginas de venda para o aluno.nerdrico.com.br, slugs antigos, prefixo /category/ das categorias) e 8 de 307 (links curtos de afiliado, como na origem).
 - **Comando de importação:** `--categories sites/nerdrico/categorias-wordpress.txt --exclude sites/nerdrico/excluir-nerdrico.txt --include-pages como-criar-lista-altamente-lucrativa,4-formas-criar-renda-passiva-internet --api <endereço provisório>`.
 - **Depois do deploy:** cadastrar o autor "Nerd Rico" na aba Autor do `/admin`; os cursos ficam em `https://aluno.nerdrico.com.br/lista-cursos`.
 

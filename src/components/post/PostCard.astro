@@ -1,5 +1,6 @@
 ---
 import site from "../../../site.config.ts";
+import { categoryUrl } from "../../../shared/settings.ts";
 import Picture from "../Picture.astro";
 import AuthorSignature from "../article/AuthorSignature.astro";
 import type { PostView } from "../../lib/posts.ts";
@@ -19,9 +20,9 @@ const cover = post.entry.data.cover;
     {cover && <Picture src={cover.src} alt={cover.alt} sizes="(max-width: 544px) calc(100vw - 58px), (max-width: 921px) 36vw, 300px" fallbackWidth={480} priority={priority} />}
   </div>
   <div class="post-card-body">
-    <a class="post-cat" href={`/category/${post.category.slug}/`}>{post.category.name}</a>
+    <a class="post-cat" href={categoryUrl(site, post.category.slug)}>{post.category.name}</a>
     <H><a href={post.url}>{post.title}</a></H>
-    <p class="post-meta">{site.authorProfile ? <AuthorSignature /> : <span class="by">{post.author.name}</span>} / <time datetime={isoDate(post.date)}>{formatDate(post.date)}</time> / <a href={`/category/${post.category.slug}/`}>{post.category.name}</a></p>
+    <p class="post-meta">{site.authorProfile ? <AuthorSignature /> : <span class="by">{post.author.name}</span>} / <time datetime={isoDate(post.date)}>{formatDate(post.date)}</time> / <a href={categoryUrl(site, post.category.slug)}>{post.category.name}</a></p>
     <p class="post-excerpt">{post.excerpt}</p>
   </div>
 </article>

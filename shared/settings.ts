@@ -80,6 +80,10 @@ export interface AuthorProfile {
 export const authorPhotoUrl = (photo: { base: string }, width: (typeof AUTHOR_PHOTO_WIDTHS)[number]) => `${photo.base}-${width}.webp`;
 export const authorUrl = (profile: { slug: string }) => `/autor/${profile.slug}/`;
 
+/** Primeiro trecho do endereço das categorias: "category", a não ser que o blog defina `categoryBase`. */
+export const categoryBase = (site: Pick<SiteConfig, "categoryBase">): string => site.categoryBase ?? "category";
+export const categoryUrl = (site: Pick<SiteConfig, "categoryBase">, slug: string): string => `/${categoryBase(site)}/${slug}/`;
+
 export interface Settings {
   authorProfile?: AuthorProfile;
   home?: HomeSettings;
@@ -258,19 +262,17 @@ function replaceDeep<T>(value: T, from: string, to: string): T {
   return value;
 }
 
-const CATEGORY_HREF = (slug: string) => `/category/${slug}/`;
-
 /** Menu: mantém os outros itens; rótulo da categoria só muda se o nome dela mudou. */
 function buildNav(base: SiteConfig, categories: Category[]): SiteConfig["nav"] {
   const baseById = new Map(base.categories.map((c) => [c.id, c]));
   const used = new Set<string>();
   const items = categories.map((c) => {
     const old = baseById.get(c.id);
-    const item = old && base.nav.find((n) => n.href === CATEGORY_HREF(old.slug));
+    const item = old && base.nav.find((n) => n.href === categoryUrl(base, old.slug));
     if (item) used.add(item.href);
-    return { label: item && old!.name === c.name ? item.label : c.name, href: CATEGORY_HREF(c.slug) };
+    return { label: item && old!.name === c.name ? item.label : c.name, href: categoryUrl(base, c.slug) };
   });
-  return [...items, ...base.nav.filter((n) => !used.has(n.href) && !n.href.startsWith("/category/"))];
+  return [...items, ...base.nav.filter((n) => !used.has(n.href) && !n.href.startsWith(`/${categoryBase(base)}/`))];
 }
 
 const image = (src: string, ref: ImageRef): ImageRef => ({ ...ref, src });

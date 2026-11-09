@@ -1,6 +1,7 @@
 /** Passo 2 do assistente: a IA propõe categorias, textos e paleta. A chave nunca vai para logs. */
 import Anthropic from "@anthropic-ai/sdk";
-import { ensureReadable, isHex, type HomeSettings } from "../shared/settings.ts";
+import site from "../site.config.ts";
+import { categoryBase, ensureReadable, isHex, type HomeSettings } from "../shared/settings.ts";
 import { WpError } from "./errors.ts";
 import { HOME_LIMITS, parseHome, validSlug } from "./settings-store.ts";
 
@@ -47,7 +48,7 @@ const SYSTEM = `Você prepara a identidade inicial de um blog novo. Responda no 
   - callout: caixa de destaque. kicker (etiqueta) com até ${HOME_LIMITS.kicker} caracteres, title, text e button, com os mesmos limites.
   - footerText: uma frase de rodapé com até ${HOME_LIMITS.footer} caracteres, sem inventar fatos.
   - searchPlaceholder: exemplo de busca com até ${HOME_LIMITS.placeholder} caracteres.
-  - Todo href é interno: /category/<slug de uma das categories>/ ou /sobre/. Nunca invente endereços externos, marcas parceiras ou links de afiliado.`;
+  - Todo href é interno: /${categoryBase(site)}/<slug de uma das categories>/ ou /sobre/. Nunca invente endereços externos, marcas parceiras ou links de afiliado.`;
 
 const HOME_TEXT_KEYS = ["footerText", "searchPlaceholder"] as const;
 const hasMarkup = (v: unknown): boolean => {
@@ -63,7 +64,7 @@ function homeHrefs(home: HomeSettings): string[] {
 /** Links internos para /category/<slug>/ que não batem com nenhuma categoria. */
 export function brokenCategoryLinks(home: HomeSettings, slugs: string[]): string[] {
   return homeHrefs(home).filter((h) => {
-    const slug = h.match(/^\/category\/([^/?#]+)/)?.[1];
+    const slug = h.match(new RegExp(`^/${categoryBase(site)}/([^/?#]+)`))?.[1];
     return slug !== undefined && !slugs.includes(slug);
   });
 }
@@ -90,7 +91,7 @@ export function validateAiHome(p: SetupProposal): string[] {
   for (const key of HOME_TEXT_KEYS) if (!home[key]) errors.push(`${key} vazio`);
   const hrefs = homeHrefs(home);
   const slugs = p.categories.map((c) => c.slug);
-  if (hrefs.some((h) => h !== "/sobre/" && !h.startsWith("/category/"))) errors.push("os links de home só podem ser /sobre/ ou /category/<slug>/");
+  if (hrefs.some((h) => h !== "/sobre/" && !h.startsWith(`/${categoryBase(site)}/`))) errors.push(`os links de home só podem ser /sobre/ ou /${categoryBase(site)}/<slug>/`);
   errors.push(...brokenCategoryLinks(home, slugs).map((h) => `o link ${h} não é de uma categoria proposta`));
   if (errors.length === 0) p.home = home;
   return errors;

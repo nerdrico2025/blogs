@@ -70,18 +70,21 @@ export default defineSiteConfig({
 
   social: { youtube: "https://www.youtube.com/onerdrico" },
 
+  /** As URLs de categoria deste blog ficam em /categoria/<slug>/. */
+  categoryBase: "categoria",
+
   /** Itens do menu principal. Por padrão, as categorias. */
   /** Categoria sem artigo publicado não aparece no menu (a página dela continua existindo). */
   hideEmptyCategories: true,
 
   nav: [
-    { label: "E-mail Marketing", href: "/category/email-marketing/" },
-    { label: "Copywriting", href: "/category/copywriting/" },
-    { label: "Estratégias de Venda", href: "/category/estrategias/" },
-    { label: "Afiliados e Produtos Digitais", href: "/category/produtos-digitais/" },
-    { label: "Tráfego", href: "/category/trafego/" },
-    { label: "Ferramentas", href: "/category/ferramentas/" },
-    { label: "Mentalidade e Entrevistas", href: "/category/mentalidade/" },
+    { label: "E-mail Marketing", href: "/categoria/email-marketing/" },
+    { label: "Copywriting", href: "/categoria/copywriting/" },
+    { label: "Estratégias de Venda", href: "/categoria/estrategias/" },
+    { label: "Afiliados e Produtos Digitais", href: "/categoria/produtos-digitais/" },
+    { label: "Tráfego", href: "/categoria/trafego/" },
+    { label: "Ferramentas", href: "/categoria/ferramentas/" },
+    { label: "Mentalidade e Entrevistas", href: "/categoria/mentalidade/" },
   ],
 
   ticker: {

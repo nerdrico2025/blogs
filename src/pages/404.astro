@@ -1,5 +1,6 @@
 ---
 import site from "../../site.config.ts";
+import { categoryUrl } from "../../shared/settings.ts";
 import BaseLayout from "../layouts/BaseLayout.astro";
 import TwoColumn from "../components/layout/TwoColumn.astro";
 import PostCard from "../components/post/PostCard.astro";
@@ -21,7 +22,7 @@ const seo = { title: "Página não encontrada", description: "A página que voc�
         <button type="submit" aria-label="Buscar"><Icon name="search" /></button>
       </form>
       <ul class="chips">
-        {site.categories.map((c) => <li><a href={`/category/${c.slug}/`}>{c.name}</a></li>)}
+        {site.categories.map((c) => <li><a href={categoryUrl(site, c.slug)}>{c.name}</a></li>)}
       </ul>
     </section>
     {latest.length > 0 && (

@@ -2,7 +2,7 @@
 import site from "../../../site.config.ts";
 import Icon from "../Icon.astro";
 import Ticker from "./Ticker.astro";
-import { headerLogo } from "../../../shared/settings.ts";
+import { categoryUrl, headerLogo } from "../../../shared/settings.ts";
 import { getPosts } from "../../lib/posts.ts";
 
 const path = Astro.url.pathname;
@@ -11,7 +11,7 @@ const logo = headerLogo(site);
 let nav = site.nav;
 if (site.hideEmptyCategories) {
   const used = new Set((await getPosts()).map((p) => p.category.slug));
-  const empty = new Set(site.categories.filter((c) => !used.has(c.slug)).map((c) => `/category/${c.slug}/`));
+  const empty = new Set(site.categories.filter((c) => !used.has(c.slug)).map((c) => categoryUrl(site, c.slug)));
   nav = nav.filter((item) => !empty.has(item.href));
 }
 ---

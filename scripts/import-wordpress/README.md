@@ -107,9 +107,11 @@ categoria com `-`, depois data. Post que já está no blog não é apagado: excl
   o original (`foto.jpg` em vez de `foto-300x200.jpg` ou `foto-scaled.jpg`). GIF, AVIF e arquivos acima de
   15 MB são convertidos antes do envio. O alt original fica; se faltar ou for só o nome do arquivo
   (`P1010676`, `IMG_2034`), é gerado pela legenda, pelo `title` ou pelo título do post. Imagem que não
-  baixa sai do texto e entra no relatório.
+  baixa sai do texto e entra no relatório, que lista os posts sem capa e os que perdem imagens no corpo.
+- **Áudio:** link ou `<audio>` para arquivo da origem (MP3, M4A, OGG, WAV, AAC) é copiado para o blog pelo
+  `POST /media` e o link passa para o endereço novo. Limite de `MAX_AUDIO_UPLOAD_MB` (padrão 64) no servidor.
 - **Links internos** para o domínio antigo (com ou sem `www`, `http` ou `https`) viram caminhos do blog
-  novo: post → `/<slug>/`, categoria → `/category/<nova>/`. Link para a foto ampliada é desembrulhado.
+  novo: post → `/<slug>/`, categoria → `/<categoryBase>/<nova>/` (padrão `/category/`). Link para a foto ampliada é desembrulhado.
   Link sem destino conhecido (uma página, por exemplo) fica com o mesmo caminho e é listado no relatório.
 
 ## Reimportar (idempotência)

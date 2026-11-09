@@ -80,6 +80,8 @@ export interface PrepareOptions {
 export interface Prepared {
   tree: Root;
   images: ImageRef[];
+  /** Áudios hospedados na origem e usados no post (URLs absolutas, sem repetir). */
+  audios: string[];
   stats: { shortcodes: string[]; embedsRemoved: number; videosLinked: number; linksRewritten: number; linksUnresolved: string[] };
 }
 
@@ -92,6 +94,9 @@ const KEEP_ATTRS: Record<string, string[]> = {
 const DROP_TAGS = new Set(["script", "style", "noscript", "template", "form", "input", "button", "select", "textarea", "svg", "object", "embed"]);
 
 const hostOf = (u: URL) => u.hostname.toLowerCase().replace(/^www\./, "");
+
+/** Extensões de áudio copiadas da origem para o blog. */
+export const AUDIO_FILE = /\.(mp3|m4a|ogg|oga|wav|aac|opus)$/i;
 
 /** Chave da imagem que ignora protocolo e www (o mesmo arquivo aparece como http e https). */
 export function imageKey(url: string): string {
@@ -137,6 +142,7 @@ export function prepareHtml(rawHtml: string, opts: PrepareOptions): Prepared {
   const stats: Prepared["stats"] = { shortcodes: removed, embedsRemoved: 0, videosLinked: 0, linksRewritten: 0, linksUnresolved: [] };
   const images: ImageRef[] = [];
   const seen = new Map<string, ImageRef>();
+  const audios = new Map<string, string>();
   const isOld = (u: URL) => opts.oldHosts.has(hostOf(u));
 
   // Legenda de cada imagem dentro de <figure> (vira alt quando o alt é fraco)
@@ -184,6 +190,17 @@ export function prepareHtml(rawHtml: string, opts: PrepareOptions): Prepared {
       });
     }
 
+    // Player de áudio da origem: o blog não aceita <audio>, então vira um link (tratado no ramo do <a>)
+    if (el.tagName === "audio") {
+      const source = el.children.find((c): c is Element => c.type === "element" && c.tagName === "source");
+      const url = absolute(String(el.properties.src ?? source?.properties.src ?? ""), opts.base);
+      if (url && isOld(url) && AUDIO_FILE.test(url.pathname)) {
+        // Bloco de áudio do Gutenberg: <figure> sem imagem seria removida no finishHtml
+        if (parent.type === "element" && parent.tagName === "figure") parent.tagName = "p";
+        return replace({ type: "element", tagName: "a", properties: { href: url.href }, children: [{ type: "text", value: "Ouça o áudio" }] });
+      }
+    }
+
     if (el.tagName === "img") {
       // Lazy load de plugins: o endereço real fica em data-src / data-lazy-src
       const p = el.properties;
@@ -209,6 +226,12 @@ export function prepareHtml(rawHtml: string, opts: PrepareOptions): Prepared {
       const url = href && !href.startsWith("#") ? absolute(href, opts.base) : null;
       el.properties = href ? { href } : {};
       if (url && isOld(url) && /^https?:$/.test(url.protocol)) {
+        // O áudio é copiado para o blog; finishHtml troca pelo endereço novo
+        if (AUDIO_FILE.test(url.pathname)) {
+          audios.set(imageKey(url.href), url.href);
+          el.properties.href = url.href;
+          return;
+        }
         const onlyImage = el.children.every((c) => (c.type === "element" && c.tagName === "img") || (c.type === "text" && !c.value.trim()));
         if (url.pathname.includes("/wp-content/uploads/") && onlyImage) {
           // Link para a foto ampliada: sem sentido no blog novo
@@ -256,14 +279,21 @@ export function prepareHtml(rawHtml: string, opts: PrepareOptions): Prepared {
     return;
   });
 
-  return { tree, images, stats };
+  return { tree, images, audios: [...audios.values()], stats };
 }
 
 /**
  * Troca cada imagem pelo endereço novo (caminho /wp-content/uploads/… do blog, para o build achar
- * as variantes WebP) e remove as que não baixaram.
+ * as variantes WebP) e remove as que não baixaram. Link de áudio vai para o endereço novo; se o áudio
+ * não foi copiado, fica com o caminho antigo.
  */
-export function finishHtml(prep: Prepared, newSrc: (url: string) => string | null): string {
+export function finishHtml(prep: Prepared, newSrc: (url: string) => string | null, newAudio: (url: string) => string | null = () => null): string {
+  const audioKeys = new Set(prep.audios.map(imageKey));
+  visit(prep.tree, "element", (node: Element) => {
+    if (node.tagName !== "a" || !audioKeys.has(imageKey(String(node.properties.href)))) return;
+    const url = new URL(String(node.properties.href));
+    node.properties.href = newAudio(url.href) ?? url.pathname;
+  });
   visit(prep.tree, "element", (node: Element, index, parent) => {
     if (node.tagName !== "img" || !parent || index === undefined) return;
     const target = newSrc(String(node.properties.src));

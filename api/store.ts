@@ -11,7 +11,7 @@ import YAML from "yaml";
 import site from "../site.config.ts";
 import { RESERVED_SLUGS } from "../src/lib/slugs.ts";
 import { processImage, PUBLIC_PREFIX, safeBaseName, type MediaMeta } from "../shared/media.ts";
-import { findCategory } from "../shared/settings.ts";
+import { categoryBase, findCategory } from "../shared/settings.ts";
 import type { ApiEnv } from "./env.ts";
 import { badParam, WpError } from "./errors.ts";
 import { htmlToMarkdown, plainText, truncate } from "./html-to-md.ts";
@@ -218,7 +218,7 @@ export class Store {
   }
 
   private slugTaken(slug: string): boolean {
-    return RESERVED_SLUGS.has(slug) || this.pageSlugs.has(slug);
+    return RESERVED_SLUGS.has(slug) || slug === categoryBase(site) || this.pageSlugs.has(slug);
   }
 
   /**
@@ -269,6 +269,28 @@ export class Store {
       this.state.media[String(id)] = record;
       await this.saveState();
       return { record, meta, created: true };
+    });
+  }
+
+  /** Grava um áudio como veio, sem conversão. Os mesmos bytes com o mesmo nome devolvem o já gravado. */
+  saveAudio(data: Buffer, filename: string, mime: string, ext: string): Promise<{ record: MediaRecord; created: boolean }> {
+    return this.serial(async () => {
+      const hash = createHash("sha256").update(data).digest("hex");
+      const base = safeBaseName(filename);
+      const same = Object.values(this.state.media).find((m) => m.hash === hash && m.name === base && existsSync(path.join(this.env.uploadsDir, m.src.slice(PUBLIC_PREFIX.length))));
+      if (same) return { record: same, created: false };
+      const now = new Date();
+      const subdir = `${now.getUTCFullYear()}/${String(now.getUTCMonth() + 1).padStart(2, "0")}`;
+      const retired = new Set(this.state.retiredImages ?? []);
+      let name = base;
+      for (let i = 2; existsSync(path.join(this.env.uploadsDir, subdir, `${name}.${ext}`)) || retired.has(`${subdir}/${name}`); i++) name = `${base}-${i}`;
+      await mkdir(path.join(this.env.uploadsDir, subdir), { recursive: true });
+      await writeFile(path.join(this.env.uploadsDir, subdir, `${name}.${ext}`), data);
+      const id = this.state.nextMediaId++;
+      const record: MediaRecord = { id, src: `${PUBLIC_PREFIX}${subdir}/${name}.${ext}`, mime, width: 0, height: 0, createdAt: now.toISOString(), hash, name: base };
+      this.state.media[String(id)] = record;
+      await this.saveState();
+      return { record, created: true };
     });
   }
 

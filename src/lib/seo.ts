@@ -7,7 +7,7 @@ import type { ImageRef } from "./config-schema.ts";
 import type { PostView } from "./posts.ts";
 import { absoluteUrl } from "./format.ts";
 import { readMediaMeta } from "../../shared/media.ts";
-import { authorPhotoUrl, authorUrl, type AuthorProfile } from "../../shared/settings.ts";
+import { authorPhotoUrl, authorUrl, categoryUrl, type AuthorProfile } from "../../shared/settings.ts";
 
 type Json = Record<string, unknown>;
 
@@ -127,7 +127,7 @@ export function articleSeo(post: PostView): SeoProps {
   const coverMeta = post.entry.data.cover ? readMediaMeta(post.entry.data.cover.src) : null;
   const images = [image && absoluteUrl(image.src), coverMeta && absoluteUrl(coverMeta.jpeg ?? coverMeta.src)].filter(Boolean);
   const crumbs = [
-    { name: post.category.name, path: `/category/${post.category.slug}/` },
+    { name: post.category.name, path: categoryUrl(site, post.category.slug) },
     { name: post.title, path: post.url },
   ];
 

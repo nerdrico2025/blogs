@@ -224,14 +224,17 @@ const gmtIso = (s: string) => (s && !s.startsWith("0000") ? s.trim().replace(" "
 
 /**
  * Limpeza de uma página importada como post: tira o título repetido no começo do texto (com ou sem um
- * "[artigo]" na frente) e os "títulos" que são só um endereço (rodapé de e-book: site, YouTube, Instagram).
+ * "[artigo]" na frente), os "títulos" que são só um endereço (rodapé de e-book: site, YouTube, Instagram)
+ * e o parágrafo com convite de grupo do WhatsApp.
  */
 export function cleanPageHtml(html: string, title: string): string {
   const plain = (h: string) => htmlText(h).replace(/^\[[a-z]+\]\s*/i, "").replace(/\s+/g, " ").trim().toLowerCase();
   let out = html;
   const first = out.match(/^\s*<h[1-6][^>]*>([\s\S]*?)<\/h[1-6]>/i);
   if (first && plain(first[1]!) === plain(title)) out = out.slice(first[0].length);
-  return out.replace(/<h[1-6][^>]*>([\s\S]*?)<\/h[1-6]>/gi, (m, inner: string) => (/^https?:\/\/\S+$/i.test(htmlText(inner).trim()) ? "" : m));
+  return out
+    .replace(/<h[1-6][^>]*>([\s\S]*?)<\/h[1-6]>/gi, (m, inner: string) => (/^https?:\/\/\S+$/i.test(htmlText(inner).trim()) ? "" : m))
+    .replace(/<p\b[^>]*>(?:(?!<\/p>)[\s\S])*?chat\.whatsapp\.com(?:(?!<\/p>)[\s\S])*?<\/p>/gi, "");
 }
 
 /**
