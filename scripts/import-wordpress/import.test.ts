@@ -119,6 +119,62 @@ describe("áudio da origem", () => {
   });
 });
 
+describe("sumário antigo do WordPress", () => {
+  const list = `<ul><li><a href="#um">Um</a></li><li><a href="#dois">Dois</a></li><li><a href="#tres">Três</a></li></ul>`;
+  const body = `<h2><span class="ez-toc-section" id="um"></span>Um<span class="ez-toc-section-end"></span></h2><p>Texto.</p><h3>Dois</h3><p>Mais.</p>`;
+  const clean = `<h2>Um</h2><p>Texto.</p><h3>Dois</h3><p>Mais.</p>`;
+
+  test("Easy Table of Contents, com título e Toggle: sai o bloco e ficam os títulos do texto", () => {
+    const p = prep(`<div id="ez-toc-container" class="ez-toc-v2_0_87 ez-toc-grey"><div class="ez-toc-title-container"><p class="ez-toc-title">Índice do Artigo</p><span class="ez-toc-title-toggle"><a href="#" class="ez-toc-toggle"><span class="eztoc-hide">Toggle</span></a></span></div><nav>${list}</nav></div>${body}`);
+    assert.equal(p.tocsRemoved, 1);
+    assert.equal(p.manualTocs, 0);
+    assert.equal(finishHtml(p, () => null), clean);
+  });
+
+  for (const [name, open, close] of [
+    ["sem Toggle", `<div id="ez-toc-container"><nav>`, `</nav></div>`],
+    ["Rank Math, com título próprio", `<div class="wp-block-rank-math-toc-block" id="rank-math-toc"><h2>Índice</h2><nav>`, `</nav></div>`],
+    ["Table of Contents Plus", `<div id="toc_container"><p class="toc_title">Contents</p>`, `</div>`],
+    ["Yoast", `<div class="schema-faq wp-block-yoast-seo-table-of-contents yoast-table-of-contents"><h2>Sumário</h2>`, `</div>`],
+    ["LuckyWP", `<div class="lwptoc lwptoc-light"><div>`, `</div></div>`],
+  ] as const) {
+    test(`variação: ${name}`, () => {
+      const p = prep(`<p>Antes.</p>${open}${list}${close}${body}`);
+      assert.equal(p.tocsRemoved, 1);
+      assert.equal(finishHtml(p, () => null), `<p>Antes.</p>${clean}`);
+    });
+  }
+
+  test("índice escrito à mão fica no texto e é contado", () => {
+    const p = prep(`<p>Veja:</p>${list}${body}`);
+    assert.equal(p.tocsRemoved, 0);
+    assert.equal(p.manualTocs, 1);
+    assert.match(finishHtml(p, () => null), /<li><a href="#um">Um<\/a><\/li>/);
+  });
+
+  test("lista comum não conta como índice; marca dentro do título não remove o título", () => {
+    const p = prep(`<ul><li><a href="https://outro.com/a">a</a></li><li><a href="#b">b</a></li><li>c</li></ul>${body}`);
+    assert.deepEqual([p.tocsRemoved, p.manualTocs], [0, 0]);
+    assert.match(finishHtml(p, () => null), /<h2>Um<\/h2>/);
+  });
+});
+
+describe("--drop-links com troca por áudio", () => {
+  const url = "https://cdn.exemplo/stream/ep3.mp3";
+  const make = () =>
+    prepareHtml(`<h3>Baixe</h3><p><a href="http://antigo.com.br/errado.mp3">MP3</a></p>`, { base: "https://antigo.com.br", oldHosts: new Set(["antigo.com.br"]), postTitle: "T", resolveLink: () => null, replaceLink: (x) => (x === "/errado.mp3" ? url : null) });
+
+  test("o link passa para o arquivo copiado", () => {
+    const p = make();
+    assert.deepEqual(p.audios, [url]);
+    assert.equal(finishHtml(p, () => null, () => "/wp-content/uploads/2026/11/ep3.mp3"), `<h3>Baixe</h3><p><a href="/wp-content/uploads/2026/11/ep3.mp3">MP3</a></p>`);
+  });
+
+  test("se a cópia falhar, o link sai em vez de apontar para outro site", () => {
+    assert.equal(finishHtml(make(), () => null, () => null), `<h3>Baixe</h3>`);
+  });
+});
+
 describe("--drop-links", () => {
   const zip = "/wp-content/uploads/z.zip";
   const mp3 = "/wp-content/uploads/e2.mp3";

@@ -1,7 +1,8 @@
-# Links do corpo removidos na importação (--drop-links). Um caminho da origem por linha; "post:<slug> <caminho>" vale só para aquele post.
+# Links do corpo tratados na importação (--drop-links). Um caminho da origem por linha.
+# "post:<slug> <caminho>" vale só para aquele post; "<caminho> => <URL de áudio>" troca o link pelo áudio, copiado para o volume.
 
 # ZIP dos episódios do Milionerd Cast: dá 404 na origem
 /wp-content/uploads/2017/02/milionerdcastt1e1-mensagempublico.zip
 
-# O episódio 3 apontava para o MP3 do episódio 2; o MP3 dele não existe na origem
-post:audiencia-fiel-t1e03-milionerdcast /wp-content/uploads/2017/03/emails_autenticost1e02_milionerdcast-.mp3
+# O episódio 3 apontava para o MP3 do episódio 2. O certo só existe no feed do podcast (SoundCloud)
+post:audiencia-fiel-t1e03-milionerdcast /wp-content/uploads/2017/03/emails_autenticost1e02_milionerdcast-.mp3 => https://feeds.soundcloud.com/stream/313024452-user-748026506-audiencia-fiel-t1-e03-milionerdcast.mp3

@@ -337,6 +337,35 @@ describe("post:<slug>, --include-pages e links pelo redirects.txt manual", () =>
 });
 
 describe("áudio e relatório de imagens", () => {
+  test("sumário antigo sai, títulos ficam, índice à mão é listado e o MP3 errado vira o áudio certo", async () => {
+    const toc = `<div id="ez-toc-container" class="ez-toc-v2_0_87"><p class="ez-toc-title">Índice do Artigo</p><a href="#" class="ez-toc-toggle"><span class="eztoc-hide">Toggle</span></a><nav><ul><li><a href="{BASE}/2024/01/com-sumario/#um">Um</a></li></ul></nav></div>`;
+    const g = fakeWordPress("Site G", [
+      { id: 61, slug: "com-sumario", title: "Com sumário", html: `<p>Abertura.</p>${toc}<h2><span class="ez-toc-section" id="um"></span>Um<span class="ez-toc-section-end"></span></h2><p>Texto.</p><h3>Baixe</h3><p><a href="{BASE}/wp-content/uploads/errado.mp3">Versão MP3</a></p><p><a href="{BASE}/wp-content/uploads/z.zip">Zip</a></p>`, category: 1 },
+      { id: 62, slug: "indice-a-mao", title: "Índice à mão", html: `<ul><li><a href="#a">A</a></li><li><a href="#b">B</a></li><li><a href="#c">C</a></li></ul><p>Texto.</p>`, category: 1 },
+    ]);
+    const base = await g.start("127.0.0.1");
+    const rules = path.join(tmp, "drop-toc.txt");
+    await writeFile(rules, `/wp-content/uploads/z.zip\npost:com-sumario /wp-content/uploads/errado.mp3 => ${base}/stream/certo.mp3\n`);
+    try {
+      const r = await importer(base, "noticias => dicas\n", ["--drop-links", rules], path.join(tmp, "redirects-toc.txt"));
+      assert.equal(r.code, 0, r.out);
+      const md = file("com-sumario");
+      assert.doesNotMatch(md, /Índice do Artigo|Toggle|errado\.mp3|z\.zip|Zip/);
+      assert.match(md, /## Um/);
+      assert.match(md, /### Baixe/);
+      const src = /\[Versão MP3\]\((\/wp-content\/uploads\/\d{4}\/\d{2}\/certo\.mp3)\)/.exec(md)?.[1];
+      assert.ok(src, md);
+      assert.equal(readFileSync(path.join(tmp, "uploads", src!.slice("/wp-content/uploads/".length))).length, 2048);
+      assert.match(file("indice-a-mao"), /\[A\]\(#a\)/);
+      assert.match(r.out, /Sumários antigos removidos do corpo: 1 posts\n  - com-sumario/);
+      assert.match(r.out, /Índices escritos à mão \(mantidos\): 1 posts\n  - indice-a-mao: 1 lista/);
+      assert.match(r.out, /Links removidos do texto \(--drop-links\): 1/);
+      assert.match(r.out, /Links trocados por áudio copiado \(--drop-links\): 1/);
+    } finally {
+      g.server.close();
+    }
+  });
+
   test("copia o MP3 para o blog, reescreve o link e lista capas e imagens perdidas", async () => {
     const g = fakeWordPress("Site G", [
       { id: 51, slug: "episodio-um", title: "Episódio um", html: `<p><a href="{BASE}/wp-content/uploads/2017/03/ep1.mp3">MP3</a></p><p><a href="{BASE}/wp-content/uploads/2017/03/sumido.mp3">sem arquivo</a></p><p><img src="{BASE}/wp-content/uploads/nao-existe.jpg" alt="Foto boa"></p>`, category: 1 },
