@@ -17,7 +17,8 @@ import site from "../site.config.ts";
 import { adminCredentials, registerAdmin } from "./admin.ts";
 import { Authenticator } from "./auth.ts";
 import { clientIp } from "./client-ip.ts";
-import { registerStatic } from "./static.ts";
+import { findRedirect, loadRedirects, registerStatic } from "./static.ts";
+import { hostKey } from "./env.ts";
 import { BuildQueue } from "./build-queue.ts";
 import type { ApiEnv } from "./env.ts";
 import { badParam, WpError } from "./errors.ts";
@@ -165,6 +166,30 @@ export async function buildApp(env: ApiEnv, opts: { logger?: boolean } = {}): Pr
   if (!adminCredentials(env, secrets).passwordHash && settings.isConfigured()) app.log.info("/admin desligado: defina ADMIN_USER e ADMIN_PASSWORD_HASH");
 
   // Rate limit só nas rotas da API (o site estático não entra na conta)
+  // Domínio antigo (ALIAS_HOSTS): tudo vai, num salto só, para o domínio em uso, já com a regra do redirects.txt
+  if (env.aliasHosts.length) {
+    const redirects = loadRedirects(env.redirectsFile);
+    app.addHook("onRequest", async (req, reply) => {
+      const host = hostKey(req.host ?? "");
+      // Nunca redireciona o domínio principal para ele mesmo (ex.: o mesmo domínio também na lista)
+      if (!env.aliasHosts.includes(host) || host === hostKey(new URL(site.url).host)) return;
+      if (req.method !== "GET" && req.method !== "HEAD") {
+        return reply.status(404).send(new WpError(404, "rest_no_route", "Este domínio só redireciona para o endereço novo do blog.").toJSON());
+      }
+      const [rawPath = "/", query] = req.url.split(/\?(.*)/s);
+      let decoded = rawPath;
+      try {
+        decoded = decodeURIComponent(rawPath);
+      } catch {}
+      const rule = findRedirect(redirects, decoded);
+      // Só o caminho muda: um pedido como //outro-site.com/ continua no domínio do blog
+      const target = rule && /^https?:\/\//i.test(rule) ? new URL(rule) : new URL(site.url);
+      if (!rule || !/^https?:\/\//i.test(rule)) target.pathname = rule ?? rawPath;
+      if (query && !target.search) target.search = query;
+      return reply.header("Cache-Control", "public, max-age=3600").redirect(target.href, 301);
+    });
+  }
+
   await app.register(rateLimit, {
     global: false,
     keyGenerator: clientIp,
