@@ -4,7 +4,7 @@ const LABELS = { header: "Topo do site", beforeContent: "Antes do conteúdo", in
 const BUILD = { idle: "publicado", waiting: "na fila", "waiting-slot": "aguardando vaga (outros blogs publicando)", building: "publicando agora" };
 const SCREENS = [
   ["Conteúdo", [["artigos", "Artigos"], ["categorias", "Categorias"], ["paginas", "Páginas"], ["autor", "Autor"]]],
-  ["Aparência", [["marca", "Marca"], ["home", "Home"], ["textos", "Textos"]]],
+  ["Aparência", [["marca", "Marca"], ["home", "Página inicial"], ["textos", "Textos"]]],
   ["Monetização e dados", [["anuncios", "Anúncios"], ["rastreamento", "Rastreamento"]]],
   ["Site", [["dominio", "Domínio"], ["wordbee", "Wordbee"]]],
 ];
@@ -104,9 +104,10 @@ function updateDirty() {
 const currentForm = () => document.querySelector(`#content form[data-tab="${SCREEN_NAMES[screen]}"]`);
 for (const form of FORMS()) for (const type of ["input", "change", "click"]) form.addEventListener(type, () => setTimeout(updateDirty));
 /** Sair da tela com alterações: pergunta, e quem desiste de salvar volta ao que está gravado. */
-function confirmLeave() {
+async function confirmLeave() {
   if (!anyDirty()) return true;
-  if (!confirm("Você tem alterações não salvas. Sair sem salvar?")) return false;
+  const leave = await Modal.confirm({ title: "Sair sem salvar?", message: "Você tem alterações não salvas nesta tela. Se sair agora, elas serão perdidas.", confirmLabel: "Sair sem salvar", cancelLabel: "Continuar editando" });
+  if (!leave) return false;
   fill();
   markSaved();
   return true;
@@ -125,12 +126,12 @@ function renderNav() {
     for (const [slug, name] of list) {
       const a = make("a", { href: `/admin/${slug}`, textContent: name });
       a.dataset.slug = slug;
-      a.onclick = (e) => {
+      a.onclick = async (e) => {
         // Ctrl/Cmd+clique continua abrindo em outra aba
         if (e.ctrlKey || e.metaKey || e.shiftKey) return;
         e.preventDefault();
         openMenu(false);
-        if (slug === screen || !confirmLeave()) return;
+        if (slug === screen || !(await confirmLeave())) return;
         history.pushState(null, "", `/admin/${slug}`);
         showScreen(slug, true);
       };
@@ -180,8 +181,8 @@ document.addEventListener("keydown", (e) => {
     $("menu-btn").focus();
   }
 });
-window.addEventListener("popstate", () => {
-  if (!confirmLeave()) return history.pushState(null, "", `/admin/${screen}`);
+window.addEventListener("popstate", async () => {
+  if (!(await confirmLeave())) return history.pushState(null, "", `/admin/${screen}`);
   showScreen(screenFromUrl(), true);
 });
 
@@ -258,8 +259,8 @@ function catRow(c) {
   desc.dataset.f = "description";
   field(row, "Descrição", desc, "Aparece na página da categoria e nos buscadores.");
   const rm = make("button", { type: "button", className: "ghost", textContent: c.id ? "Excluir categoria" : "Remover" });
-  rm.onclick = () => {
-    if (c.id && !confirm(`Excluir a categoria "${c.name}"? Só funciona se ela não tiver artigos. A exclusão vale ao clicar em Salvar e publicar.`)) return;
+  rm.onclick = async () => {
+    if (c.id && !(await Modal.confirm({ title: "Excluir categoria?", message: `A categoria "${c.name}" sai da lista. Só funciona se ela não tiver artigos.\n\nA exclusão vale quando você clicar em Salvar e publicar.`, confirmLabel: "Excluir categoria", danger: true }))) return;
     row.remove();
     updateDirty();
   };
@@ -387,9 +388,9 @@ function renderChecklist() {
   $("checklist-items").replaceChildren(...list.map((item) => {
     const li = make("li", { className: item.done ? "done" : "" });
     const a = make("a", { href: `/admin/${item.screen}`, textContent: item.label });
-    a.onclick = (e) => {
+    a.onclick = async (e) => {
       e.preventDefault();
-      if (item.screen === screen || !confirmLeave()) return;
+      if (item.screen === screen || !(await confirmLeave())) return;
       history.pushState(null, "", `/admin/${item.screen}`);
       showScreen(item.screen, true);
     };
@@ -407,6 +408,8 @@ $("checklist-hide").onclick = async () => {
 };
 
 function fill() {
+  // Modais com a cor principal, a fonte e o logotipo do blog
+  Modal.setTheme({ primary: state.colors.primary, fontFamily: state.fontFamily, logo: state.logo });
   $("title").textContent = state.name;
   $("b-name").value = state.name;
   $("b-tagline").value = state.tagline;
@@ -656,7 +659,8 @@ async function deletePosts(list) {
   const titles = list.slice(0, SHOWN).map((p) => `"${p.title}"`).join("\n");
   const more = list.length > SHOWN ? `\ne mais ${list.length - SHOWN}` : "";
   const what = list.length === 1 ? "este artigo" : `estes ${list.length} artigos`;
-  if (!confirm(`Excluir ${what}?\n\n${titles}${more}\n\nEsta ação não pode ser desfeita.`)) return;
+  const label = list.length === 1 ? "Excluir artigo" : `Excluir ${list.length} artigos`;
+  if (!(await Modal.confirm({ title: `Excluir ${what}?`, message: `${titles}${more}\n\nEsta ação não pode ser desfeita.`, confirmLabel: label, danger: true }))) return;
   try {
     const r = await post("/admin/api/posts/delete", { slugs: list.map((p) => p.slug) });
     posts = r.posts;
@@ -750,8 +754,8 @@ $("au-photo").onchange = () => {
   const draft = readAuthor();
   saved(api("/admin/api/author-photo", { method: "POST", headers: { "Content-Type": file.type }, body: file }), "", () => fillAuthor(draft));
 };
-$("au-photo-remove").onclick = () => {
-  if (!confirm("Remover a foto do autor? A imagem será apagada do servidor.")) return;
+$("au-photo-remove").onclick = async () => {
+  if (!(await Modal.confirm({ title: "Remover a foto do autor?", message: "A imagem será apagada do servidor.", confirmLabel: "Remover foto", danger: true }))) return;
   $("au-photo-info").replaceChildren();
   const draft = readAuthor();
   saved(post("/admin/api/author", { ...draft, removePhoto: true }), "", () => fillAuthor(draft));
@@ -767,10 +771,10 @@ $("f-home").onsubmit = (e) => {
     searchPlaceholder: $("h-placeholder").value,
   }));
 };
-$("f-tracking").onsubmit = (e) => {
+$("f-tracking").onsubmit = async (e) => {
   e.preventDefault();
   const hasGtmCode = /googletagmanager\.com\/gtm\.js/i.test($("t-head").value + $("t-body").value);
-  if ($("t-gtm").value.trim() && hasGtmCode && !confirm("O ID do Tag Manager está preenchido e um dos campos de código também traz o código do Tag Manager. Isso pode duplicar as medições. Salvar assim mesmo?")) return;
+  if ($("t-gtm").value.trim() && hasGtmCode && !(await Modal.confirm({ title: "Tag Manager duas vezes?", message: "O ID do Tag Manager está preenchido e um dos campos de código também traz o código do Tag Manager. Isso pode contar as visitas em dobro.", confirmLabel: "Salvar assim mesmo" }))) return;
   saved(post("/admin/api/tracking", { gaId: $("t-ga").value, gtmId: $("t-gtm").value, headCode: $("t-head").value, bodyCode: $("t-body").value }));
 };
 $("f-ads").onsubmit = (e) => {
@@ -822,10 +826,10 @@ async function loadPages() {
 }
 let pageShown = "";
 $("pg-select").onfocus = () => (pageShown = $("pg-select").value);
-$("pg-select").onchange = () => {
+$("pg-select").onchange = async () => {
   const next = $("pg-select").value;
   // A troca de página não pode levar embora o que foi digitado na anterior
-  if (isDirty($("f-pages")) && !confirm("Esta página tem alterações não salvas. Trocar sem salvar?")) {
+  if (isDirty($("f-pages")) && !(await Modal.confirm({ title: "Trocar de página sem salvar?", message: "Esta página tem alterações não salvas. Se trocar agora, elas serão perdidas.", confirmLabel: "Trocar sem salvar", cancelLabel: "Continuar editando" }))) {
     $("pg-select").value = pageShown;
     return;
   }
@@ -883,7 +887,7 @@ $("r-go").onclick = async () => {
     $("r-confirm").focus();
     return show($("msg"), "Digite o domínio atual para confirmar.", "err");
   }
-  if (!confirm("Última confirmação: apagar os artigos, as imagens e as personalizações deste blog? O backup é feito antes.")) return;
+  if (!(await Modal.confirm({ title: "Reiniciar o blog?", message: "Última confirmação: os artigos, as imagens e as personalizações deste blog serão apagados. O backup é feito antes.", confirmLabel: "Apagar e reiniciar", danger: true }))) return;
   $("r-go").disabled = true;
   show($("r-result"), "Fazendo o backup e apagando. Isso pode levar alguns minutos; não feche esta página.", "warn");
   try {
@@ -914,7 +918,7 @@ $("f-cats").onsubmit = (e) => {
   saved(post("/admin/api/categories", { categories }));
 };
 $("wb-new").onclick = async () => {
-  if (!confirm("A senha atual vai parar de funcionar e o Wordbee precisará da nova. Continuar?")) return;
+  if (!(await Modal.confirm({ title: "Gerar nova senha do Wordbee?", message: "A senha atual vai parar de funcionar na hora, e o cadastro no Wordbee vai precisar da nova.", confirmLabel: "Gerar nova senha", danger: true }))) return;
   try {
     const r = await post("/admin/api/wordbee-password", {});
     $("wb-password").textContent = r.password;
@@ -926,7 +930,7 @@ $("wb-new").onclick = async () => {
 };
 $("wb-copy").onclick = () => navigator.clipboard.writeText($("wb-password").textContent).then(() => ($("wb-copy").textContent = "Copiado"));
 $("logout").onclick = async () => {
-  if (!confirmLeave()) return;
+  if (!(await confirmLeave())) return;
   await post("/admin/api/logout", {});
   location.reload();
 };

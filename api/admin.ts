@@ -29,7 +29,7 @@ import type { Store } from "./store.ts";
 const COOKIE = "blog_admin";
 const SESSION_MS = 12 * 3600 * 1000;
 const UI = path.join(path.dirname(fileURLToPath(import.meta.url)), "admin-ui");
-const UI_FILES: Record<string, string> = { "admin.css": "text/css", "admin.js": "text/javascript", "color.js": "text/javascript", "setup.js": "text/javascript" };
+const UI_FILES: Record<string, string> = { "admin.css": "text/css", "admin.js": "text/javascript", "color.js": "text/javascript", "modal.js": "text/javascript", "setup.js": "text/javascript" };
 const digest = (s: string) => createHash("sha256").update(s).digest();
 const WORDBEE_USER = "wordbee";
 /** Marcadores aceitos nas páginas fixas (src/lib/placeholders.ts). Outro marcador faria a publicação falhar. */
@@ -187,6 +187,8 @@ export async function registerAdmin(app: FastifyInstance, deps: AdminDeps): Prom
         missingOriginals: missingOriginals(env.assetsDir, s.brand),
         favicon: site.favicon,
         colors: { primary: c.accent, highlight: site.theme.highlight ?? c.accent, callout: c.calloutFrom, header: site.theme.header ?? DEFAULT_HEADER_COLOR },
+        // Fonte do site, usada também nos modais do painel
+        fontFamily: site.theme.fontFamily,
         warnings: contrastWarnings({ primary: c.accent, highlight: site.theme.highlight, callout: c.calloutFrom }),
         tracking: { gtmId: s.tracking?.gtmId ?? "", headCode: s.tracking?.headCode ?? "", bodyCode: s.tracking?.bodyCode ?? "" },
         ads: { headScript: s.ads?.headScript ?? "", adsTxt: s.ads?.adsTxt ?? site.adsTxt.join("\n"), slots: s.ads?.slots ?? {} },

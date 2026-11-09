@@ -216,3 +216,26 @@ describe("favicon enviado no painel", () => {
     assert.deepEqual(readFileSync(path.join(process.env.ASSETS_DIR!, "favicon.ico")), before);
   });
 });
+
+describe("textos do site em português", () => {
+  test("página de categoria, busca, lang, og:locale e JSON-LD em pt-BR; endereço /category/ igual", { timeout: 180_000 }, async () => {
+    const { default: site } = await import("../site.config.ts");
+    const cat = site.categories[0]!;
+    const auth = { authorization: "Basic " + Buffer.from("wordbee:outra").toString("base64") };
+    const created = await ctx.app.inject({ method: "POST", url: "/wp-json/wp/v2/posts", headers: auth, payload: { title: "Post de teste dos textos", content: "<p>Texto.</p>", status: "publish", categories: [cat.id] } });
+    assert.equal(created.statusCode, 201, created.body);
+    await ctx.builds.drain();
+
+    const catPage = readFileSync(path.join(current, "category", cat.slug, "index.html"), "utf8");
+    assert.match(catPage, /<span class="kicker">Categoria<\/span>/);
+    assert.match(catPage, /<html lang="pt-BR"/);
+    assert.match(catPage, /<meta property="og:locale" content="pt_BR"/);
+    assert.match(catPage, /"inLanguage":"pt-BR"/);
+    assert.match(catPage, /"name":"Início"/, "breadcrumb em português");
+    assert.doesNotMatch(catPage, />\s*(Categories|Category|Next|Previous|Read more|Posted in|Tags)\s*</);
+
+    const search = readFileSync(path.join(current, "search", "index.html"), "utf8");
+    assert.match(search, /<meta name="description" content="Busque artigos e guias no blog\.">/);
+    assert.match(search, /data-sem-indice="A busca fica disponível depois do build/);
+  });
+});
