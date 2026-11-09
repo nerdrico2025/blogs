@@ -10,6 +10,7 @@ import path from "node:path";
 import fastifyStatic from "@fastify/static";
 import type { FastifyInstance, FastifyReply } from "fastify";
 import site from "../site.config.ts";
+import { categoryBase } from "../shared/settings.ts";
 import type { ApiEnv } from "./env.ts";
 import { ORIGINALS_DIR } from "./brand-images.ts";
 import { APPLE_TOUCH_ICON, FAVICON_ICO, FAVICON_SVG } from "./favicon.ts";
@@ -100,10 +101,10 @@ export async function registerStatic(app: FastifyInstance, env: ApiEnv, isConfig
       return reply.code(503).type("text/html; charset=utf-8").header("Retry-After", "3600").header("X-Robots-Tag", "noindex, nofollow").send(SETUP_PAGE);
     }
     // Slug de categoria renomeado no /admin
-    const renamed = p.match(/^\/category\/([^/]+)(\/.*)?$/);
+    const renamed = p.match(new RegExp(`^/${categoryBase(site)}/([^/]+)(/.*)?$`));
     if (renamed) {
       const cat = site.categories.find((c) => c.aliases?.includes(renamed[1]!));
-      if (cat) return reply.redirect(`/category/${cat.slug}${renamed[2] ?? "/"}`, 301);
+      if (cat) return reply.redirect(`/${categoryBase(site)}/${cat.slug}${renamed[2] ?? "/"}`, 301);
     }
     // Nome do autor trocado no /admin
     const author = p.match(/^\/autor\/([^/]+)\/?$/);

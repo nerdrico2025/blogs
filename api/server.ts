@@ -25,9 +25,11 @@ import { badParam, WpError } from "./errors.ts";
 import { SecretStore } from "./secrets.ts";
 import { SettingsStore } from "./settings-store.ts";
 import { Store, type PostRecord } from "./store.ts";
-import { findCategory } from "../shared/settings.ts";
+import { categoryUrl, findCategory } from "../shared/settings.ts";
 
 const IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
+/** Áudio guardado como veio (a extensão vem do tipo, nunca do nome enviado). */
+const AUDIO_TYPES: Record<string, string> = { "audio/mpeg": "mp3", "audio/mp4": "m4a", "audio/ogg": "ogg", "audio/wav": "wav", "audio/aac": "aac" };
 const WP = "/wp-json/wp/v2";
 
 /** O WP aceita `title: "x"` ou `title: { raw: "x" }`. */
@@ -201,12 +203,14 @@ export async function buildApp(env: ApiEnv, opts: { logger?: boolean } = {}): Pr
   });
 
   app.addContentTypeParser(IMAGE_TYPES, { parseAs: "buffer", bodyLimit: env.maxUploadBytes }, (_req, body, done) => done(null, body));
+  app.addContentTypeParser(Object.keys(AUDIO_TYPES), { parseAs: "buffer", bodyLimit: env.maxAudioUploadBytes }, (_req, body, done) => done(null, body));
 
   app.setErrorHandler((err, req, reply) => {
     if (err instanceof WpError) return reply.status(err.status).send(err.toJSON());
     const e = err as { code?: string; statusCode?: number; message: string };
     if (e.code === "FST_ERR_CTP_BODY_TOO_LARGE") {
-      return reply.status(413).send(new WpError(413, "rest_upload_file_too_big", `Arquivo maior que ${Math.round(env.maxUploadBytes / 1048576)} MB.`).toJSON());
+      const audio = (req.headers["content-type"] ?? "").toLowerCase().startsWith("audio/");
+      return reply.status(413).send(new WpError(413, "rest_upload_file_too_big", `Arquivo maior que ${Math.round((audio ? env.maxAudioUploadBytes : env.maxUploadBytes) / 1048576)} MB.`).toJSON());
     }
     if (e.code === "FST_ERR_CTP_INVALID_MEDIA_TYPE") {
       return reply.status(415).send(new WpError(415, "rest_upload_invalid_type", "Tipo de conteúdo não suportado.").toJSON());
@@ -281,7 +285,7 @@ export async function buildApp(env: ApiEnv, opts: { logger?: boolean } = {}): Pr
         id: c.id,
         count: store.countByCategory(c.slug),
         description: c.description,
-        link: `${site.url}/category/${c.slug}/`,
+        link: `${site.url}${categoryUrl(site, c.slug)}`,
         name: c.name,
         slug: c.slug,
         taxonomy: "category",
@@ -291,6 +295,13 @@ export async function buildApp(env: ApiEnv, opts: { logger?: boolean } = {}): Pr
 
   app.post(`${WP}/media`, { preHandler: requireAuth, config: limited }, async (req, reply) => {
     const type = (req.headers["content-type"] ?? "").split(";")[0]!.trim().toLowerCase();
+    const audioExt = AUDIO_TYPES[type];
+    if (audioExt && Buffer.isBuffer(req.body)) {
+      if (req.body.length === 0) throw new WpError(400, "rest_upload_no_data", "Nenhum dado recebido.");
+      const { record, created } = await store.saveAudio(req.body, filenameFrom(req.headers["content-disposition"]), type, audioExt);
+      req.log.info({ mediaId: record.id, src: record.src, created }, created ? "áudio salvo" : "áudio repetido; devolvendo o existente");
+      return reply.status(created ? 201 : 200).send({ id: record.id, date: record.createdAt, type: "attachment", media_type: "file", mime_type: record.mime, source_url: site.url + record.src });
+    }
     if (!IMAGE_TYPES.includes(type) || !Buffer.isBuffer(req.body)) {
       throw new WpError(415, "rest_upload_invalid_type", "Envie a imagem como corpo binário (image/jpeg, image/png ou image/webp).");
     }

@@ -73,6 +73,7 @@ export interface ApiEnv {
   /** Builds simultâneos permitidos no VPS inteiro. */
   globalBuildSlots: number;
   maxUploadBytes: number;
+  maxAudioUploadBytes: number;
   rateLimitPerMinute: number;
   /** Número de proxies confiáveis à frente (Traefik = 1). 0 desliga. */
   trustProxyHops: number;
@@ -168,6 +169,7 @@ export function loadEnv(overrides: Partial<ApiEnv> = {}): ApiEnv {
     // Pico medido de um build completo: ~460 MB (500 posts), abaixo de 1 GB, então 2 vagas por padrão
     globalBuildSlots: Math.max(1, num("GLOBAL_BUILD_SLOTS", 2)),
     maxUploadBytes: num("MAX_UPLOAD_MB", 16) * 1024 * 1024,
+    maxAudioUploadBytes: num("MAX_AUDIO_UPLOAD_MB", 64) * 1024 * 1024,
     rateLimitPerMinute: num("RATE_LIMIT_PER_MINUTE", 120),
     trustProxyHops: trustProxy(),
     serveStatic: process.env.SERVE_STATIC !== "false",

@@ -93,7 +93,7 @@ próprios com prefixo `leo-` (ticker, sumário, caixa do autor, CTA etc.).
 - Lista: cartões horizontais (`blog-layout-5`), imagem `ast-width-md-6` à esquerda,
   à direita categoria, título H2, meta (autor/data) e resumo.
 - Paginação: `1 2 … 11 Próximo →` em `/page/N/`, com `rel="next"` no `<head>`.
-- Categoria: `/category/<slug>/`, mesma lista, com `BreadcrumbList`.
+- Categoria: `/category/<slug>/`, mesma lista, com `BreadcrumbList`. O prefixo é configurável por blog (`categoryBase` no `site.config.ts`).
 
 ### Sidebar (ordem real na referência)
 1. Busca (`leo-search-widget`): kicker + H3 19 px, campo de 44 px com fundo `#f8f8f8`,

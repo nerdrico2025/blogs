@@ -6,7 +6,7 @@ import { after, before, describe, test } from "node:test";
 import { loadRedirects } from "../../api/static.ts";
 import { autop, finishHtml, originalCandidates, prepareHtml, stripShortcodes, weakAlt } from "./html.ts";
 import { BLOCK_END, BLOCK_START, CategoryMapper, mergeRedirects, parseCategoryMap } from "./mapping.ts";
-import { expandSeoVars, readXml, stripSiteName } from "./source.ts";
+import { cleanPageHtml, expandSeoVars, readXml, stripSiteName } from "./source.ts";
 
 const base = { base: "https://antigo.com.br", oldHosts: new Set(["antigo.com.br"]), postTitle: "Título do post" };
 const prep = (html: string, resolveLink: (p: string) => string | null = () => null) => prepareHtml(html, { ...base, resolveLink });
@@ -93,6 +93,42 @@ describe("links internos", () => {
   test("link para a foto ampliada é desembrulhado", () => {
     const p = prep(`<p><a href="https://antigo.com.br/wp-content/uploads/foto.jpg"><img src="https://antigo.com.br/wp-content/uploads/foto-300x200.jpg" alt="Foto boa"></a></p>`);
     assert.equal(finishHtml(p, () => "/wp-content/uploads/2026/11/foto.jpg"), `<p><img src="/wp-content/uploads/2026/11/foto.jpg" alt="Foto boa"></p>`);
+  });
+});
+
+describe("áudio da origem", () => {
+  const NEW = "/wp-content/uploads/2026/11/ep.mp3";
+
+  test("link para MP3 do domínio antigo vai para o endereço novo; o mesmo arquivo em http e https conta uma vez", () => {
+    const p = prep(`<p><a href="http://antigo.com.br/wp-content/uploads/2017/03/ep.mp3">MP3</a> <a href="https://www.antigo.com.br/wp-content/uploads/2017/03/ep.mp3">de novo</a></p>`);
+    assert.equal(p.audios.length, 1);
+    assert.deepEqual(p.stats.linksUnresolved, []);
+    assert.equal(finishHtml(p, () => null, () => NEW), `<p><a href="${NEW}">MP3</a> <a href="${NEW}">de novo</a></p>`);
+  });
+
+  test("áudio que não copiou fica no caminho antigo; áudio em outro site não é tocado", () => {
+    const p = prep(`<p><a href="https://antigo.com.br/wp-content/uploads/ep.mp3">a</a> <a href="https://outro.com/x.mp3">b</a></p>`);
+    assert.equal(p.audios.length, 1);
+    assert.equal(finishHtml(p, () => null), `<p><a href="/wp-content/uploads/ep.mp3">a</a> <a href="https://outro.com/x.mp3">b</a></p>`);
+  });
+
+  test("player <audio> da origem vira link", () => {
+    const p = prep(`<audio controls><source src="https://antigo.com.br/wp-content/uploads/ep.ogg" type="audio/ogg"></audio>`);
+    assert.equal(p.audios.length, 1);
+    assert.equal(finishHtml(p, () => null, () => "/wp-content/uploads/2026/11/ep.ogg"), `<p><a href="/wp-content/uploads/2026/11/ep.ogg">Ouça o áudio</a></p>`);
+  });
+});
+
+describe("páginas importadas como post", () => {
+  test("o parágrafo do convite do WhatsApp sai e os outros canais ficam", () => {
+    const html = cleanPageHtml(
+      `<p>Entre em um dos meus canais:</p>\n</p>\n<p>Canal no Telegram &#8211; <a href="https://t.me/canal">https://t.me/canal</a></p>\n<p>Grupo no Whatsapp &#8211; <a href="https://chat.whatsapp.com/Abc123" target="_blank">https://chat.whatsapp.com/Abc123</a></p>\n<p>Chatbots no Messenger e no Whatsapp.</p>\n<p>Grupo no Facebook &#8211; <a href="https://www.facebook.com/groups/x/">fb</a></p>`,
+      "Outro título"
+    );
+    assert.doesNotMatch(html, /chat\.whatsapp|Grupo no Whatsapp/);
+    assert.match(html, /t\.me\/canal/);
+    assert.match(html, /Chatbots no Messenger e no Whatsapp/);
+    assert.match(html, /facebook\.com\/groups/);
   });
 });
 

@@ -73,6 +73,8 @@ export interface SiteConfig {
   /** razaoSocial e cnpj são opcionais: sem eles, as páginas mostram "(… a informar)" no lugar do marcador. */
   legal: { owner: string; city: string; razaoSocial?: string; cnpj?: string };
   social: Author["links"];
+  /** Prefixo das URLs de categoria (/<categoryBase>/<slug>/). Padrão: "category". */
+  categoryBase?: string;
   nav: Link[];
   /** Tira do menu as categorias sem nenhum artigo publicado. Sem valor (padrão), o menu mostra todas. */
   hideEmptyCategories?: boolean;
@@ -141,6 +143,7 @@ export function defineSiteConfig(config: SiteConfig): SiteConfig {
     ids.add(c.id);
     slugs.add(c.slug);
   }
+  if (config.categoryBase !== undefined && !/^[a-z0-9-]+$/.test(config.categoryBase)) throw new Error("site.config.ts: `categoryBase` aceita só letras minúsculas, números e hífen.");
   if (!config.authors[config.defaultAuthor]) throw new Error("site.config.ts: `defaultAuthor` não existe em `authors`.");
   return config;
 }

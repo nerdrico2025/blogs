@@ -84,6 +84,11 @@ function fakeWordPress(name: string, posts: FakePost[], cats = NOTICIAS, pages: 
         }))
       );
     }
+    if (url.pathname.endsWith(".mp3") && !url.pathname.includes("sumido")) {
+      const head = req.method === "HEAD";
+      res.writeHead(200, { "Content-Type": "audio/mpeg", "Content-Length": "2048" });
+      return void res.end(head ? undefined : Buffer.alloc(2048, 7));
+    }
     res.writeHead(404).end();
   });
   return {
@@ -325,6 +330,31 @@ describe("post:<slug>, --include-pages e links pelo redirects.txt manual", () =>
       assert.match(links, /\[um caminho sem regra\]\(\/sumiu\/\)/);
       assert.match(r.out, /Links internos sem destino conhecido: 1 em 1 caminho\(s\)/);
       assert.match(r.out, /\n  \/sumiu\/ \(1\)/);
+    } finally {
+      g.server.close();
+    }
+  });
+});
+
+describe("áudio e relatório de imagens", () => {
+  test("copia o MP3 para o blog, reescreve o link e lista capas e imagens perdidas", async () => {
+    const g = fakeWordPress("Site G", [
+      { id: 51, slug: "episodio-um", title: "Episódio um", html: `<p><a href="{BASE}/wp-content/uploads/2017/03/ep1.mp3">MP3</a></p><p><a href="{BASE}/wp-content/uploads/2017/03/sumido.mp3">sem arquivo</a></p><p><img src="{BASE}/wp-content/uploads/nao-existe.jpg" alt="Foto boa"></p>`, category: 1 },
+    ]);
+    const base = await g.start("127.0.0.1");
+    try {
+      const r = await importer(base, "noticias => dicas\n", [], path.join(tmp, "redirects-audio.txt"));
+      assert.equal(r.code, 0, r.out);
+      const md = file("episodio-um");
+      const src = /\[MP3\]\((\/wp-content\/uploads\/\d{4}\/\d{2}\/ep1\.mp3)\)/.exec(md)?.[1];
+      assert.ok(src, md);
+      assert.equal(readFileSync(path.join(tmp, "uploads", src!.slice("/wp-content/uploads/".length))).length, 2048);
+      assert.match(md, /\[sem arquivo\]\(\/wp-content\/uploads\/2017\/03\/sumido\.mp3\)/);
+      assert.match(r.out, /Áudios:       1 copiados, 1 com erro/);
+      assert.match(r.out, /FALHA episodio-um: .*sumido\.mp3 \(HTTP 404\)/);
+      assert.match(r.out, /Posts sem capa: 1 \(sem imagem destacada na origem: 1; capa que não baixa: 0\)/);
+      assert.match(r.out, /Posts que perdem imagens no corpo: 1 \(1 imagens\)\n  - episodio-um: 1/);
+      assert.match(readFileSync(path.join(tmp, "redirects-audio.txt"), "utf8"), /\/wp-content\/uploads\/2017\/03\/ep1\.mp3 \/wp-content\/uploads\/\d{4}\/\d{2}\/ep1\.mp3/);
     } finally {
       g.server.close();
     }

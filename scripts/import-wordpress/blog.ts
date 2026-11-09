@@ -102,7 +102,7 @@ export class BlogApi {
     return data[0] ?? null;
   }
 
-  async uploadMedia(data: Buffer, type: string, filename: string, alt: string): Promise<BlogMedia> {
+  async uploadMedia(data: Buffer, type: string, filename: string, alt: string, timeoutMs = 60_000): Promise<BlogMedia> {
     const ascii = filename.replace(/[^\w.-]+/g, "-");
     const { data: media } = await this.call<BlogMedia>(
       `/media?alt_text=${encodeURIComponent(alt)}`,
@@ -111,7 +111,7 @@ export class BlogApi {
         headers: { "Content-Type": type, "Content-Disposition": `attachment; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(filename)}` },
         body: new Uint8Array(data),
       },
-      60_000
+      timeoutMs
     );
     return media;
   }
