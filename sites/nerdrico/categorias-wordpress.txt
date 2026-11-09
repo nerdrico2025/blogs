@@ -1,0 +1,18 @@
+# Mapeamento de categorias: nerdrico.com.br (WordPress) => sites/nerdrico
+# Num post com várias categorias vale a PRIMEIRA regra que bater: as específicas vêm antes.
+# "Blog" está em quase todos os posts e fica por último, como reserva (posts só em "Blog" vão para estrategias).
+leadlovers => email-marketing
+e-mail-marketing => email-marketing
+copy => copywriting
+storytelling => copywriting
+marketing-de-afiliados => produtos-digitais
+plr => produtos-digitais
+trafego => trafego
+ferramentas => ferramentas
+mindset => mentalidade
+entrevistas => mentalidade
+nerdshow => mentalidade
+milionerd-cast => mentalidade
+funil-de-vendas => estrategias
+estrategia => estrategias
+blog => estrategias

@@ -1,0 +1,29 @@
+# Posts de nerdrico.com.br que não devem ser importados (--exclude). Um slug por linha.
+
+# Notícias de IA de jan/2025, fora do tema do blog
+ia-na-busca-de-emprego-5-dicas-para-se-destacar-em-2025   # IA na Busca de Emprego: 5 Dicas Para Se Destacar em 2025
+spotify-revoluciona-com-ia-5-novidades-que-vao-mudar-sua-experiencia-musical   # Spotify Revoluciona com IA: 5 Novidades que Vão Mudar Sua Experiência 
+revolucao-optica-da-ibm-ia-mais-rapida-e-sustentavel-em-2024   # Revolução Óptica da IBM: IA Mais Rápida e Sustentável em 2024
+ia-para-o-bem-5-insights-da-conferencia-ai-for-good   # IA para o Bem: 5 Insights da Conferência "AI for Good"
+utah-lidera-regulamentacao-de-ia-nos-eua-o-que-muda   # Utah Lidera Regulamentação de IA nos EUA: O Que Muda?
+india-lanca-primeira-ia-espacial-revolucao-na-analise-de-dados-orbitais   # Índia Lança Primeira IA Espacial: Revolução na Análise de Dados Orbita
+ia-na-tecnologia-b2b-3-mudancas-de-reativa-para-antecipatoria   # IA na Tecnologia B2B: 3 Mudanças de Reativa para Antecipatória
+nvidia-explode-lucro-dobra-com-chips-de-ia-em-2024   # NVIDIA Explode: Lucro Dobra com Chips de IA em 2024
+urgente-por-que-a-ia-e-o-ponto-cego-na-formacao-medica   # Urgente: Por que a IA é o Ponto Cego na Formação Médica?
+ftc-proibe-rytr-o-fim-das-avaliacoes-falsas-geradas-por-ia   # "FTC Proíbe Rytr: O Fim das Avaliações Falsas Geradas por IA?"
+ia-para-pmes-hub-da-sba-revoluciona-negocios-em-2025   # IA para PMEs: Hub da SBA Revoluciona Negócios em 2025
+ia-revoluciona-ensaios-clinicos-5-avancos-surpreendentes   # IA Revoluciona Ensaios Clínicos: 5 Avanços Surpreendentes
+deepseek-o-que-e   # DeepSeek: A Revolução da IA Que Vai Agitar Wall Street em 2025
+
+# Datados: eventos, promoções e campanhas que já passaram
+nerd-rico-na-brasil-game-show   # evento de 2013 (Brasil Game Show), fora do tema
+formula-de-lancamento-ao-vivo-dez-2013   # evento datado (dez/2013)
+vh-bonus   # bônus de campanha antiga (Video Hero)
+uma-noticia-boa-e-uma-excelente-para-voce   # anúncio de campanha antiga
+quem-vai-afiliados-brasil-2014   # evento datado (Afiliados Brasil 2014)
+ebramad-com-inscricoes-abertas   # inscrições de evento de 2014 (EBRAMAD)
+video-o-fim-da-grande-familia   # vídeo de ocasião (2014)
+promocoes-secretas-da-black-friday-2018   # promoção datada (Black Friday 2018)
+maestria-ao-vivo-2019   # evento datado (Maestria ao Vivo 2019)
+digital-sem-barreiras-e-o-novo-formula-de-lancamento   # venda de curso de 2021 (Digital Sem Barreiras)
+curso-digital-sem-barreiras-10-motivos-para-voce-comprar-hoje   # venda de curso de 2021 (Digital Sem Barreiras)
