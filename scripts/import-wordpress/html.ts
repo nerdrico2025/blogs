@@ -103,6 +103,11 @@ const KEEP_ATTRS: Record<string, string[]> = {
 const DROP_TAGS = new Set(["script", "style", "noscript", "template", "form", "input", "button", "select", "textarea", "svg", "object", "embed"]);
 
 const hostOf = (u: URL) => u.hostname.toLowerCase().replace(/^www\./, "");
+const isHeading = (el: Element | undefined) => Boolean(el && /^h[1-6]$/.test(el.tagName));
+const childElements = (root: Root) => root.children.filter((c): c is Element => c.type === "element");
+
+/** Convite para ouvir no começo de um parágrafo; sai quando o áudio trocado por --drop-links não foi copiado. */
+const AUDIO_PROMISE = /^\s*Ouça agora mesmo e\s+(\S)/;
 
 /**
  * Marcas (id ou classe) do contêiner de sumário dos plugins: Easy Table of Contents, Rank Math, Yoast, Table of
@@ -331,7 +336,6 @@ export function prepareHtml(rawHtml: string, opts: PrepareOptions): Prepared {
   });
 
   // Título logo antes dos parágrafos que perderam o link: sem nada embaixo, ele sai junto
-  const isHeading = (el: Element | undefined) => Boolean(el && /^h[1-6]$/.test(el.tagName));
   const orphanCandidates = new Set<Element>();
   let lastHeading: Element | undefined;
   for (const el of tree.children.filter((c): c is Element => c.type === "element")) {
@@ -368,17 +372,32 @@ export function prepareHtml(rawHtml: string, opts: PrepareOptions): Prepared {
 export function finishHtml(prep: Prepared, newSrc: (url: string) => string | null, newAudio: (url: string) => string | null = () => null): string {
   const audioKeys = new Set(prep.audios.map(imageKey));
   const replacedKeys = new Set(prep.replacedAudios.map(imageKey));
+  const lostAudioIn = new Set<Element>();
   visit(prep.tree, "element", (node: Element, index, parent) => {
     if (node.tagName !== "a" || !audioKeys.has(imageKey(String(node.properties.href)))) return;
     const url = new URL(String(node.properties.href));
     const target = newAudio(url.href);
     if (!target && replacedKeys.has(imageKey(url.href)) && parent && index !== undefined) {
       (parent.children as ElementContent[]).splice(index, 1);
+      if (parent.type === "element") lostAudioIn.add(parent);
       return [SKIP, index];
     }
     node.properties.href = target ?? url.pathname;
     return;
   });
+  // Sem o áudio, o título de download que ficou vazio é candidato a sair e o texto não promete mais o episódio
+  const orphanHeadings = new Set<Element>();
+  if (lostAudioIn.size) {
+    const siblings = childElements(prep.tree);
+    for (const el of lostAudioIn) {
+      const previous = siblings[siblings.indexOf(el) - 1];
+      if (previous && isHeading(previous) && !toString(el).trim()) orphanHeadings.add(previous);
+    }
+    visit(prep.tree, "element", (node: Element) => {
+      const first = node.tagName === "p" ? node.children[0] : undefined;
+      if (first?.type === "text") first.value = first.value.replace(AUDIO_PROMISE, (_, letter: string) => letter.toUpperCase());
+    });
+  }
   visit(prep.tree, "element", (node: Element, index, parent) => {
     if (node.tagName !== "img" || !parent || index === undefined) return;
     const target = newSrc(String(node.properties.src));
@@ -399,6 +418,11 @@ export function finishHtml(prep: Prepared, newSrc: (url: string) => string | nul
     }
     return;
   });
+  for (const heading of orphanHeadings) {
+    const siblings = childElements(prep.tree);
+    const next = siblings[siblings.indexOf(heading) + 1];
+    if (!next || isHeading(next)) prep.tree.children.splice(prep.tree.children.indexOf(heading), 1);
+  }
   return toHtml(prep.tree).replace(/\n{3,}/g, "\n\n").trim();
 }
 

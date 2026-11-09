@@ -366,6 +366,26 @@ describe("áudio e relatório de imagens", () => {
     }
   });
 
+  test("áudio trocado que não baixa: o post fica sem áudio e sem prometer o episódio", async () => {
+    const g = fakeWordPress("Site G", [
+      { id: 63, slug: "episodio-sem-audio", title: "Episódio sem áudio", html: `<p>Ouça agora mesmo e deixe o seu comentário.</p><h3>Baixe o episódio:</h3><p><a href="{BASE}/wp-content/uploads/errado.mp3">Versão MP3</a></p><h3>Assine o feed:</h3><p>Feed.</p>`, category: 1 },
+    ]);
+    const base = await g.start("127.0.0.1");
+    const rules = path.join(tmp, "drop-sem-audio.txt");
+    await writeFile(rules, `post:episodio-sem-audio /wp-content/uploads/errado.mp3 => ${base}/stream/sumido.mp3\n`);
+    try {
+      const r = await importer(base, "noticias => dicas\n", ["--drop-links", rules], path.join(tmp, "redirects-sem-audio.txt"));
+      assert.equal(r.code, 0, r.out);
+      const md = file("episodio-sem-audio");
+      assert.doesNotMatch(md, /Ouça|Baixe o episódio|Versão MP3|\.mp3/);
+      assert.match(md, /Deixe o seu comentário/);
+      assert.match(md, /### Assine o feed:/);
+      assert.match(r.out, /FALHA episodio-sem-audio: .*sumido\.mp3 \(HTTP 404\)/);
+    } finally {
+      g.server.close();
+    }
+  });
+
   test("copia o MP3 para o blog, reescreve o link e lista capas e imagens perdidas", async () => {
     const g = fakeWordPress("Site G", [
       { id: 51, slug: "episodio-um", title: "Episódio um", html: `<p><a href="{BASE}/wp-content/uploads/2017/03/ep1.mp3">MP3</a></p><p><a href="{BASE}/wp-content/uploads/2017/03/sumido.mp3">sem arquivo</a></p><p><img src="{BASE}/wp-content/uploads/nao-existe.jpg" alt="Foto boa"></p>`, category: 1 },
