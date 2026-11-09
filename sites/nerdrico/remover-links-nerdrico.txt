@@ -6,3 +6,37 @@
 
 # O episódio 3 apontava para o MP3 do episódio 2. O certo só existe no feed do podcast (SoundCloud)
 post:audiencia-fiel-t1e03-milionerdcast /wp-content/uploads/2017/03/emails_autenticost1e02_milionerdcast-.mp3 => https://feeds.soundcloud.com/stream/313024452-user-748026506-audiencia-fiel-t1-e03-milionerdcast.mp3
+
+# Caminhos que dão 404 na origem: sai o link, fica o texto ou a imagem
+/dobresuasvendas/ => texto
+/redirec/leadlovers-site.html => texto
+/lista-vip-do-nerd-rico/ => texto
+/como-licenciar-um-produto-digital-passo-a-passo/ => texto
+/redirec/leadlovers-plan.html => texto
+/abracoaching => texto
+/workshopfacebook => texto
+/estrategia7diasafiliado => texto
+/workshopfl => texto
+/6templateadsface => texto
+/mitosdovideo => texto
+/klickpages => texto
+/forum => texto
+/seusiteproespera => texto
+/digflix/ => texto
+/livro/ => texto
+/redirec/leadlovers-artigo-tudoemum.html => texto
+/fxvideomaker => texto
+/conheca-o-email-marketing-essencial/ => texto
+/emails-para-vendas-gratis/ => texto
+/5-emails-vendas/ => texto
+/materiais-gratuitos/ => texto
+/sf/ => texto
+/redirec/leadlovers-ebook.html => texto
+/bonusleadlovers/ => texto
+/redirec/copystart.html => texto
+/redirec/leadlovers-artigo-recursos.html => texto
+/emailsqvendem/ => texto
+/cursoemailmarketing/ => texto
+/blog/5-dicas-de-e-mail-marketing-que-voce-precisa-conhecer/ => texto
+/como-criar-lista-lucrativa-de-emails/ => texto
+/webinario => texto

@@ -27,3 +27,6 @@ promocoes-secretas-da-black-friday-2018   # promoção datada (Black Friday 2018
 maestria-ao-vivo-2019   # evento datado (Maestria ao Vivo 2019)
 digital-sem-barreiras-e-o-novo-formula-de-lancamento   # venda de curso de 2021 (Digital Sem Barreiras)
 curso-digital-sem-barreiras-10-motivos-para-voce-comprar-hoje   # venda de curso de 2021 (Digital Sem Barreiras)
+
+# Depende de um slider que não existe mais: o texto promete 11 livros e nenhum aparece
+11-livros-sobre-empreendedorismo-que-voce-precisa-ler
