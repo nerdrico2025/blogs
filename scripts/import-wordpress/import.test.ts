@@ -190,3 +190,65 @@ describe("XML de exportação (WXR)", () => {
     assert.equal(site.allLinks.get("/2016/08/dicas/"), "dicas");
   });
 });
+
+describe("--suggest-categories", async () => {
+  const { formatSuggestion, outputFile, postsPerTarget, similarity, suggestCategories } = await import("./suggest.ts");
+  const targets = [
+    { id: 2, slug: "renda-extra", name: "Renda extra", description: "Formas de ganhar dinheiro além do salário." },
+    { id: 4, slug: "investimentos", name: "Investimentos", description: "Tesouro Direto, renda fixa, fundos e ações." },
+    { id: 7, slug: "cartoes", name: "Cartões e bancos", description: "Contas digitais, cartões de crédito e tarifas." },
+  ];
+  const source = [
+    { id: 10, name: "Investimento", slug: "investimento", count: 4, parent: 0 },
+    { id: 11, name: "Tesouro", slug: "tesouro", count: 2, parent: 10 },
+    { id: 12, name: "Cartão de Crédito", slug: "cartao-de-credito", count: 3, parent: 0 },
+    { id: 13, name: "Ganhar Dinheiro", slug: "ganhar-dinheiro", count: 2, parent: 0 },
+    { id: 14, name: "Receitas de bolo", slug: "receitas", count: 1, parent: 0 },
+  ];
+  const posts = [
+    { title: "Como ganhar dinheiro além do salário", categories: [13] },
+    { title: "Formas de ganhar renda em casa", categories: [13] },
+    { title: "Tesouro Selic ou CDB?", categories: [10, 11] },
+    { title: "Bolo de cenoura", categories: [14] },
+  ];
+  const list = suggestCategories(source, posts, targets);
+  const pick = (slug: string) => list.find((s) => s.source.slug === slug)!;
+
+  test("nome sem acento, plural e maiúsculas; filho herda do pai; títulos decidem; sem nada, '?'", () => {
+    assert.ok(similarity("Cartões", "cartao") >= 0.8);
+    assert.deepEqual([pick("investimento").target, pick("investimento").confidence], ["investimentos", "alta"]);
+    assert.deepEqual([pick("tesouro").target, pick("tesouro").reason], ["investimentos", "pai"]);
+    assert.equal(pick("cartao-de-credito").target, "cartoes");
+    assert.deepEqual([pick("ganhar-dinheiro").target, pick("ganhar-dinheiro").reason], ["renda-extra", "palavras"]);
+    assert.deepEqual([pick("receitas").target, pick("receitas").confidence], ["?", null]);
+  });
+
+  test("arquivo no formato do mapeamento: subcategoria antes, comentário com confiança e posts; '?' é lido", () => {
+    const text = formatSuggestion(list, { from: "https://antigo.com.br", blog: "x" });
+    const rules = parseCategoryMap(text);
+    assert.deepEqual(rules[0], { from: "tesouro", to: "investimentos" });
+    assert.ok(rules.some((r) => r.from === "receitas" && r.to === "?"));
+    assert.match(text, /investimento => investimentos\s+# confiança alta \(pelo nome\), 4 post\(s\), "Investimento"/);
+    assert.deepEqual(Object.fromEntries(postsPerTarget(list, posts, targets)), { "renda-extra": 2, investimentos: 1, "?": 1 });
+  });
+
+  test("não sobrescreve um mapeamento que já existe", async () => {
+    const dir = await mkdtemp(path.join(os.tmpdir(), "sugestao-"));
+    const file = path.join(dir, "categorias.txt");
+    assert.equal(outputFile(file), file);
+    await writeFile(file, "a => b\n");
+    assert.equal(outputFile(file), `${file}.sugerido`);
+    await rm(dir, { recursive: true, force: true });
+  });
+
+  test("importação e --dry-run param enquanto houver '?'", async () => {
+    const { spawnSync } = await import("node:child_process");
+    const dir = await mkdtemp(path.join(os.tmpdir(), "sugestao-"));
+    const file = path.join(dir, "categorias.txt");
+    await writeFile(file, "receitas => ?  # confiança: ?\nlugares => roteiros\n");
+    const r = spawnSync(process.execPath, ["scripts/import-wordpress/import.ts", "--xml", path.join(dir, "nao-existe.xml"), "--blog", "exemplo", "--categories", file, "--dry-run"], { encoding: "utf8" });
+    assert.equal(r.status, 1);
+    assert.match(r.stderr, /ainda tem "\?" em: receitas/);
+    await rm(dir, { recursive: true, force: true });
+  });
+});
