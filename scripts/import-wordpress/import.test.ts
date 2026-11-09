@@ -269,3 +269,29 @@ describe("--suggest-categories", async () => {
     await rm(dir, { recursive: true, force: true });
   });
 });
+
+describe("regra de um post só (post:<slug>)", () => {
+  const targets = [
+    { id: 2, slug: "roteiros", name: "Roteiros" },
+    { id: 3, slug: "dicas", name: "Dicas" },
+  ];
+  test("vence a regra por categoria, aceita slug com acento ou codificado, e destino inexistente é problema", () => {
+    const m = new CategoryMapper(parseCategoryMap(`post:acoes-e-ações => roteiros\npost:fora => -\npost:sumida => nao-existe\nlugares => dicas`), targets);
+    assert.equal(m.problems.length, 1);
+    assert.equal((m.forSlug("acoes-e-a%C3%A7%C3%B5es") as { slug: string }).slug, "roteiros");
+    assert.equal(m.forSlug("acoes-e-ações".normalize("NFD")) !== undefined, true);
+    assert.equal(m.forSlug("fora"), "-");
+    assert.equal(m.forSlug("outro"), undefined);
+    assert.deepEqual(m.postRuleSlugs().sort(), ["acoes-e-ações", "fora"]);
+    // A regra de post não muda as regras por categoria (nem os redirects de categoria)
+    assert.equal(m.forPost([{ slug: "lugares", name: "Lugares", path: "" }])?.slug, "dicas");
+  });
+});
+
+describe("regras manuais do redirects.txt", async () => {
+  const { manualRedirects } = await import("./mapping.ts");
+  test("só as de fora do bloco gerado, com o tipo (301 quando não diz)", () => {
+    const text = `/a/ /b/\n/curto/ https://x.example 307\n# /comentada/ /x/\n\n${BLOCK_START}\n/gerada/ /y/\n${BLOCK_END}\n`;
+    assert.deepEqual([...manualRedirects(text)], [["/a/", { to: "/b/", status: 301 }], ["/curto/", { to: "https://x.example", status: 307 }]]);
+  });
+});

@@ -8,7 +8,7 @@ Esta política explica como o **{{site.name}}** ({{site.domain}}) trata dados pe
 
 ## 1. Controlador
 
-O controlador dos dados é {{legal.owner}}. Contato do encarregado (DPO): {{contact.email}}.
+O controlador dos dados é {{legal.razaoSocial}} ({{legal.owner}}), CNPJ {{legal.cnpj}}. Contato do encarregado (DPO): {{contact.email}}.
 
 ## 2. Dados que tratamos
 
