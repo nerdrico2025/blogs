@@ -29,11 +29,34 @@ npm run import-wordpress -- \
 | `--limit <N>` | Só os N posts mais recentes |
 | `--slug <a,b>` | Só estes posts |
 | `--verbose` | Mostra o começo do HTML limpo de cada post (na simulação) |
+| `--suggest-categories` | Só sugere o mapeamento de categorias (ver abaixo). Não importa nada |
 
 **Antes de tudo:** o destino precisa ser o blog novo. Enquanto o domínio ainda aponta para o WordPress
 antigo, o `url` do `site.config.ts` responde pelo WordPress. O script confere o `/health` do blog e, se não
 for este projeto, para (na simulação, só avisa e usa as categorias do `site.config.ts`). Nesse período,
 use `--api` com o endereço provisório do serviço no Easypanel.
+
+## Sugerir o mapeamento de categorias
+
+```bash
+npm run import-wordpress -- --from https://site-antigo.com.br --blog <nome> --suggest-categories \
+  [--categories sites/<nome>/categorias-wordpress.txt]
+```
+
+Lê as categorias da origem (`/wp-json/wp/v2/categories`, com contagem e pai) e os títulos dos posts, e as
+categorias do `sites/<nome>/site.config.ts`. Para cada categoria antiga, escolhe a do blog mais parecida:
+primeiro pelo nome e pelo slug (sem acento, sem plural, sem maiúsculas); se ficar abaixo do limiar, pelas
+palavras dos títulos dos posts daquela categoria, comparadas com nome, slug e descrição de cada categoria do
+blog. Subcategoria herda o destino da categoria pai, salvo nome mais parecido com outra.
+
+- **Nunca cria categoria.** Sem correspondência razoável, o destino fica `?`, para você decidir.
+- Grava no formato de `categorias.exemplo.txt`, uma regra por linha, com um comentário: confiança (alta,
+  média ou baixa), de onde veio a sugestão e quantos posts a categoria tem. Subcategorias vêm antes.
+- Arquivo: o de `--categories` ou, sem ele, `sites/<nome>/categorias-wordpress.txt`. **Se já existir, não é
+  alterado:** a sugestão vai para `<arquivo>.sugerido`.
+- Mostra a tabela origem → destino → confiança → posts e quantos posts cada categoria do blog receberia.
+- Só lê a origem e grava o arquivo: não chama a API do destino.
+- **Enquanto o arquivo tiver `?`, a importação e o `--dry-run` param** e listam as categorias a decidir.
 
 ## O que é feito com cada post
 

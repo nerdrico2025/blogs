@@ -15,6 +15,7 @@ import { BlogApi, type BlogCategory, type BlogMedia } from "./blog.ts";
 import { finishHtml, imageKey, originalCandidates, prepareHtml, type ImageRef } from "./html.ts";
 import { CategoryMapper, parseCategoryMap, writeRedirects } from "./mapping.ts";
 import { fetchWithRetry, pathOf, readRest, readXml, type SourcePost, type SourceSite } from "./source.ts";
+import { runSuggest } from "./suggest.ts";
 
 const HELP = `Uso: node scripts/import-wordpress/import.ts --from <url> --blog <nome> --categories <arquivo> [opções]
 
@@ -30,7 +31,10 @@ const HELP = `Uso: node scripts/import-wordpress/import.ts --from <url> --blog <
   --dry-run             não grava nada: mostra o que faria
   --limit <N>           só os N posts mais recentes
   --slug <a,b>          só estes posts (slugs da origem)
-  --verbose             mostra o começo do HTML limpo de cada post`;
+  --verbose             mostra o começo do HTML limpo de cada post
+  --suggest-categories  só sugere o mapeamento de categorias (lê a origem e o site.config.ts do blog,
+                        grava em --categories ou sites/<nome>/categorias-wordpress.txt; se o arquivo
+                        existir, grava <arquivo>.sugerido). Não importa nada nem chama o destino`;
 
 const { values: args } = parseArgs({
   options: {
@@ -47,6 +51,7 @@ const { values: args } = parseArgs({
     limit: { type: "string" },
     slug: { type: "string" },
     verbose: { type: "boolean", default: false },
+    "suggest-categories": { type: "boolean", default: false },
     help: { type: "boolean", short: "h", default: false },
   },
 });
@@ -62,7 +67,25 @@ if (args.help) {
 }
 if (!args.from && !args.xml) fail("informe --from (ou --xml).");
 if (!args.blog) fail("informe --blog.");
+
+// Modo de sugestão: só lê a origem e as categorias do site.config.ts; não toca no destino
+if (args["suggest-categories"]) {
+  if (!args.from) fail("--suggest-categories precisa de --from (lê a REST API da origem).");
+  if (!existsSync(path.join("sites", args.blog, "site.config.ts"))) fail(`sites/${args.blog}/ não existe.`);
+  process.env.SITE = args.blog;
+  const { default: blogSite } = await import("../../site.config.ts");
+  try {
+    await runSuggest({ from: args.from, blog: args.blog, file: args.categories ?? path.join("sites", args.blog, "categorias-wordpress.txt"), targets: blogSite.categories });
+  } catch (err) {
+    fail(`não deu para ler as categorias de ${args.from}: ${(err as Error).message}`);
+  }
+  process.exit(0);
+}
+
 if (!args.categories) fail("informe --categories.");
+// Linha com "?" (vinda do --suggest-categories) ainda não foi decidida: para antes de qualquer coisa
+const undecided = parseCategoryMap(await readFile(args.categories, "utf8")).filter((r) => r.to.trim() === "?");
+if (undecided.length) fail(`o mapeamento ${args.categories} ainda tem "?" em: ${undecided.map((r) => r.from).join(", ")}. Troque cada "?" por uma categoria do blog ou apague a linha.`);
 const limit = args.limit === undefined ? undefined : Number(args.limit);
 if (limit !== undefined && (!Number.isInteger(limit) || limit < 1)) fail("--limit precisa ser um número inteiro a partir de 1.");
 const dryRun = args["dry-run"];
