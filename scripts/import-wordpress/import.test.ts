@@ -6,7 +6,7 @@ import { after, before, describe, test } from "node:test";
 import { loadRedirects } from "../../api/static.ts";
 import { autop, finishHtml, originalCandidates, prepareHtml, stripShortcodes, weakAlt } from "./html.ts";
 import { BLOCK_END, BLOCK_START, CategoryMapper, mergeRedirects, parseCategoryMap } from "./mapping.ts";
-import { cleanPageHtml, expandSeoVars, readXml, stripSiteName } from "./source.ts";
+import { cleanPageHtml, expandSeoVars, pageExcerpt, readXml, stripSiteName } from "./source.ts";
 
 const base = { base: "https://antigo.com.br", oldHosts: new Set(["antigo.com.br"]), postTitle: "Título do post" };
 const prep = (html: string, resolveLink: (p: string) => string | null = () => null) => prepareHtml(html, { ...base, resolveLink });
@@ -225,6 +225,24 @@ describe("páginas importadas como post", () => {
     assert.match(html, /t\.me\/canal/);
     assert.match(html, /Chatbots no Messenger e no Whatsapp/);
     assert.match(html, /facebook\.com\/groups/);
+  });
+
+  test("o resumo é o primeiro parágrafo com texto, sem marcador nem título", () => {
+    const html = cleanPageHtml(
+      `<h1><strong>[artigo]</strong><strong>4 Formas</strong></h1><p><span><img src="a.jpg"></span></p><h1>Introdução</h1><p>Se tem uma <em>coisa</em> boa.</p><p>Outro.</p>`,
+      "4 Formas"
+    );
+    assert.doesNotMatch(html, /\[artigo\]/);
+    assert.equal(pageExcerpt(html), "Se tem uma coisa boa.");
+    assert.equal(pageExcerpt(`<h3>Prefácio</h3><p>[artigo] O que significa.</p>`), "O que significa.");
+  });
+
+  test("o resumo para em 55 palavras e fica vazio sem parágrafo de texto", () => {
+    const long = Array.from({ length: 60 }, (_, i) => `p${i}`).join(" ");
+    const excerpt = pageExcerpt(`<p>${long}</p>`);
+    assert.equal(excerpt.split(" ").length, 55);
+    assert.ok(excerpt.endsWith("p54…"));
+    assert.equal(pageExcerpt(`<h2>Só título</h2><p><img src="a.jpg"></p>`), "");
   });
 });
 

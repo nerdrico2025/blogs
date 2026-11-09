@@ -11,7 +11,7 @@ interface Props {
   page: number;
   pages: number;
   showBanner?: boolean;
-  /** Na home, a imagem do primeiro card carrega com prioridade. */
+  /** A imagem do primeiro card (acima da dobra) carrega com prioridade. */
   priorityFirst?: boolean;
 }
 const { posts, base, page, pages, showBanner = false, priorityFirst = false } = Astro.props;
