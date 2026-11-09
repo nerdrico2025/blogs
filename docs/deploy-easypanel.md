@@ -445,8 +445,8 @@ Repita para cada blog (de preferência em lotes de 2 a 3, observando a memória 
 - **URLs de categoria:** `categoryBase: "categoria"` no `site.config.ts`: as páginas ficam em `/categoria/<slug>/` (nomes e slugs não mudam). `/category/<slug>/` e a paginação dão 301 pelas regras do `redirects.txt`; os outros blogs seguem em `/category/`.
 - **Áudio:** o importador copia os MP3 hospedados na origem para o volume (`/data/uploads`), com limite próprio (`MAX_AUDIO_UPLOAD_MB`, padrão 64) e entrega com Range (206).
 - **Páginas fixas:** Sobre, Contato, Política de Privacidade, Termos de Uso, História do Nerd Rico (`/historia-do-nerd-rico/`, imagens em `public/historia/`) e a ajuda da lista de confiáveis do Gmail. Razão social, CNPJ e cidade ainda não informados: as páginas mostram "(… a informar)" e `npm test` lista as pendências.
-- **Redirects manuais** (`sites/nerdrico/redirects.txt`, fora do bloco gerado): 128 regras, 120 de 301 (posts excluídos, páginas antigas, páginas de venda para o aluno.nerdrico.com.br, slugs antigos, prefixo /category/ das categorias) e 8 de 307 (links curtos de afiliado, como na origem).
-- **Comando de importação:** `--categories sites/nerdrico/categorias-wordpress.txt --exclude sites/nerdrico/excluir-nerdrico.txt --include-pages como-criar-lista-altamente-lucrativa,4-formas-criar-renda-passiva-internet --api <endereço provisório>`.
+- **Redirects manuais** (`sites/nerdrico/redirects.txt`, fora do bloco gerado): 230 regras, 222 de 301 (posts excluídos, páginas antigas, páginas de venda para o aluno.nerdrico.com.br, slugs antigos, prefixo /category/ e paginação antiga das categorias) e 8 de 307 (links curtos de afiliado, como na origem).
+- **Comando de importação:** `--categories sites/nerdrico/categorias-wordpress.txt --exclude sites/nerdrico/excluir-nerdrico.txt --drop-links sites/nerdrico/remover-links-nerdrico.txt --include-pages como-criar-lista-altamente-lucrativa,4-formas-criar-renda-passiva-internet --api <endereço provisório>`.
 - **Depois do deploy:** cadastrar o autor "Nerd Rico" na aba Autor do `/admin`; os cursos ficam em `https://aluno.nerdrico.com.br/lista-cursos`.
 
 ---

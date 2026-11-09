@@ -162,7 +162,7 @@ export function articleSeo(post: PostView): SeoProps {
       publisher: { "@id": ids.organization },
       articleSection: post.category.name,
       ...(post.entry.data.tags.length ? { keywords: post.entry.data.tags.join(", ") } : {}),
-      ...(images.length ? { image: images } : {}),
+      image: images.length ? images : [absoluteUrl(site.seo.defaultImage.src)],
       wordCount: post.words,
       timeRequired: `PT${post.readingTime}M`,
       inLanguage: site.lang,
