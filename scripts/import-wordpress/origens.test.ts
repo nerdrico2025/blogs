@@ -3,6 +3,7 @@
  * fonte vira conflito sem ser alterado, e o redirects.txt tem uma seção por origem.
  * Sobe o blog de verdade (api/server.ts, sem build) e dois WordPress falsos em hosts diferentes.
  */
+import sharp from "sharp";
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { readFileSync } from "node:fs";
@@ -83,6 +84,10 @@ function fakeWordPress(name: string, posts: FakePost[], cats = NOTICIAS, pages: 
           yoast_head_json: { title: p.title, description: "Resumo." },
         }))
       );
+    }
+    if (url.pathname.endsWith(".svg")) {
+      res.writeHead(200, { "Content-Type": "image/svg+xml" });
+      return void res.end(`<svg xmlns="http://www.w3.org/2000/svg" width="40" height="20"><rect width="20" height="20" fill="#f00"/></svg>`);
     }
     if (url.pathname.endsWith(".mp3") && !url.pathname.includes("sumido")) {
       const head = req.method === "HEAD";
@@ -362,6 +367,33 @@ describe("áudio e relatório de imagens", () => {
       assert.match(r.out, /Índices escritos à mão \(mantidos\): 1 posts\n  - indice-a-mao: 1 lista/);
       assert.match(r.out, /Links removidos do texto \(--drop-links\): 1/);
       assert.match(r.out, /Links trocados por áudio copiado \(--drop-links\): 1/);
+    } finally {
+      g.server.close();
+    }
+  });
+
+  test("SVG vira imagem com fundo transparente; link com \"=> texto\" fica só o texto", async () => {
+    const g = fakeWordPress("Site G", [
+      { id: 64, slug: "com-svg", title: "Com SVG", html: `<p><img src="{BASE}/wp-content/uploads/marca.svg?_t=1" alt="Marca boa"></p><p>Veja <a href="{BASE}/sumiu-de-vez/">o texto do link</a> e <a href="{BASE}/banner-velho"><img src="{BASE}/wp-content/uploads/outra.svg" alt="Outra marca"></a>.</p>`, category: 1 },
+    ]);
+    const base = await g.start("127.0.0.1");
+    const rules = path.join(tmp, "drop-texto.txt");
+    await writeFile(rules, `/sumiu-de-vez/ => texto\n/banner-velho => texto\n`);
+    try {
+      const r = await importer(base, "noticias => dicas\n", ["--drop-links", rules], path.join(tmp, "redirects-svg.txt"));
+      assert.equal(r.code, 0, r.out);
+      const md = file("com-svg");
+      assert.doesNotMatch(md, /\.svg|sumiu-de-vez|banner-velho|\]\(\/sumiu/);
+      assert.match(md, /Veja o texto do link e/);
+      const src = /!\[Marca boa\]\(\/wp-content\/uploads\/(\d{4}\/\d{2}\/marca)\.\w+\)/.exec(md)?.[1];
+      assert.ok(src, md);
+      assert.match(md, /!\[Outra marca\]/);
+      const webp = path.join(tmp, "uploads", `${src}.webp`);
+      const info = await sharp(webp).metadata();
+      assert.equal(info.width, 1200);
+      assert.equal(info.hasAlpha, true);
+      assert.match(r.out, /Links que viraram texto \(--drop-links\): 2/);
+      assert.doesNotMatch(r.out, /SVG não é suportado|nenhum link para/);
     } finally {
       g.server.close();
     }

@@ -35,8 +35,8 @@ const HELP = `Uso: node scripts/import-wordpress/import.ts --from <url> --blog <
   --since <AAAA-MM-DD>  ignora os posts da origem publicados antes desta data
   --exclude <arquivo>   ignora os slugs listados (um por linha, # comenta)
   --drop-links <arquivo> tira do texto os links para estes caminhos da origem (um por linha, # comenta;
-                        "post:<slug> <caminho>" vale só para aquele post; "<caminho> => <URL de áudio>"
-                        troca o link pelo áudio dessa URL, copiado para o blog)
+                        "post:<slug> <caminho>" vale só para aquele post; "<caminho> => texto" tira o link e
+                        mantém o texto; "<caminho> => <URL de áudio>" troca o link pelo áudio dessa URL, copiado para o blog)
   --include-pages <a,b> importa também estas páginas do WordPress, como posts (cada uma precisa de
                         uma regra "post:<slug> => <categoria>" no mapeamento)
   --verbose             mostra o começo do HTML limpo de cada post
@@ -110,7 +110,7 @@ if (args.exclude) {
     if (slug) excluded.add(slugKey(slug));
   }
 }
-const dropRules: { slug?: string; path: string; used: number; to?: string }[] = [];
+const dropRules: { slug?: string; path: string; used: number; to?: string; keepText?: boolean }[] = [];
 if (args["drop-links"]) {
   if (!existsSync(args["drop-links"])) fail(`--drop-links: o arquivo ${args["drop-links"]} não existe.`);
   for (const line of (await readFile(args["drop-links"], "utf8")).split("\n")) {
@@ -118,10 +118,11 @@ if (args["drop-links"]) {
     if (!all.length) continue;
     const arrow = all.indexOf("=>");
     const parts = arrow === -1 ? all : all.slice(0, arrow);
-    const to = arrow === -1 ? undefined : all[arrow + 1];
+    const keepText = arrow !== -1 && all[arrow + 1] === "texto" && all.length === arrow + 2;
+    const to = arrow === -1 || keepText ? undefined : all[arrow + 1];
     const scoped = parts[0]!.startsWith("post:");
-    const rule = scoped ? { slug: slugKey(parts[0]!.slice("post:".length)), path: parts[1] ?? "", used: 0, to } : { path: parts[0]!, used: 0, to };
-    const validTarget = arrow === -1 || (all.length === arrow + 2 && /^https?:\/\/\S+$/.test(to ?? "") && AUDIO_FILE.test(new URL(to!).pathname));
+    const rule = scoped ? { slug: slugKey(parts[0]!.slice("post:".length)), path: parts[1] ?? "", used: 0, to, keepText } : { path: parts[0]!, used: 0, to, keepText };
+    const validTarget = arrow === -1 || keepText || (all.length === arrow + 2 && /^https?:\/\/\S+$/.test(to ?? "") && AUDIO_FILE.test(new URL(to!).pathname));
     if (!rule.path.startsWith("/") || parts.length !== (scoped ? 2 : 1) || !validTarget) fail(`--drop-links: linha inválida: "${line}"`);
     dropRules.push(rule);
   }
@@ -245,6 +246,8 @@ function resolveLink(p: string): string | null {
 // ---------------------------------------------------------------- imagens
 const ACCEPTED = new Set(["jpeg", "png", "webp"]);
 const MAX_BYTES = 15 * 1024 * 1024;
+/** Lado maior do PNG gerado a partir de um SVG (o blog não aceita SVG). */
+const SVG_MAX_SIDE = 1200;
 
 interface ImageResult {
   ok: boolean;
@@ -293,7 +296,13 @@ async function probe(candidates: string[]): Promise<string> {
 /** Formato que a API aceita (JPEG, PNG ou WebP) e tamanho abaixo do limite de upload. */
 async function uploadable(data: Buffer): Promise<{ data: Buffer; type: string }> {
   const meta = await sharp(data, { limitInputPixels: 50_000_000 }).metadata();
-  if (meta.format === "svg") throw new Error("SVG não é suportado pelo blog");
+  if (meta.format === "svg") {
+    // O vetor é desenhado já no tamanho final, para ficar nítido; o PNG mantém o fundo transparente
+    const scale = SVG_MAX_SIDE / Math.max(meta.width ?? SVG_MAX_SIDE, meta.height ?? SVG_MAX_SIDE);
+    const density = Math.min(Math.max(72 * scale, 1), 100_000);
+    const png = await sharp(data, { density, limitInputPixels: 50_000_000 }).resize({ width: SVG_MAX_SIDE, height: SVG_MAX_SIDE, fit: "inside" }).png().toBuffer();
+    return { data: png, type: "image/png" };
+  }
   if (meta.format && ACCEPTED.has(meta.format) && data.length <= MAX_BYTES) return { data, type: `image/${meta.format}` };
   // GIF, AVIF, TIFF ou arquivo grande demais: PNG/JPEG equivalente, que o blog otimiza
   const img = sharp(data, { limitInputPixels: 50_000_000, animated: false }).rotate().resize({ width: 3000, withoutEnlargement: true });
@@ -408,6 +417,8 @@ const report = {
   /** Links tirados do texto pela lista --drop-links. */
   linksDropped: [] as { post: string; path: string }[],
   linksReplaced: [] as { post: string; path: string; to: string }[],
+  /** Links que viraram texto (--drop-links com "=> texto"). */
+  linksUnwrapped: [] as { post: string; path: string }[],
   /** Posts que tinham sumário de plugin no corpo (removido). */
   tocsRemoved: [] as string[],
   /** Posts com lista só de âncoras, sem marca de plugin (mantida). */
@@ -460,7 +471,7 @@ async function importPost(post: SourcePost, n: number): Promise<void> {
   const ruleFor = (p: string) => dropRules.find((r) => r.path === p && (!r.slug || r.slug === slugKey(post.slug)));
   const dropLink = (p: string) => {
     const rule = ruleFor(p);
-    if (!rule || rule.to) return false;
+    if (!rule || rule.to || rule.keepText) return false;
     rule.used++;
     report.linksDropped.push({ post: post.slug, path: p });
     return true;
@@ -472,7 +483,14 @@ async function importPost(post: SourcePost, n: number): Promise<void> {
     report.linksReplaced.push({ post: post.slug, path: p, to: rule.to });
     return rule.to;
   };
-  const prep = prepareHtml(post.html, { base: source.url, oldHosts, postTitle: post.title, resolveLink, dropLink, replaceLink });
+  const unwrapLink = (p: string) => {
+    const rule = ruleFor(p);
+    if (!rule?.keepText) return false;
+    rule.used++;
+    report.linksUnwrapped.push({ post: post.slug, path: p });
+    return true;
+  };
+  const prep = prepareHtml(post.html, { base: source.url, oldHosts, postTitle: post.title, resolveLink, dropLink, unwrapLink, replaceLink });
   if (prep.tocsRemoved) report.tocsRemoved.push(post.slug);
   if (prep.manualTocs) report.manualTocs.push({ post: post.slug, lists: prep.manualTocs });
   const featuredRef: ImageRef | undefined = post.featured && {
@@ -660,6 +678,7 @@ if (dropRules.length) {
   for (const l of report.linksDropped) console.log(`  - ${l.post}: ${l.path}`);
   console.log(`Links trocados por áudio copiado (--drop-links): ${report.linksReplaced.length}`);
   for (const l of report.linksReplaced) console.log(`  - ${l.post}: ${l.path} → ${l.to}`);
+  console.log(`Links que viraram texto (--drop-links): ${report.linksUnwrapped.length}`);
   for (const r of dropRules) if (!r.used) warn(`--drop-links: nenhum link para ${r.path}${r.slug ? ` em ${r.slug}` : ""}`);
 }
 if (categoryBase(site) !== "category") {

@@ -104,14 +104,15 @@ categoria com `-`, depois data. Post que já está no blog não é apagado: excl
   ids, `data-*`, `srcset` e `<span>`. Vídeo do YouTube vira um link "Vídeo: …"; outros iframes saem
   (aviso no relatório). Depois, o blog ainda aplica a allowlist dele.
 - **Imagens:** todas, a destacada e as do corpo, são baixadas e enviadas pelo `POST /media`. Primeiro tenta
-  o original (`foto.jpg` em vez de `foto-300x200.jpg` ou `foto-scaled.jpg`). GIF, AVIF e arquivos acima de
-  15 MB são convertidos antes do envio. O alt original fica; se faltar ou for só o nome do arquivo
+  o original (`foto.jpg` em vez de `foto-300x200.jpg` ou `foto-scaled.jpg`). GIF, AVIF, SVG (vira PNG de até
+  1200 px, com fundo transparente) e arquivos acima de 15 MB são convertidos antes do envio. O alt original fica; se faltar ou for só o nome do arquivo
   (`P1010676`, `IMG_2034`), é gerado pela legenda, pelo `title` ou pelo título do post. Imagem que não
   baixa sai do texto e entra no relatório, que lista os posts sem capa e os que perdem imagens no corpo.
 - **Áudio:** link ou `<audio>` para arquivo da origem (MP3, M4A, OGG, WAV, AAC) é copiado para o blog pelo
   `POST /media` e o link passa para o endereço novo. Limite de `MAX_AUDIO_UPLOAD_MB` (padrão 64) no servidor.
 - **Links a retirar (`--drop-links <arquivo>`):** caminhos da origem, um por linha (`post:<slug> <caminho>` vale
   só para aquele post). O link sai do texto; parágrafo vazio e título que fica sem conteúdo saem junto.
+  Com `<caminho> => texto`, sai só o link: o texto ou a imagem dentro dele fica.
   Com `<caminho> => <URL de áudio>`, o link é trocado por esse áudio, copiado para o blog. Se o download falhar, o
   post fica sem áudio: saem o link, o título que ficou vazio e o "Ouça agora mesmo e" do texto, e a falha vai para o relatório.
 - **Sumário de plugin** (Easy Table of Contents, Rank Math, Yoast e similares) sai do corpo, porque o blog gera o
