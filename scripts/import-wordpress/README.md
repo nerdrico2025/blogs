@@ -29,6 +29,8 @@ npm run import-wordpress -- \
 | `--limit <N>` | Só os N posts mais recentes |
 | `--slug <a,b>` | Só estes posts |
 | `--verbose` | Mostra o começo do HTML limpo de cada post (na simulação) |
+| `--since <AAAA-MM-DD>` | Ignora os posts publicados antes desta data (a data em si entra) |
+| `--exclude <arquivo>` | Ignora os slugs listados no arquivo (ver "Deixar posts de fora") |
 | `--suggest-categories` | Só sugere o mapeamento de categorias (ver abaixo). Não importa nada |
 
 **Antes de tudo:** o destino precisa ser o blog novo. Enquanto o domínio ainda aponta para o WordPress
@@ -57,6 +59,26 @@ blog. Subcategoria herda o destino da categoria pai, salvo nome mais parecido co
 - Mostra a tabela origem → destino → confiança → posts e quantos posts cada categoria do blog receberia.
 - Só lê a origem e grava o arquivo: não chama a API do destino.
 - **Enquanto o arquivo tiver `?`, a importação e o `--dry-run` param** e listam as categorias a decidir.
+
+## Deixar posts de fora
+
+Três jeitos, que podem ser usados juntos. Em todos, o post sai no relatório como "ignorado", não conta como
+falha, não baixa imagens, não chama o blog e não ganha redirect (o endereço antigo dá 404 no domínio novo):
+
+- **Categoria inteira:** `categoria => -` no mapeamento (ver "O que é feito com cada post").
+- **Por data:** `--since 2019-01-01` ignora o que foi publicado antes (útil para posts de demonstração do tema).
+- **Post a post:** `--exclude sites/<nome>/excluir-<origem>.txt`, um slug por linha, com `#` para comentários:
+
+  ```
+  como-extrair-dados-do-site-da-cbs-news-guia-pratico-para-2023   # fora do tema
+  ```
+
+  O slug pode ser escrito com acento (`ações`) ou codificado (`a%C3%A7%C3%B5es`, `ac%cc%a7o%cc%83es`): os dois
+  casam. Slug da lista que não existe na origem vira aviso, para pegar erro de digitação.
+
+Na linha "Ignorados" do relatório, os motivos aparecem separados (categoria com `-`, antes da data, excluídos).
+Se um post se encaixa em mais de um, conta uma vez só, na primeira regra que pegar: lista de exclusão, depois
+categoria com `-`, depois data. Post que já está no blog não é apagado: exclua-o em **Artigos** no `/admin`.
 
 ## O que é feito com cada post
 

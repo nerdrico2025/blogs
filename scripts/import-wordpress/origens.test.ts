@@ -33,6 +33,8 @@ interface FakePost {
   category: number;
   /** Outras categorias, além de `category`. */
   more?: number[];
+  /** Data GMT (padrão 2024-01-10T10:00:00). */
+  date?: string;
 }
 
 const NOTICIAS = [{ id: 1, slug: "noticias", name: "Notícias" }];
@@ -53,8 +55,8 @@ function fakeWordPress(name: string, posts: FakePost[], cats = NOTICIAS) {
       return send(
         posts.map((p) => ({
           id: p.id,
-          date_gmt: "2024-01-10T10:00:00",
-          modified_gmt: "2024-01-10T10:00:00",
+          date_gmt: p.date ?? "2024-01-10T10:00:00",
+          modified_gmt: p.date ?? "2024-01-10T10:00:00",
           slug: p.slug,
           link: `${base}/2024/01/${p.slug}/`,
           title: { rendered: p.title },
@@ -224,6 +226,48 @@ describe("'-' no mapeamento (não importar)", () => {
     } finally {
       e.server.close();
     }
+  });
+});
+
+describe("--since e --exclude", () => {
+  test("post antigo e slugs da lista ficam de fora, sem falha e sem redirect; motivos separados no relatório", async () => {
+    const cats = [...NOTICIAS, { id: 2, slug: "demo", name: "Demo" }];
+    // O WordPress devolve o slug com acento decomposto e codificado (c + cedilha)
+    const accented = encodeURIComponent("acoes-e-ac\u0327o\u0303es".normalize("NFD")).toLowerCase();
+    const f = fakeWordPress("Site F", [
+      { id: 31, slug: "de-2018", title: "Old demo", html: "<p>2018</p>", category: 1, date: "2018-11-18T10:00:00" },
+      { id: 32, slug: "fora-do-tema", title: "Fora", html: "<p>x</p>", category: 1 },
+      { id: 33, slug: accented, title: "Com acento", html: "<p>x</p>", category: 1 },
+      { id: 34, slug: "demo-de-2018", title: "Demo", html: "<p>x</p>", category: 2, date: "2018-11-18T10:00:00" },
+      { id: 35, slug: "fica", title: "Fica", html: "<p>fica</p>", category: 1, date: "2019-01-01T00:00:00" },
+    ], cats);
+    const fromF = await f.start("127.0.0.1");
+    const list = path.join(tmp, "excluir.txt");
+    // Acento composto (como se digita) e um slug que não existe
+    await writeFile(list, `# comentário\nfora-do-tema   # fora do tema\nacoes-e-ações\nnao-existe\n`);
+    try {
+      const r = await importer(fromF, "noticias => dicas\ndemo => -\n", ["--since", "2019-01-01", "--exclude", list]);
+      assert.equal(r.code, 0, r.out);
+      assert.match(r.out, /de-2018: ignorado \(antes de 2019-01-01: publicado em 2018-11-18\)/);
+      assert.match(r.out, /fora-do-tema: ignorado \(excluído pelo excluir\.txt\)/);
+      assert.match(r.out, /Ignorados:\s+4 \(categoria com "-": 1; antes de 2019-01-01: 1; excluídos: 2; não são falha\)/);
+      assert.match(r.out, /--exclude: o slug "nao-existe" não existe na origem/);
+      assert.match(r.out, /fica: importado/, "a data do --since em si entra");
+      for (const slug of ["de-2018", "fora-do-tema", "acoes-e-acoes", "demo-de-2018"]) assert.equal(await post(slug), undefined, slug);
+      const red = readFileSync(redirectsFile, "utf8");
+      for (const p of ["/2024/01/fora-do-tema/", "/2024/01/de-2018/", "/category/demo/"]) assert.ok(!red.includes(p), p);
+    } finally {
+      f.server.close();
+    }
+  });
+
+  test("--since com data inválida e --exclude com arquivo inexistente param antes de tudo", async () => {
+    const bad = await importer("http://127.0.0.1:1", "noticias => dicas\n", ["--since", "2019-13-45"]);
+    assert.equal(bad.code, 1);
+    assert.match(bad.out, /--since precisa de uma data no formato AAAA-MM-DD/);
+    const missing = await importer("http://127.0.0.1:1", "noticias => dicas\n", ["--exclude", path.join(tmp, "nao-ha.txt")]);
+    assert.equal(missing.code, 1);
+    assert.match(missing.out, /--exclude: o arquivo .* não existe/);
   });
 });
 

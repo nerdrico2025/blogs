@@ -31,6 +31,8 @@ const HELP = `Uso: node scripts/import-wordpress/import.ts --from <url> --blog <
   --dry-run             não grava nada: mostra o que faria
   --limit <N>           só os N posts mais recentes
   --slug <a,b>          só estes posts (slugs da origem)
+  --since <AAAA-MM-DD>  ignora os posts da origem publicados antes desta data
+  --exclude <arquivo>   ignora os slugs listados (um por linha, # comenta)
   --verbose             mostra o começo do HTML limpo de cada post
   --suggest-categories  só sugere o mapeamento de categorias (lê a origem e o site.config.ts do blog,
                         grava em --categories ou sites/<nome>/categorias-wordpress.txt; se o arquivo
@@ -50,6 +52,8 @@ const { values: args } = parseArgs({
     "dry-run": { type: "boolean", default: false },
     limit: { type: "string" },
     slug: { type: "string" },
+    since: { type: "string" },
+    exclude: { type: "string" },
     verbose: { type: "boolean", default: false },
     "suggest-categories": { type: "boolean", default: false },
     help: { type: "boolean", short: "h", default: false },
@@ -89,6 +93,23 @@ if (undecided.length) fail(`o mapeamento ${args.categories} ainda tem "?" em: ${
 const limit = args.limit === undefined ? undefined : Number(args.limit);
 if (limit !== undefined && (!Number.isInteger(limit) || limit < 1)) fail("--limit precisa ser um número inteiro a partir de 1.");
 const dryRun = args["dry-run"];
+if (args.since !== undefined && (!/^\d{4}-\d{2}-\d{2}$/.test(args.since) || Number.isNaN(Date.parse(`${args.since}T00:00:00Z`)))) fail("--since precisa de uma data no formato AAAA-MM-DD.");
+/** Slug comparável: decodificado (%C3%A7 ou %CC%A7), acentos na forma composta, minúsculo. */
+const slugKey = (slug: string) => {
+  let s = slug.trim();
+  try {
+    s = decodeURIComponent(s);
+  } catch {}
+  return s.normalize("NFC").toLowerCase();
+};
+const excluded = new Set<string>();
+if (args.exclude) {
+  if (!existsSync(args.exclude)) fail(`--exclude: o arquivo ${args.exclude} não existe.`);
+  for (const line of (await readFile(args.exclude, "utf8")).split("\n")) {
+    const slug = line.replace(/#.*$/, "").trim();
+    if (slug) excluded.add(slugKey(slug));
+  }
+}
 const slugs = args.slug ? args.slug.split(",").map((s) => s.trim()).filter(Boolean) : undefined;
 
 // A configuração do blog (url e categorias) vem do site.config.ts com SITE=<blog>
@@ -275,8 +296,10 @@ const report = {
   unchanged: [] as string[],
   unverified: [] as string[],
   failed: [] as { slug: string; error: string }[],
-  /** Só em categorias marcadas com "-" no mapeamento: não importados, de propósito. */
+  /** Não importados, de propósito: categoria marcada com "-", data antes do --since ou slug do --exclude. */
   ignored: [] as string[],
+  ignoredSince: [] as string[],
+  excluded: [] as string[],
   /** Slug já usado no blog por post de outra fonte: não foi atualizado. */
   conflicts: [] as { slug: string; existing: string; link: string }[],
   images: [] as { post: string; url: string; error: string }[],
@@ -290,9 +313,20 @@ const addRedirect = (from: string, to: string) => {
 
 async function importPost(post: SourcePost, n: number): Promise<void> {
   const label = `[${n}/${source.posts.length}] ${post.slug}`;
+  // Antes de qualquer imagem ou chamada ao blog: estes posts ficam de fora, sem falha e sem redirect
+  if (excluded.has(slugKey(post.slug))) {
+    report.excluded.push(post.slug);
+    console.log(`${dryRun ? "\n" : ""}${label}: ignorado (excluído pelo ${path.basename(args.exclude!)})`);
+    return;
+  }
   if (mapper.skips(post.categories)) {
     report.ignored.push(post.slug);
     console.log(`${dryRun ? "\n" : ""}${label}: ignorado (categoria ${post.categories.map((c) => c.slug).join(", ")} marcada com "-" no mapeamento)`);
+    return;
+  }
+  if (args.since && post.dateGmt.slice(0, 10) < args.since) {
+    report.ignoredSince.push(post.slug);
+    console.log(`${dryRun ? "\n" : ""}${label}: ignorado (antes de ${args.since}: publicado em ${post.dateGmt.slice(0, 10)})`);
     return;
   }
   const category = mapper.forPost(post.categories);
@@ -404,6 +438,12 @@ function addRedirectForImage(oldUrl: string, newPath: string) {
   } catch {}
 }
 
+// Slug do --exclude que não está na origem: provável erro de digitação
+if (excluded.size) {
+  const known = new Set([...source.allLinks.values(), ...source.posts.map((p) => p.slug)].map(slugKey));
+  for (const slug of excluded) if (!known.has(slug)) warn(`--exclude: o slug "${slug}" não existe na origem`);
+}
+
 let n = 0;
 for (const post of source.posts) {
   n++;
@@ -435,7 +475,14 @@ if (dryRun) {
   console.log(`Atualizados:  ${report.updated.length}`);
   console.log(`Sem mudanças: ${report.unchanged.length}`);
 }
-console.log(`Ignorados:    ${report.ignored.length}${report.ignored.length ? ' (categorias marcadas com "-" no mapeamento; não são falha)' : ""}`);
+const ignoredTotal = report.ignored.length + report.ignoredSince.length + report.excluded.length;
+const reasons = [
+  report.ignored.length ? `categoria com "-": ${report.ignored.length}` : "",
+  report.ignoredSince.length ? `antes de ${args.since}: ${report.ignoredSince.length}` : "",
+  report.excluded.length ? `excluídos: ${report.excluded.length}` : "",
+].filter(Boolean);
+console.log(`Ignorados:    ${ignoredTotal}${ignoredTotal ? ` (${reasons.join("; ")}; não são falha)` : ""}`);
+for (const slug of report.excluded) console.log(`  - excluído: ${slug}`);
 console.log(`Falhas:       ${report.failed.length}`);
 for (const f of report.failed) console.log(`  - ${f.slug}: ${f.error}`);
 console.log(`Conflitos:    ${report.conflicts.length}${report.conflicts.length ? " (slug já usado no blog por post de outra fonte; não foram alterados)" : ""}`);
