@@ -275,6 +275,8 @@ const report = {
   unchanged: [] as string[],
   unverified: [] as string[],
   failed: [] as { slug: string; error: string }[],
+  /** Só em categorias marcadas com "-" no mapeamento: não importados, de propósito. */
+  ignored: [] as string[],
   /** Slug já usado no blog por post de outra fonte: não foi atualizado. */
   conflicts: [] as { slug: string; existing: string; link: string }[],
   images: [] as { post: string; url: string; error: string }[],
@@ -288,6 +290,11 @@ const addRedirect = (from: string, to: string) => {
 
 async function importPost(post: SourcePost, n: number): Promise<void> {
   const label = `[${n}/${source.posts.length}] ${post.slug}`;
+  if (mapper.skips(post.categories)) {
+    report.ignored.push(post.slug);
+    console.log(`${dryRun ? "\n" : ""}${label}: ignorado (categoria ${post.categories.map((c) => c.slug).join(", ")} marcada com "-" no mapeamento)`);
+    return;
+  }
   const category = mapper.forPost(post.categories);
   if (!category) throw new Error(`nenhuma regra de categoria para ${post.categories.map((c) => c.slug).join(", ") || "(sem categoria)"}`);
 
@@ -428,6 +435,7 @@ if (dryRun) {
   console.log(`Atualizados:  ${report.updated.length}`);
   console.log(`Sem mudanças: ${report.unchanged.length}`);
 }
+console.log(`Ignorados:    ${report.ignored.length}${report.ignored.length ? ' (categorias marcadas com "-" no mapeamento; não são falha)' : ""}`);
 console.log(`Falhas:       ${report.failed.length}`);
 for (const f of report.failed) console.log(`  - ${f.slug}: ${f.error}`);
 console.log(`Conflitos:    ${report.conflicts.length}${report.conflicts.length ? " (slug já usado no blog por post de outra fonte; não foram alterados)" : ""}`);

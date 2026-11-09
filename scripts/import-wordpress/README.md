@@ -66,6 +66,10 @@ blog. Subcategoria herda o destino da categoria pai, salvo nome mais parecido co
   `_yoast_wpseo_*` ou `rank_math_*`. O " - Nome do Site" do fim do título é removido, porque o blog já
   acrescenta o nome dele. O meta title vai para `seoTitle` no frontmatter, só se for diferente do título.
 - **Categoria:** a primeira regra do arquivo de mapeamento que bater com alguma categoria do post.
+- **Não importar:** no mapeamento, `categoria => -` marca uma categoria para ficar de fora (ex.: posts de
+  demonstração do tema). O post que só tem categorias assim sai no relatório como "ignorado", sem contar como
+  falha. Se ele também estiver numa categoria com regra, é importado por ela. O `-` vale antes do `*`, e a
+  categoria ignorada não ganha redirect.
   Sem regra (e sem `*`), o post falha e aparece no relatório.
 - **HTML:** saem comentários do Gutenberg, shortcodes (o texto dentro deles fica), classes, estilos,
   ids, `data-*`, `srcset` e `<span>`. Vídeo do YouTube vira um link "Vídeo: …"; outros iframes saem
@@ -121,7 +125,7 @@ para outro redirecionamento (Cloudflare ou Traefik) para o novo.
 
 ## Relatório
 
-No fim: importados, atualizados, sem mudanças, falhas (com o motivo), conflitos (slug de post de outra fonte
+No fim: importados, atualizados, sem mudanças, ignorados (categoria marcada com `-`), falhas (com o motivo), conflitos (slug de post de outra fonte
 e caminhos de redirect de outra origem), imagens que não baixaram (post e URL), redirects gravados e avisos.
 Código de saída 2 quando há falha ou conflito.
 

@@ -18,6 +18,7 @@ export interface CategoryRule {
  *   Texto:        uma regra por linha, "antigo => novo", "antigo,novo" ou "antigo;novo" (# comenta)
  * A ordem importa: num post com várias categorias, vale a primeira regra do arquivo que bater.
  * "*" vale para qualquer categoria sem regra.
+ * Destino "-" = não importar: o post que só tem categorias assim é ignorado (ver CategoryMapper.skips).
  */
 export function parseCategoryMap(text: string): CategoryRule[] {
   const t = text.trim();
@@ -46,12 +47,21 @@ export function findTarget(value: string, targets: BlogCategory[]): BlogCategory
   return targets.find((c) => String(c.id) === value.trim() || c.slug === v || norm(c.name) === v);
 }
 
+/** Destino especial: não importar os posts desta categoria. */
+export const SKIP = "-";
+
 export class CategoryMapper {
   private readonly rules: { from: string; to: BlogCategory }[] = [];
+  private readonly skipped: string[] = [];
   readonly problems: string[] = [];
 
   constructor(rules: CategoryRule[], targets: BlogCategory[]) {
     for (const r of rules) {
+      if (r.to.trim() === SKIP) {
+        if (r.from === "*") this.problems.push(`"* => ${SKIP}" não é aceito: marque com "${SKIP}" só as categorias que não devem ser importadas`);
+        else this.skipped.push(r.from);
+        continue;
+      }
       const to = findTarget(r.to, targets);
       if (!to) this.problems.push(`"${r.from}" → "${r.to}": categoria de destino não existe no blog (há: ${targets.map((c) => c.slug).join(", ")})`);
       else this.rules.push({ from: r.from, to });
@@ -62,13 +72,25 @@ export class CategoryMapper {
     return rule === c.slug || norm(rule) === norm(c.name) || norm(rule) === c.slug;
   }
 
-  /** Categoria de destino de um post (pela ordem das regras), ou null. */
-  forPost(categories: SourceCategory[]): BlogCategory | null {
+  private explicit(categories: SourceCategory[]): BlogCategory | null {
     for (const r of this.rules) {
       if (r.from === "*") continue;
       if (categories.some((c) => this.matches(r.from, c))) return r.to;
     }
-    return this.rules.find((r) => r.from === "*")?.to ?? null;
+    return null;
+  }
+
+  /**
+   * Post a não importar: nenhuma categoria dele tem regra com destino, e alguma está marcada com "-".
+   * Um post que também está numa categoria com regra é importado por ela. Vale antes do "*".
+   */
+  skips(categories: SourceCategory[]): boolean {
+    return !this.explicit(categories) && categories.some((c) => this.skipped.some((from) => this.matches(from, c)));
+  }
+
+  /** Categoria de destino de um post (pela ordem das regras), ou null. */
+  forPost(categories: SourceCategory[]): BlogCategory | null {
+    return this.explicit(categories) ?? (this.skips(categories) ? null : this.rules.find((r) => r.from === "*")?.to ?? null);
   }
 
   /** Destino de uma categoria antiga (para links e redirects), sem usar o "*". */

@@ -31,10 +31,14 @@ interface FakePost {
   title: string;
   html: string;
   category: number;
+  /** Outras categorias, além de `category`. */
+  more?: number[];
 }
 
-/** WordPress mínimo: as rotas que o importador lê, com uma categoria "noticias". */
-function fakeWordPress(name: string, posts: FakePost[]) {
+const NOTICIAS = [{ id: 1, slug: "noticias", name: "Notícias" }];
+
+/** WordPress mínimo: as rotas que o importador lê, com uma categoria "noticias" (ou as passadas). */
+function fakeWordPress(name: string, posts: FakePost[], cats = NOTICIAS) {
   let base = "";
   const server = http.createServer((req, res) => {
     const url = new URL(req.url!, "http://x");
@@ -43,7 +47,7 @@ function fakeWordPress(name: string, posts: FakePost[]) {
       res.end(JSON.stringify(data));
     };
     if (url.pathname === "/wp-json/") return send({ name });
-    if (url.pathname === "/wp-json/wp/v2/categories") return send([{ id: 1, slug: "noticias", name: "Notícias", link: `${base}/category/noticias/` }]);
+    if (url.pathname === "/wp-json/wp/v2/categories") return send(cats.map((c) => ({ ...c, link: `${base}/category/${c.slug}/` })));
     if (url.pathname === "/wp-json/wp/v2/posts") {
       if (url.searchParams.get("_fields") === "slug,link") return send(posts.map((p) => ({ slug: p.slug, link: `${base}/2024/01/${p.slug}/` })));
       return send(
@@ -56,7 +60,7 @@ function fakeWordPress(name: string, posts: FakePost[]) {
           title: { rendered: p.title },
           content: { rendered: p.html },
           excerpt: { rendered: "" },
-          categories: [p.category],
+          categories: [p.category, ...(p.more ?? [])],
           yoast_head_json: { title: p.title, description: "Resumo." },
         }))
       );
@@ -194,6 +198,31 @@ describe("duas origens no mesmo blog", () => {
       assert.match(second.out, /antigo: sem mudanças/, second.out);
     } finally {
       d.server.close();
+    }
+  });
+});
+
+describe("'-' no mapeamento (não importar)", () => {
+  test("post só da categoria marcada é ignorado, sem falha; com outra categoria com regra, é importado", async () => {
+    const cats = [...NOTICIAS, { id: 2, slug: "demo", name: "Demo" }];
+    const e = fakeWordPress("Site E", [
+      { id: 21, slug: "post-de-demo", title: "Running on the ground", html: "<p>demo</p>", category: 2 },
+      { id: 22, slug: "post-misto", title: "Misto", html: "<p>misto</p>", category: 2, more: [1] },
+    ], cats);
+    const fromE = await e.start("127.0.0.1");
+    try {
+      const r = await importer(fromE, "noticias => dicas\ndemo => -\n");
+      assert.equal(r.code, 0, r.out);
+      assert.match(r.out, /post-de-demo: ignorado \(categoria demo marcada com "-"/);
+      assert.match(r.out, /Ignorados:\s+1 /);
+      assert.match(r.out, /Falhas:\s+0/);
+      assert.match(r.out, /post-misto: importado/);
+      assert.equal(await post("post-de-demo"), undefined);
+      assert.equal((await post("post-misto")).categories[0], 3, "foi pela regra de noticias (dicas, id 3)");
+      // Categoria ignorada não ganha redirect
+      assert.ok(!readFileSync(redirectsFile, "utf8").includes("/category/demo/"));
+    } finally {
+      e.server.close();
     }
   });
 });

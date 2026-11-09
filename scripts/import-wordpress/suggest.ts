@@ -179,7 +179,7 @@ export function formatSuggestion(list: Suggestion[], meta: { from: string; blog:
     "# Gerado por --suggest-categories. Revise antes de importar: troque cada \"?\" por uma categoria do blog",
     "# (slug, nome ou id) ou apague a linha. Enquanto houver \"?\", a importação e o --dry-run param.",
     "# Num post com várias categorias vale a PRIMEIRA regra que bater: as subcategorias vêm antes.",
-    "# \"* => <categoria>\" vale para qualquer categoria sem regra.",
+    "# \"* => <categoria>\" vale para qualquer categoria sem regra. \"<categoria> => -\" = não importar os posts dela.",
     ...lines.map((s) => {
       const rule = `${s.source.slug} => ${s.target}`;
       const conf = s.confidence ? `confiança ${s.confidence}` : "confiança: ?";

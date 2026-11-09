@@ -119,6 +119,23 @@ describe("categorias", () => {
     assert.equal(m.forPost([{ slug: "outra", name: "Outra", path: "/category/outra/" }])?.slug, "dicas");
     assert.equal(m.forCategory({ slug: "outra", name: "Outra", path: "" }), null, "o '*' não vale para redirect de categoria");
   });
+
+  test("'-' = não importar: só ignora quem não tem outra categoria com regra; vale antes do '*'", () => {
+    const m = new CategoryMapper(parseCategoryMap(`lugares => roteiros\ndemo => -\n* => dicas`), targets);
+    assert.deepEqual(m.problems, []);
+    const demo = { slug: "demo", name: "Demo", path: "/category/demo/" };
+    const lugares = { slug: "lugares", name: "Lugares", path: "/category/lugares/" };
+    const outra = { slug: "outra", name: "Outra", path: "/category/outra/" };
+    assert.equal(m.skips([demo]), true);
+    assert.equal(m.forPost([demo]), null);
+    assert.equal(m.skips([demo, lugares]), false);
+    assert.equal(m.forPost([demo, lugares])?.slug, "roteiros");
+    // Categoria sem regra junto com uma marcada com "-": ignorado (o "-" vale antes do "*")
+    assert.equal(m.skips([demo, outra]), true);
+    assert.equal(m.forPost([outra])?.slug, "dicas");
+    assert.equal(m.forCategory(demo), null, "categoria ignorada não ganha redirect");
+    assert.equal(new CategoryMapper(parseCategoryMap(`* => -`), targets).problems.length, 1);
+  });
 });
 
 describe("redirects", () => {

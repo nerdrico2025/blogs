@@ -1,0 +1,14 @@
+# Mapeamento de categorias sugerido: https://diariobitcoin.com.br => sites/rendadinheiro
+# Gerado por --suggest-categories. Revise antes de importar: troque cada "?" por uma categoria do blog
+# (slug, nome ou id) ou apague a linha. Enquanto houver "?", a importação e o --dry-run param.
+# Num post com várias categorias vale a PRIMEIRA regra que bater: as subcategorias vêm antes.
+# "* => <categoria>" vale para qualquer categoria sem regra. "<categoria> => -" = não importar os posts dela.
+bitcoin-ethereum => criptomoedas    # confiança média (pelos títulos dos posts), 4 post(s), "Bitcoin / Ethereum"
+lancamentos-tokens => criptomoedas  # escolhido à mão (sugestão era ?), 6 post(s), "Lançamentos de Tokens"
+staking => criptomoedas             # escolhido à mão (sugestão era ?), 6 post(s), "Staking"
+jogos-nft => criptomoedas           # escolhido à mão (sugestão era ?), 4 post(s), "Jogos NFT"
+mineracao => criptomoedas           # confiança baixa (pelos títulos dos posts), 8 post(s), "Mineração"
+oportunidades => criptomoedas       # confiança baixa (pelos títulos dos posts), 8 post(s), "Oportunidades"
+noticias => criptomoedas            # escolhido à mão; /category/noticias/ já é do rendadinheiro.com.br (vai para economia): conflito aceito, 5 post(s), "Notícias"
+criptomoedas => criptomoedas        # confiança alta (pelo nome), 29 post(s), "Criptomoedas"
+sem-categoria => -                  # não importar: posts de demonstração do tema (2018, em inglês), 115 post(s), "Sem categoria"
