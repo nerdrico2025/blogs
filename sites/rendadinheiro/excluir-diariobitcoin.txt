@@ -1,0 +1,3 @@
+# Posts de diariobitcoin.com.br que não devem ser importados (--exclude). Um slug por linha.
+como-extrair-dados-do-site-da-cbs-news-guia-pratico-para-2023   # fora do tema
+trump-anuncia-us-500-bi-para-ia-o-futuro-dos-eua   # fora do tema
