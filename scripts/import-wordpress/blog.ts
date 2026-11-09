@@ -19,6 +19,8 @@ export interface BlogPost {
   id: number;
   slug: string;
   link: string;
+  /** De onde veio o post ("wordbee", "wordpress" ou "wordpress:<domínio>"). Servidor antigo não manda. */
+  meta?: { source?: string };
 }
 
 export class BlogApi {

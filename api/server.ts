@@ -128,6 +128,8 @@ function postJson(post: PostRecord, store: Store) {
     featured_media: post.featuredMedia,
     categories: category ? [category.id] : [],
     tags: [],
+    // Fora do padrão do WP: de onde veio o post, para o importador não sobrescrever post de outra origem
+    meta: { source: post.source },
   };
 }
 

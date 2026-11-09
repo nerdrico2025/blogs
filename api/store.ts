@@ -64,6 +64,8 @@ export interface PostRecord {
   hash: string;
   excerpt: string;
   featuredMedia: number;
+  /** Frontmatter `source`: "wordbee", "wordpress" (importação antiga) ou "wordpress:<domínio de origem>". */
+  source: string;
 }
 
 export interface CreatePostInput {
@@ -145,6 +147,7 @@ export class Store {
         hash: String(data.wpHash ?? ""),
         excerpt: String(data.excerpt ?? ""),
         featuredMedia: Number(data.wpFeaturedMedia ?? 0),
+        source: String(data.source ?? ""),
       });
       this.state.nextPostId = Math.max(this.state.nextPostId, id + 1);
     }
@@ -352,7 +355,7 @@ export class Store {
       await atomicWrite(path.join(this.env.contentDir, `${slug}.md`), file);
       await this.saveState();
 
-      const post: PostRecord = { id, slug, title, status: input.status, category: category.slug, date, hash, excerpt, featuredMedia: media?.id ?? 0 };
+      const post: PostRecord = { id, slug, title, status: input.status, category: category.slug, date, hash, excerpt, featuredMedia: media?.id ?? 0, source: input.source || "wordbee" };
       this.posts.set(slug, post);
       return { post, created: true };
     });
@@ -395,7 +398,7 @@ export class Store {
       const updated = input.modified ?? (bodyChanged ? new Date().toISOString() : oldUpdated);
 
       const { file, excerpt } = await this.render(merged, { id, title, hash, date, updated, category: category.slug, media });
-      const post: PostRecord = { ...current, title, status: merged.status, category: category.slug, date, hash, excerpt, featuredMedia: media?.id ?? 0 };
+      const post: PostRecord = { ...current, title, status: merged.status, category: category.slug, date, hash, excerpt, featuredMedia: media?.id ?? 0, source: merged.source || "wordbee" };
       if (file === raw) return { post: current, changed: false };
       await atomicWrite(mdFile, file);
       this.posts.set(current.slug, post);
