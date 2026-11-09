@@ -238,6 +238,18 @@ export function cleanPageHtml(html: string, title: string): string {
 }
 
 /**
+ * Resumo de página importada como post: o primeiro parágrafo com texto, em até 55 palavras (o tamanho do
+ * resumo automático do WordPress). O automático cola títulos e marcadores como "[artigo]" no começo do texto.
+ */
+export function pageExcerpt(html: string, maxWords = 55): string {
+  for (const match of html.matchAll(/<p\b[^>]*>([\s\S]*?)<\/p>/gi)) {
+    const words = htmlText(match[1]!).replace(/\[[a-z]+\]/gi, " ").split(/\s+/).filter(Boolean);
+    if (words.length) return words.length > maxWords ? `${words.slice(0, maxWords).join(" ")}…` : words.join(" ");
+  }
+  return "";
+}
+
+/**
  * Páginas do WordPress escolhidas pelo slug (--include-pages), no formato de post. Não têm categoria:
  * o mapeamento precisa de uma regra "post:<slug> => <categoria>" para cada uma.
  */
@@ -253,6 +265,7 @@ export async function readPages(from: string, slugs: string[], onWarn: (msg: str
     }
     const title = htmlText(p.title.rendered);
     const media = p._embedded?.["wp:featuredmedia"]?.[0];
+    const html = cleanPageHtml(p.content.rendered, title);
     out.push({
       id: `page-${p.id}`,
       title,
@@ -261,8 +274,8 @@ export async function readPages(from: string, slugs: string[], onWarn: (msg: str
       dateGmt: p.date_gmt,
       modifiedGmt: p.modified_gmt,
       categories: [],
-      html: cleanPageHtml(p.content.rendered, title),
-      excerpt: cleanExcerpt(p.excerpt?.rendered ?? ""),
+      html,
+      excerpt: pageExcerpt(html) || cleanExcerpt(p.excerpt?.rendered ?? ""),
       ...(media?.source_url && !media.code ? { featured: { url: media.source_url, alt: (media.alt_text ?? "").trim() } } : {}),
       ...(p.yoast_head_json?.title ? { seoTitle: p.yoast_head_json.title } : {}),
       ...(p.yoast_head_json?.description ? { seoDescription: p.yoast_head_json.description } : {}),

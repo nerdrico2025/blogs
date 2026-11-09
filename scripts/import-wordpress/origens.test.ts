@@ -321,6 +321,7 @@ describe("post:<slug>, --include-pages e links pelo redirects.txt manual", () =>
       assert.equal(ebook.categories[0], 3);
       const md = file("ebook-grande");
       assert.doesNotMatch(md, /\[artigo\]|## E-book Grande|site\.example/);
+      assert.match(md, /^excerpt: "?Texto do e-book\."?$/m);
       assert.match(md, /## Capítulo I/);
       // Links: 301 encadeado vai direto ao destino final; destino externo também; o 307 fica no caminho local
       const links = file("com-links");

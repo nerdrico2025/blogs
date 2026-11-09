@@ -94,7 +94,7 @@ categoria com `-`, depois data. Post que já está no blog não é apagado: excl
   regra que não existe na origem vira aviso.
 - **Páginas como post:** `--include-pages slug-a,slug-b` traz páginas do WordPress (não só posts), com a origem
   marcada como nos posts. Na entrada, sai o título repetido no começo do texto (com ou sem `[artigo]`) e os
-  "títulos" que são só um endereço. A categoria vem da regra `post:<slug>`.
+  "títulos" que são só um endereço. O resumo é o primeiro parágrafo com texto. A categoria vem da regra `post:<slug>`.
 - **Não importar:** no mapeamento, `categoria => -` marca uma categoria para ficar de fora (ex.: posts de
   demonstração do tema). O post que só tem categorias assim sai no relatório como "ignorado", sem contar como
   falha. Se ele também estiver numa categoria com regra, é importado por ela. O `-` vale antes do `*`, e a
