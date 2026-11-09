@@ -1,0 +1,54 @@
+{
+  "brand": {
+    "name": "Nerd Rico",
+    "colors": {
+      "primary": "#6d28d9"
+    }
+  },
+  "tagline": "Marketing digital que vende, do e-mail ao funil",
+  "categories": [
+    {
+      "id": 2,
+      "name": "E-mail Marketing",
+      "slug": "email-marketing",
+      "description": "Listas, automação, segmentação e e-mails que vendem todos os dias."
+    },
+    {
+      "id": 3,
+      "name": "Copywriting",
+      "slug": "copywriting",
+      "description": "Copy, storytelling, títulos e textos de venda que convertem."
+    },
+    {
+      "id": 4,
+      "name": "Estratégias de Venda",
+      "slug": "estrategias",
+      "description": "Lançamentos, funis de vendas, landing pages e páginas de venda."
+    },
+    {
+      "id": 5,
+      "name": "Afiliados e Produtos Digitais",
+      "slug": "produtos-digitais",
+      "description": "Marketing de afiliados, PLR, licenciamento e infoprodutos."
+    },
+    {
+      "id": 6,
+      "name": "Tráfego",
+      "slug": "trafego",
+      "description": "Tráfego orgânico e pago, redes sociais e SEO para atrair clientes."
+    },
+    {
+      "id": 7,
+      "name": "Ferramentas",
+      "slug": "ferramentas",
+      "description": "Plataformas, automação e ferramentas de IA para o seu marketing."
+    },
+    {
+      "id": 8,
+      "name": "Mentalidade e Entrevistas",
+      "slug": "mentalidade",
+      "description": "Mentalidade empreendedora, entrevistas, NerdShow e Milionerd Cast."
+    }
+  ],
+  "nextCategoryId": 9
+}

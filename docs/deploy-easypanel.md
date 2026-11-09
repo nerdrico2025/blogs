@@ -436,6 +436,14 @@ Repita para cada blog (de preferência em lotes de 2 a 3, observando a memória 
 - [ ] **Domínio:** **Domains → Add domain** → `dominio.com.br`, HTTPS, porta **8080**; memória 1 GB, zero downtime desligado → **Deploy**.
 - [ ] **Domínio antigo (opcional):** `ALIAS_HOSTS=antigo.com.br,www.antigo.com.br` — só preencher quando o DNS do domínio antigo apontar para este serviço. Adicione também esse domínio em **Domains** (porta 8080). Cada pedido nele recebe 301 para o domínio em uso, com o mesmo caminho (ou o destino do `redirects.txt`) e a query. O domínio principal na lista é ignorado; o endereço provisório do Easypanel e os outros blogs não são afetados.
 
+### Blog nerdrico (migração do WordPress nerdrico.com.br)
+
+- **Pasta:** `sites/nerdrico/` (marca "Nerd Rico", cor provisória `#6d28d9`, 7 categorias, `hideEmptyCategories` ligado).
+- **Serviço:** `nerdrico`, volume `nerdrico-data`, `SITE=nerdrico`, `SITE_URL=https://nerdrico.com.br` (o mesmo domínio da origem: importe com `--api` no endereço provisório do Easypanel).
+- **Importação:** `--categories sites/nerdrico/categorias-wordpress.txt --exclude sites/nerdrico/excluir-nerdrico.txt` (24 posts de fora: notícias de IA e posts datados). "Blog" é a última regra do mapeamento, como reserva.
+- **Antes de importar:** decidir as 47 páginas do WordPress (páginas fixas, 301 ou nada), os links curtos de afiliado que o WordPress redireciona hoje (`/leadlovers/`, `/killerplayer/`…) e os slugs antigos que respondem 301. Eles entram no `redirects.txt`, fora do bloco gerado.
+- **Depois do deploy:** cadastrar o autor "Nerd Rico" na aba Autor do `/admin`; os cursos ficam em `https://aluno.nerdrico.com.br/lista-cursos`.
+
 ---
 
 ## 8.1 Blog "camaleão" (um domínio por vez, tudo pelo /admin)
