@@ -119,6 +119,29 @@ describe("áudio da origem", () => {
   });
 });
 
+describe("--drop-links", () => {
+  const zip = "/wp-content/uploads/z.zip";
+  const mp3 = "/wp-content/uploads/e2.mp3";
+  const run = (html: string, drop: string[]) => {
+    const p = prepareHtml(html, { base: "https://antigo.com.br", oldHosts: new Set(["antigo.com.br"]), postTitle: "T", resolveLink: () => null, dropLink: (x) => drop.includes(x) });
+    return finishHtml(p, () => null, () => "/novo.mp3");
+  };
+  const link = (path: string, label: string) => `<p><a href="http://antigo.com.br${path}">${label}</a></p>`;
+
+  test("sai o parágrafo do link; o título fica se ainda há conteúdo embaixo", () => {
+    assert.equal(run(`<h3>Baixe</h3>${link(mp3, "MP3")}${link(zip, "Zip")}<p>Texto.</p>`, [zip]), `<h3>Baixe</h3><p><a href="/novo.mp3">MP3</a></p><p>Texto.</p>`);
+  });
+
+  test("sem nada embaixo do título, ele sai junto; título sem link removido fica", () => {
+    assert.equal(run(`<h3>Baixe</h3>${link(mp3, "MP3")}${link(zip, "Zip")}<h3>Assine</h3><p>Feed.</p>`, [zip, mp3]), `<h3>Assine</h3><p>Feed.</p>`);
+    assert.equal(run(`<h3>Sozinho</h3><h3>Outro</h3>`, [zip]), `<h3>Sozinho</h3><h3>Outro</h3>`);
+  });
+
+  test("link no meio do parágrafo sai e o texto fica", () => {
+    assert.equal(run(`<p>Antes <a href="https://antigo.com.br${zip}">x</a> depois.</p>`, [zip]), `<p>Antes  depois.</p>`);
+  });
+});
+
 describe("páginas importadas como post", () => {
   test("o parágrafo do convite do WhatsApp sai e os outros canais ficam", () => {
     const html = cleanPageHtml(

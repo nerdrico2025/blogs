@@ -5,6 +5,7 @@
  * Se o build falhar, o site continua no release anterior.
  */
 import { spawn } from "node:child_process";
+import { randomBytes } from "node:crypto";
 import { cp, readdir, readlink, rename, rm, symlink, mkdir } from "node:fs/promises";
 import path from "node:path";
 import type { FastifyBaseLogger } from "fastify";
@@ -133,13 +134,15 @@ export class BuildQueue {
 
   private async buildRelease(reasons: string[]): Promise<void> {
     const started = Date.now();
-    const release = new Date().toISOString().replace(/[-:]/g, "").replace(/\..+/, "") + "-" + process.pid;
+    // Milissegundos e sufixo aleatório: dois builds nunca recebem a mesma pasta, nem no mesmo segundo
+    const release = `${new Date().toISOString().replace(/[-:.Z]/g, "")}-${process.pid}-${randomBytes(3).toString("hex")}`;
     const outDir = path.join(this.env.releasesDir, release);
     // O Astro move arquivos (rename) da pasta interna dele para o outDir; entre o disco do container
     // e o volume /data isso falha (EXDEV). Então o build sai numa pasta do próprio projeto e é copiado
     // para o volume como .partial, renomeado (mesmo disco, atômico) e só então publicado.
     const staging = path.join(this.env.projectDir, ".astro", "staging", release);
     const partial = `${outDir}.partial`;
+    let moved = false;
     this.status.state = "building";
     this.log.info({ release, reasons }, "build iniciado");
     const childEnv: NodeJS.ProcessEnv = {
@@ -164,8 +167,9 @@ export class BuildQueue {
       await precompress(staging);
       await cp(staging, partial, { recursive: true });
       await rename(partial, outDir);
+      moved = true;
       await rm(staging, { recursive: true, force: true });
-      await this.swap(outDir);
+      await this.swap(outDir, release);
       await this.prune(release);
       const durationMs = Date.now() - started;
       this.status.lastBuild = { ok: true, finishedAt: new Date().toISOString(), durationMs, release, reasons };
@@ -175,7 +179,9 @@ export class BuildQueue {
       const error = (err as Error).message;
       this.status.lastBuild = { ok: false, finishedAt: new Date().toISOString(), durationMs: Date.now() - started, error, reasons };
       this.log.error({ release, err: error }, "build falhou; o site continua no release anterior");
-      for (const dir of [staging, partial, outDir]) await rm(dir, { recursive: true, force: true });
+      for (const dir of [staging, partial]) await rm(dir, { recursive: true, force: true });
+      // Só apaga a pasta que este build criou, e nunca a que está no ar
+      if (moved && !(await this.isActive(release))) await rm(outDir, { recursive: true, force: true });
       this.scheduleRetry();
     }
   }
@@ -194,11 +200,19 @@ export class BuildQueue {
   }
 
   /** Troca atômica: cria um symlink temporário e renomeia por cima de `current`. */
-  private async swap(outDir: string): Promise<void> {
-    const tmp = `${this.env.currentLink}.tmp-${process.pid}`;
+  private async swap(outDir: string, release: string): Promise<void> {
+    const tmp = `${this.env.currentLink}.tmp-${release}`;
     await rm(tmp, { force: true });
     await symlink(outDir, tmp, "dir");
     await rename(tmp, this.env.currentLink);
+  }
+
+  private async isActive(release: string): Promise<boolean> {
+    try {
+      return path.basename(await readlink(this.env.currentLink)) === release;
+    } catch {
+      return false;
+    }
   }
 
   /** Mantém os `keepReleases` mais recentes (e sempre o atual). */

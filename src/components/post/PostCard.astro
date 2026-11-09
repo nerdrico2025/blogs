@@ -2,6 +2,7 @@
 import site from "../../../site.config.ts";
 import { categoryUrl } from "../../../shared/settings.ts";
 import Picture from "../Picture.astro";
+import CoverFallback from "./CoverFallback.astro";
 import AuthorSignature from "../article/AuthorSignature.astro";
 import type { PostView } from "../../lib/posts.ts";
 import { formatDate, isoDate } from "../../lib/format.ts";
@@ -17,7 +18,7 @@ const cover = post.entry.data.cover;
 ---
 <article class="card post-card">
   <div class="img-box">
-    {cover && <Picture src={cover.src} alt={cover.alt} sizes="(max-width: 544px) calc(100vw - 58px), (max-width: 921px) 36vw, 300px" fallbackWidth={480} priority={priority} />}
+    {cover ? <Picture src={cover.src} alt={cover.alt} sizes="(max-width: 544px) calc(100vw - 58px), (max-width: 921px) 36vw, 300px" fallbackWidth={480} priority={priority} /> : <CoverFallback />}
   </div>
   <div class="post-card-body">
     <a class="post-cat" href={categoryUrl(site, post.category.slug)}>{post.category.name}</a>

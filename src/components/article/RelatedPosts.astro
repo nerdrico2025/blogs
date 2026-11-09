@@ -1,6 +1,7 @@
 ---
 import site from "../../../site.config.ts";
 import Picture from "../Picture.astro";
+import CoverFallback from "../post/CoverFallback.astro";
 import type { PostView } from "../../lib/posts.ts";
 interface Props {
   posts: PostView[];
@@ -16,7 +17,7 @@ const cfg = site.article.related;
       {posts.map((p) => (
         <article class="related-card">
           <div class="img-box">
-            {p.entry.data.cover && <Picture src={p.entry.data.cover.src} alt="" sizes="(max-width: 544px) calc(100vw - 64px), (max-width: 768px) 45vw, 260px" fallbackWidth={480} />}
+            {p.entry.data.cover ? <Picture src={p.entry.data.cover.src} alt="" sizes="(max-width: 544px) calc(100vw - 64px), (max-width: 768px) 45vw, 260px" fallbackWidth={480} /> : <CoverFallback />}
           </div>
           <span class="kicker">{p.category.name}</span>
           <h3><a href={p.url}>{p.title}</a></h3>

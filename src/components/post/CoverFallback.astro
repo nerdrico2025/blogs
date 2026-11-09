@@ -1,0 +1,6 @@
+---
+/** Post sem capa: o logotipo do blog centralizado no quadro da imagem, para os cartões continuarem alinhados. */
+import site from "../../../site.config.ts";
+const { logo } = site;
+---
+<img class="cover-fallback" src={logo.src} width={logo.width} height={logo.height} alt="" loading="lazy" decoding="async" />

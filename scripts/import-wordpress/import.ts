@@ -34,6 +34,8 @@ const HELP = `Uso: node scripts/import-wordpress/import.ts --from <url> --blog <
   --slug <a,b>          só estes posts (slugs da origem)
   --since <AAAA-MM-DD>  ignora os posts da origem publicados antes desta data
   --exclude <arquivo>   ignora os slugs listados (um por linha, # comenta)
+  --drop-links <arquivo> tira do texto os links para estes caminhos da origem (um por linha, # comenta;
+                        "post:<slug> <caminho>" vale só para aquele post)
   --include-pages <a,b> importa também estas páginas do WordPress, como posts (cada uma precisa de
                         uma regra "post:<slug> => <categoria>" no mapeamento)
   --verbose             mostra o começo do HTML limpo de cada post
@@ -57,6 +59,7 @@ const { values: args } = parseArgs({
     slug: { type: "string" },
     since: { type: "string" },
     exclude: { type: "string" },
+    "drop-links": { type: "string" },
     "include-pages": { type: "string" },
     verbose: { type: "boolean", default: false },
     "suggest-categories": { type: "boolean", default: false },
@@ -104,6 +107,18 @@ if (args.exclude) {
   for (const line of (await readFile(args.exclude, "utf8")).split("\n")) {
     const slug = line.replace(/#.*$/, "").trim();
     if (slug) excluded.add(slugKey(slug));
+  }
+}
+const dropRules: { slug?: string; path: string; used: number }[] = [];
+if (args["drop-links"]) {
+  if (!existsSync(args["drop-links"])) fail(`--drop-links: o arquivo ${args["drop-links"]} não existe.`);
+  for (const line of (await readFile(args["drop-links"], "utf8")).split("\n")) {
+    const parts = line.replace(/#.*$/, "").trim().split(/\s+/).filter(Boolean);
+    if (!parts.length) continue;
+    const scoped = parts[0]!.startsWith("post:");
+    const rule = scoped ? { slug: slugKey(parts[0]!.slice("post:".length)), path: parts[1] ?? "", used: 0 } : { path: parts[0]!, used: 0 };
+    if (!rule.path.startsWith("/") || parts.length !== (scoped ? 2 : 1)) fail(`--drop-links: linha inválida: "${line}"`);
+    dropRules.push(rule);
   }
 }
 const slugs = args.slug ? args.slug.split(",").map((s) => s.trim()).filter(Boolean) : undefined;
@@ -385,6 +400,8 @@ const report = {
   /** Imagens do corpo que não baixam e saem do texto, por post. */
   bodyLost: new Map<string, number>(),
   audios: [] as { post: string; result: AudioResult }[],
+  /** Links tirados do texto pela lista --drop-links. */
+  linksDropped: [] as { post: string; path: string }[],
   /** Links do corpo que ainda ficaram com /category/ num blog com outro prefixo. */
   legacyCategoryLinks: [] as { post: string; href: string }[],
 };
@@ -430,7 +447,14 @@ async function importPost(post: SourcePost, n: number): Promise<void> {
     return;
   }
 
-  const prep = prepareHtml(post.html, { base: source.url, oldHosts, postTitle: post.title, resolveLink });
+  const dropLink = (p: string) => {
+    const rule = dropRules.find((r) => r.path === p && (!r.slug || r.slug === slugKey(post.slug)));
+    if (!rule) return false;
+    rule.used++;
+    report.linksDropped.push({ post: post.slug, path: p });
+    return true;
+  };
+  const prep = prepareHtml(post.html, { base: source.url, oldHosts, postTitle: post.title, resolveLink, dropLink });
   const featuredRef: ImageRef | undefined = post.featured && {
     url: post.featured.url,
     candidates: originalCandidates(post.featured.url),
@@ -607,6 +631,11 @@ const audioBad = report.audios.filter((a) => !a.result.ok);
 console.log(`Áudios:       ${audioOk.length} ${dryRun ? "disponíveis para copiar" : "copiados"}, ${audioBad.length} com erro (o mesmo arquivo conta uma vez por post)`);
 for (const a of audioOk) console.log(`  - ${a.post}: ${a.result.url} (${MB(a.result.bytes ?? 0)})${a.result.target ? ` → ${a.result.target}` : ""}`);
 for (const a of audioBad) console.log(`  - FALHA ${a.post}: ${a.result.url} (${a.result.error})`);
+if (dropRules.length) {
+  console.log(`Links removidos do texto (--drop-links): ${report.linksDropped.length}`);
+  for (const l of report.linksDropped) console.log(`  - ${l.post}: ${l.path}`);
+  for (const r of dropRules) if (!r.used) warn(`--drop-links: nenhum link para ${r.path}${r.slug ? ` em ${r.slug}` : ""}`);
+}
 if (categoryBase(site) !== "category") {
   console.log(`Links do corpo com o prefixo antigo /category/: ${report.legacyCategoryLinks.length}`);
   for (const l of report.legacyCategoryLinks) console.log(`  - ${l.post}: ${l.href}`);

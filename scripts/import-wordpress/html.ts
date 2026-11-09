@@ -75,6 +75,8 @@ export interface PrepareOptions {
   postTitle: string;
   /** Caminho antigo (decodificado, com barra final) → caminho novo. */
   resolveLink: (path: string) => string | null;
+  /** Link do domínio antigo que sai do texto (caminho decodificado, como está no link). */
+  dropLink?: (path: string) => boolean;
 }
 
 export interface Prepared {
@@ -143,6 +145,8 @@ export function prepareHtml(rawHtml: string, opts: PrepareOptions): Prepared {
   const images: ImageRef[] = [];
   const seen = new Map<string, ImageRef>();
   const audios = new Map<string, string>();
+  /** Parágrafos de onde saiu um link da lista --drop-links. */
+  const dropped = new Set<Element>();
   const isOld = (u: URL) => opts.oldHosts.has(hostOf(u));
 
   // Legenda de cada imagem dentro de <figure> (vira alt quando o alt é fraco)
@@ -226,6 +230,10 @@ export function prepareHtml(rawHtml: string, opts: PrepareOptions): Prepared {
       const url = href && !href.startsWith("#") ? absolute(href, opts.base) : null;
       el.properties = href ? { href } : {};
       if (url && isOld(url) && /^https?:$/.test(url.protocol)) {
+        if (opts.dropLink?.(decodeURI(url.pathname))) {
+          if (parent.type === "element") dropped.add(parent);
+          return replace();
+        }
         // O áudio é copiado para o blog; finishHtml troca pelo endereço novo
         if (AUDIO_FILE.test(url.pathname)) {
           audios.set(imageKey(url.href), url.href);
@@ -268,6 +276,16 @@ export function prepareHtml(rawHtml: string, opts: PrepareOptions): Prepared {
     }
   });
 
+  // Título logo antes dos parágrafos que perderam o link: sem nada embaixo, ele sai junto
+  const isHeading = (el: Element | undefined) => Boolean(el && /^h[1-6]$/.test(el.tagName));
+  const orphanCandidates = new Set<Element>();
+  let lastHeading: Element | undefined;
+  for (const el of tree.children.filter((c): c is Element => c.type === "element")) {
+    if (isHeading(el)) lastHeading = el;
+    else if (!dropped.has(el)) lastHeading = undefined;
+    else if (lastHeading) orphanCandidates.add(lastHeading);
+  }
+
   // Parágrafos que ficaram vazios (sobra de shortcode ou &nbsp;)
   visit(tree, "element", (node: Element, index, parent) => {
     if (!parent || index === undefined || node.tagName !== "p") return;
@@ -278,6 +296,12 @@ export function prepareHtml(rawHtml: string, opts: PrepareOptions): Prepared {
     }
     return;
   });
+
+  for (const heading of orphanCandidates) {
+    const siblings = tree.children.filter((c): c is Element => c.type === "element");
+    const next = siblings[siblings.indexOf(heading) + 1];
+    if (!next || isHeading(next)) tree.children.splice(tree.children.indexOf(heading), 1);
+  }
 
   return { tree, images, audios: [...audios.values()], stats };
 }

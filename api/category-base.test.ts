@@ -25,6 +25,10 @@ interface Report {
   apiLink: string;
   card: boolean;
   nav: boolean;
+  defaultImage: string;
+  homeFallbacks: number;
+  postOgImage?: string;
+  postLdImage: boolean;
 }
 
 /** Roda no processo filho: faz o build de um blog com 11 posts numa categoria e faz os pedidos ao servidor. */
@@ -79,7 +83,14 @@ async function child(blog: string): Promise<void> {
   const home = await get("/");
   const sitemap = await get("/sitemap.xml");
   const api = await ctx.app.inject({ url: "/wp-json/wp/v2/categories" });
+  // Os posts deste teste não têm capa
+  const post = await get("/teste-1/");
+  const defaultImage = `https://blog.example${site.seo.defaultImage.src}`;
   const report: Report = {
+    defaultImage,
+    homeFallbacks: (home.body.match(/class="cover-fallback"/g) ?? []).length,
+    postOgImage: /<meta property="og:image" content="([^"]+)"/.exec(post.body)?.[1],
+    postLdImage: post.body.includes(`"image":["${defaultImage}"]`),
     base,
     page1: page1.statusCode,
     page2: page2.statusCode,
@@ -131,6 +142,9 @@ if (process.env.CATEGORY_BASE_CHILD) {
       assert.doesNotMatch(r.html, /\/category\//, "nada na página cita o prefixo antigo (menu, breadcrumb, JSON-LD)");
       assert.equal(r.apiLink, "https://blog.example/categoria/email-marketing/");
       assert.ok(r.card && r.nav, "cartões e menu da home usam o prefixo novo");
+      assert.ok(r.homeFallbacks > 0, "post sem capa mostra o logotipo no quadro da imagem");
+      assert.equal(r.postOgImage, r.defaultImage);
+      assert.ok(r.postLdImage, "JSON-LD do artigo sem capa usa a imagem padrão da marca");
     });
 
     test("redirects.txt: nenhum destino com /category/; cada categoria e sua paginação têm 301; slugs da origem vão para o destino novo", async () => {
@@ -142,6 +156,20 @@ if (process.env.CATEGORY_BASE_CHILD) {
         for (let p = 2; p <= n; p++) assert.equal(map.get(`/category/${slug}/page/${p}/`)?.to, `/categoria/${slug}/page/${p}/`);
       }
       assert.equal(map.get("/category/estrategia/")?.to, "/categoria/estrategias/");
+    });
+
+    test("paginação antiga: /secao/ e /category/ dão 301 para uma página que existe na categoria nova", async () => {
+      const map = await rules("nerdrico");
+      const pages: Record<string, number> = { "email-marketing": 5, copywriting: 1, estrategias: 8, "produtos-digitais": 2, trafego: 1, ferramentas: 3, mentalidade: 4 };
+      assert.equal(map.get("/secao/estrategia/page/2/")?.to, "/categoria/estrategias/page/2/");
+      assert.equal(map.get("/category/estrategia/page/2/")?.to, "/categoria/estrategias/page/2/");
+      assert.equal(map.get("/secao/copy/e-mail-marketing/page/5/")?.to, "/categoria/email-marketing/page/5/");
+      assert.equal(map.get("/secao/blog/page/21/")?.to, "/categoria/estrategias/page/8/", "além do fim vai para a última página");
+      assert.equal(map.get("/secao/trafego/page/2/")?.to, "/categoria/trafego/", "categoria nova com uma página só");
+      for (const [from, r] of map) {
+        const m = /^\/categoria\/([^/]+)\/page\/(\d+)\/$/.exec(r.to);
+        if (m) assert.ok(Number(m[2]) >= 2 && Number(m[2]) <= pages[m[1]!]!, `${from} → ${r.to}`);
+      }
     });
   });
 
@@ -159,6 +187,7 @@ if (process.env.CATEGORY_BASE_CHILD) {
         assert.doesNotMatch(r.sitemap, /\/categoria\//);
         assert.doesNotMatch(r.html, /\/categoria\//);
         assert.equal(r.apiLink, `https://blog.example/category/${slug}/`);
+        assert.equal(r.postOgImage, r.defaultImage);
       });
 
       test("redirects.txt sem nenhuma regra para /categoria/", async () => {
