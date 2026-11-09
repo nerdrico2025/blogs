@@ -112,6 +112,9 @@ categoria com `-`, depois data. Post que já está no blog não é apagado: excl
   `POST /media` e o link passa para o endereço novo. Limite de `MAX_AUDIO_UPLOAD_MB` (padrão 64) no servidor.
 - **Links a retirar (`--drop-links <arquivo>`):** caminhos da origem, um por linha (`post:<slug> <caminho>` vale
   só para aquele post). O link sai do texto; parágrafo vazio e título que fica sem conteúdo saem junto.
+  Com `<caminho> => <URL de áudio>`, o link é trocado por esse áudio, copiado para o blog.
+- **Sumário de plugin** (Easy Table of Contents, Rank Math, Yoast e similares) sai do corpo, porque o blog gera o
+  próprio. Lista só de âncoras sem marca de plugin é índice escrito à mão: fica no texto e entra no relatório.
 - **Links internos** para o domínio antigo (com ou sem `www`, `http` ou `https`) viram caminhos do blog
   novo: post → `/<slug>/`, categoria → `/<categoryBase>/<nova>/` (padrão `/category/`). Link para a foto ampliada é desembrulhado.
   Link sem destino conhecido (uma página, por exemplo) fica com o mesmo caminho e é listado no relatório.

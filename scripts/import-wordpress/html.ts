@@ -77,6 +77,8 @@ export interface PrepareOptions {
   resolveLink: (path: string) => string | null;
   /** Link do domínio antigo que sai do texto (caminho decodificado, como está no link). */
   dropLink?: (path: string) => boolean;
+  /** URL de áudio que substitui o link do domínio antigo (o arquivo é copiado para o blog). */
+  replaceLink?: (path: string) => string | null;
 }
 
 export interface Prepared {
@@ -84,6 +86,11 @@ export interface Prepared {
   images: ImageRef[];
   /** Áudios hospedados na origem e usados no post (URLs absolutas, sem repetir). */
   audios: string[];
+  /** Áudios vindos de --drop-links com "=>": se a cópia falhar, o link sai em vez de apontar para outro site. */
+  replacedAudios: string[];
+  /** Blocos de sumário de plugin removidos e listas de âncoras sem marca de plugin (mantidas). */
+  tocsRemoved: number;
+  manualTocs: number;
   stats: { shortcodes: string[]; embedsRemoved: number; videosLinked: number; linksRewritten: number; linksUnresolved: string[] };
 }
 
@@ -96,6 +103,19 @@ const KEEP_ATTRS: Record<string, string[]> = {
 const DROP_TAGS = new Set(["script", "style", "noscript", "template", "form", "input", "button", "select", "textarea", "svg", "object", "embed"]);
 
 const hostOf = (u: URL) => u.hostname.toLowerCase().replace(/^www\./, "");
+
+/**
+ * Marcas (id ou classe) do contêiner de sumário dos plugins: Easy Table of Contents, Rank Math, Yoast, Table of
+ * Contents Plus, LuckyWP, SimpleTOC, Spectra, Kadence, Ultimate Blocks, Elementor e o bloco do Gutenberg.
+ * O blog gera o próprio sumário. Sem uma destas marcas, nada sai: índice escrito à mão fica e vai para o relatório.
+ */
+const TOC_BLOCKS = new Set([
+  "ez-toc-container", "ez-toc-widget-container", "rank-math-toc", "wp-block-rank-math-toc-block", "wp-block-yoast-seo-table-of-contents", "yoast-table-of-contents",
+  "toc_container", "lwptoc", "simpletoc", "wp-block-simpletoc-toc", "wp-block-uagb-table-of-contents", "uagb-toc__wrap", "wp-block-kadence-tableofcontents",
+  "kb-table-of-contents-wrap", "ub_table-of-contents", "wp-block-ub-table-of-contents-block", "elementor-widget-table-of-contents", "wp-block-table-of-contents",
+]);
+const isTocBlock = (el: Element) =>
+  TOC_BLOCKS.has(String(el.properties.id ?? "")) || (Array.isArray(el.properties.className) && el.properties.className.some((c) => TOC_BLOCKS.has(String(c))));
 
 /** Extensões de áudio copiadas da origem para o blog. */
 export const AUDIO_FILE = /\.(mp3|m4a|ogg|oga|wav|aac|opus)$/i;
@@ -147,7 +167,34 @@ export function prepareHtml(rawHtml: string, opts: PrepareOptions): Prepared {
   const audios = new Map<string, string>();
   /** Parágrafos de onde saiu um link da lista --drop-links. */
   const dropped = new Set<Element>();
+  const replaced = new Map<string, string>();
   const isOld = (u: URL) => opts.oldHosts.has(hostOf(u));
+
+  // Sumário de plugin sai antes de tudo: os links dele não entram nas contagens
+  let tocsRemoved = 0;
+  visit(tree, "element", (node: Element, index, parent) => {
+    if (!parent || index === undefined || !isTocBlock(node)) return;
+    (parent.children as RootContent[]).splice(index, 1);
+    tocsRemoved++;
+    return [SKIP, index];
+  });
+  // Lista só com âncoras da própria página, sem marca de plugin: índice escrito à mão, que fica como está
+  let manualTocs = 0;
+  visit(tree, "element", (node: Element) => {
+    if (node.tagName !== "ul" && node.tagName !== "ol") return;
+    const hrefs: string[] = [];
+    visit(node, "element", (a: Element) => {
+      if (a.tagName === "a") hrefs.push(String(a.properties.href ?? ""));
+    });
+    const anchor = (h: string) => {
+      if (h.startsWith("#")) return h.length > 1;
+      const u = absolute(h, opts.base);
+      return Boolean(u?.hash && isOld(u));
+    };
+    if (hrefs.length < 3 || !hrefs.every(anchor)) return;
+    manualTocs++;
+    return SKIP;
+  });
 
   // Legenda de cada imagem dentro de <figure> (vira alt quando o alt é fraco)
   const captions = new Map<Element, string>();
@@ -234,6 +281,13 @@ export function prepareHtml(rawHtml: string, opts: PrepareOptions): Prepared {
           if (parent.type === "element") dropped.add(parent);
           return replace();
         }
+        const replacement = opts.replaceLink?.(decodeURI(url.pathname));
+        if (replacement) {
+          audios.set(imageKey(replacement), replacement);
+          replaced.set(imageKey(replacement), replacement);
+          el.properties.href = replacement;
+          return;
+        }
         // O áudio é copiado para o blog; finishHtml troca pelo endereço novo
         if (AUDIO_FILE.test(url.pathname)) {
           audios.set(imageKey(url.href), url.href);
@@ -303,7 +357,7 @@ export function prepareHtml(rawHtml: string, opts: PrepareOptions): Prepared {
     if (!next || isHeading(next)) tree.children.splice(tree.children.indexOf(heading), 1);
   }
 
-  return { tree, images, audios: [...audios.values()], stats };
+  return { tree, images, audios: [...audios.values()], replacedAudios: [...replaced.values()], tocsRemoved, manualTocs, stats };
 }
 
 /**
@@ -313,10 +367,17 @@ export function prepareHtml(rawHtml: string, opts: PrepareOptions): Prepared {
  */
 export function finishHtml(prep: Prepared, newSrc: (url: string) => string | null, newAudio: (url: string) => string | null = () => null): string {
   const audioKeys = new Set(prep.audios.map(imageKey));
-  visit(prep.tree, "element", (node: Element) => {
+  const replacedKeys = new Set(prep.replacedAudios.map(imageKey));
+  visit(prep.tree, "element", (node: Element, index, parent) => {
     if (node.tagName !== "a" || !audioKeys.has(imageKey(String(node.properties.href)))) return;
     const url = new URL(String(node.properties.href));
-    node.properties.href = newAudio(url.href) ?? url.pathname;
+    const target = newAudio(url.href);
+    if (!target && replacedKeys.has(imageKey(url.href)) && parent && index !== undefined) {
+      (parent.children as ElementContent[]).splice(index, 1);
+      return [SKIP, index];
+    }
+    node.properties.href = target ?? url.pathname;
+    return;
   });
   visit(prep.tree, "element", (node: Element, index, parent) => {
     if (node.tagName !== "img" || !parent || index === undefined) return;

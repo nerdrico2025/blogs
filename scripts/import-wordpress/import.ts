@@ -13,7 +13,7 @@ import { parseArgs } from "node:util";
 import sharp from "sharp";
 import { BlogApi, type BlogCategory, type BlogMedia } from "./blog.ts";
 import { categoryBase, categoryUrl } from "../../shared/settings.ts";
-import { finishHtml, imageKey, originalCandidates, prepareHtml, type ImageRef } from "./html.ts";
+import { AUDIO_FILE, finishHtml, imageKey, originalCandidates, prepareHtml, type ImageRef } from "./html.ts";
 import { CategoryMapper, manualRedirects, parseCategoryMap, SKIP, slugKey, writeRedirects } from "./mapping.ts";
 import { fetchWithRetry, pathOf, readPages, readRest, readXml, type SourcePost, type SourceSite } from "./source.ts";
 import { runSuggest } from "./suggest.ts";
@@ -35,7 +35,8 @@ const HELP = `Uso: node scripts/import-wordpress/import.ts --from <url> --blog <
   --since <AAAA-MM-DD>  ignora os posts da origem publicados antes desta data
   --exclude <arquivo>   ignora os slugs listados (um por linha, # comenta)
   --drop-links <arquivo> tira do texto os links para estes caminhos da origem (um por linha, # comenta;
-                        "post:<slug> <caminho>" vale só para aquele post)
+                        "post:<slug> <caminho>" vale só para aquele post; "<caminho> => <URL de áudio>"
+                        troca o link pelo áudio dessa URL, copiado para o blog)
   --include-pages <a,b> importa também estas páginas do WordPress, como posts (cada uma precisa de
                         uma regra "post:<slug> => <categoria>" no mapeamento)
   --verbose             mostra o começo do HTML limpo de cada post
@@ -109,15 +110,19 @@ if (args.exclude) {
     if (slug) excluded.add(slugKey(slug));
   }
 }
-const dropRules: { slug?: string; path: string; used: number }[] = [];
+const dropRules: { slug?: string; path: string; used: number; to?: string }[] = [];
 if (args["drop-links"]) {
   if (!existsSync(args["drop-links"])) fail(`--drop-links: o arquivo ${args["drop-links"]} não existe.`);
   for (const line of (await readFile(args["drop-links"], "utf8")).split("\n")) {
-    const parts = line.replace(/#.*$/, "").trim().split(/\s+/).filter(Boolean);
-    if (!parts.length) continue;
+    const all = line.replace(/#.*$/, "").trim().split(/\s+/).filter(Boolean);
+    if (!all.length) continue;
+    const arrow = all.indexOf("=>");
+    const parts = arrow === -1 ? all : all.slice(0, arrow);
+    const to = arrow === -1 ? undefined : all[arrow + 1];
     const scoped = parts[0]!.startsWith("post:");
-    const rule = scoped ? { slug: slugKey(parts[0]!.slice("post:".length)), path: parts[1] ?? "", used: 0 } : { path: parts[0]!, used: 0 };
-    if (!rule.path.startsWith("/") || parts.length !== (scoped ? 2 : 1)) fail(`--drop-links: linha inválida: "${line}"`);
+    const rule = scoped ? { slug: slugKey(parts[0]!.slice("post:".length)), path: parts[1] ?? "", used: 0, to } : { path: parts[0]!, used: 0, to };
+    const validTarget = arrow === -1 || (all.length === arrow + 2 && /^https?:\/\/\S+$/.test(to ?? "") && AUDIO_FILE.test(new URL(to!).pathname));
+    if (!rule.path.startsWith("/") || parts.length !== (scoped ? 2 : 1) || !validTarget) fail(`--drop-links: linha inválida: "${line}"`);
     dropRules.push(rule);
   }
 }
@@ -402,6 +407,11 @@ const report = {
   audios: [] as { post: string; result: AudioResult }[],
   /** Links tirados do texto pela lista --drop-links. */
   linksDropped: [] as { post: string; path: string }[],
+  linksReplaced: [] as { post: string; path: string; to: string }[],
+  /** Posts que tinham sumário de plugin no corpo (removido). */
+  tocsRemoved: [] as string[],
+  /** Posts com lista só de âncoras, sem marca de plugin (mantida). */
+  manualTocs: [] as { post: string; lists: number }[],
   /** Links do corpo que ainda ficaram com /category/ num blog com outro prefixo. */
   legacyCategoryLinks: [] as { post: string; href: string }[],
 };
@@ -447,14 +457,24 @@ async function importPost(post: SourcePost, n: number): Promise<void> {
     return;
   }
 
+  const ruleFor = (p: string) => dropRules.find((r) => r.path === p && (!r.slug || r.slug === slugKey(post.slug)));
   const dropLink = (p: string) => {
-    const rule = dropRules.find((r) => r.path === p && (!r.slug || r.slug === slugKey(post.slug)));
-    if (!rule) return false;
+    const rule = ruleFor(p);
+    if (!rule || rule.to) return false;
     rule.used++;
     report.linksDropped.push({ post: post.slug, path: p });
     return true;
   };
-  const prep = prepareHtml(post.html, { base: source.url, oldHosts, postTitle: post.title, resolveLink, dropLink });
+  const replaceLink = (p: string) => {
+    const rule = ruleFor(p);
+    if (!rule?.to) return null;
+    rule.used++;
+    report.linksReplaced.push({ post: post.slug, path: p, to: rule.to });
+    return rule.to;
+  };
+  const prep = prepareHtml(post.html, { base: source.url, oldHosts, postTitle: post.title, resolveLink, dropLink, replaceLink });
+  if (prep.tocsRemoved) report.tocsRemoved.push(post.slug);
+  if (prep.manualTocs) report.manualTocs.push({ post: post.slug, lists: prep.manualTocs });
   const featuredRef: ImageRef | undefined = post.featured && {
     url: post.featured.url,
     candidates: originalCandidates(post.featured.url),
@@ -482,7 +502,7 @@ async function importPost(post: SourcePost, n: number): Promise<void> {
       const r = byKey.get(imageKey(url));
       return r?.ok ? (dryRun ? url : r.target!) : null;
     },
-    (url) => audioByKey.get(imageKey(url))?.target ?? null
+    (url) => audioByKey.get(imageKey(url))?.target ?? (dryRun && audioByKey.get(imageKey(url))?.ok ? url : null)
   );
   const featured = featuredRef ? byKey.get(imageKey(featuredRef.url)) : undefined;
   if (!featuredRef) report.noCover.push(post.slug);
@@ -631,9 +651,15 @@ const audioBad = report.audios.filter((a) => !a.result.ok);
 console.log(`Áudios:       ${audioOk.length} ${dryRun ? "disponíveis para copiar" : "copiados"}, ${audioBad.length} com erro (o mesmo arquivo conta uma vez por post)`);
 for (const a of audioOk) console.log(`  - ${a.post}: ${a.result.url} (${MB(a.result.bytes ?? 0)})${a.result.target ? ` → ${a.result.target}` : ""}`);
 for (const a of audioBad) console.log(`  - FALHA ${a.post}: ${a.result.url} (${a.result.error})`);
+console.log(`Sumários antigos removidos do corpo: ${report.tocsRemoved.length} posts`);
+for (const slug of report.tocsRemoved) console.log(`  - ${slug}`);
+console.log(`Índices escritos à mão (mantidos): ${report.manualTocs.length} posts`);
+for (const m of report.manualTocs) console.log(`  - ${m.post}: ${m.lists} lista(s) de âncoras`);
 if (dropRules.length) {
   console.log(`Links removidos do texto (--drop-links): ${report.linksDropped.length}`);
   for (const l of report.linksDropped) console.log(`  - ${l.post}: ${l.path}`);
+  console.log(`Links trocados por áudio copiado (--drop-links): ${report.linksReplaced.length}`);
+  for (const l of report.linksReplaced) console.log(`  - ${l.post}: ${l.path} → ${l.to}`);
   for (const r of dropRules) if (!r.used) warn(`--drop-links: nenhum link para ${r.path}${r.slug ? ` em ${r.slug}` : ""}`);
 }
 if (categoryBase(site) !== "category") {
