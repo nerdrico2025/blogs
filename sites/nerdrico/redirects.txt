@@ -5,5 +5,113 @@
 # /sobre-nos/ /sobre/
 # /quem-somos/ /sobre/
 
+# ---------------------------------------------------------------- regras manuais do nerdrico
+# Terceira coluna opcional: o tipo do redirect (sem ela, 301). 307 = temporário, para links de afiliado.
+# O importador usa as regras 301 para levar os links do corpo dos posts direto ao destino final;
+# os links curtos (307) continuam passando pelo blog.
+
+# Posts excluídos: notícias de IA (excluir-nerdrico.txt)
+/ia-na-busca-de-emprego-5-dicas-para-se-destacar-em-2025/ /category/ferramentas/
+/spotify-revoluciona-com-ia-5-novidades-que-vao-mudar-sua-experiencia-musical/ /category/ferramentas/
+/revolucao-optica-da-ibm-ia-mais-rapida-e-sustentavel-em-2024/ /category/ferramentas/
+/ia-para-o-bem-5-insights-da-conferencia-ai-for-good/ /category/ferramentas/
+/utah-lidera-regulamentacao-de-ia-nos-eua-o-que-muda/ /category/ferramentas/
+/india-lanca-primeira-ia-espacial-revolucao-na-analise-de-dados-orbitais/ /category/ferramentas/
+/ia-na-tecnologia-b2b-3-mudancas-de-reativa-para-antecipatoria/ /category/ferramentas/
+/nvidia-explode-lucro-dobra-com-chips-de-ia-em-2024/ /category/ferramentas/
+/urgente-por-que-a-ia-e-o-ponto-cego-na-formacao-medica/ /category/ferramentas/
+/ftc-proibe-rytr-o-fim-das-avaliacoes-falsas-geradas-por-ia/ /category/ferramentas/
+/ia-para-pmes-hub-da-sba-revoluciona-negocios-em-2025/ /category/ferramentas/
+/ia-revoluciona-ensaios-clinicos-5-avancos-surpreendentes/ /category/ferramentas/
+/deepseek-o-que-e/ /category/ferramentas/
+
+# Posts excluídos: eventos e promoções que já passaram
+/nerd-rico-na-brasil-game-show/ /category/estrategias/
+/formula-de-lancamento-ao-vivo-dez-2013/ /category/estrategias/
+/vh-bonus/ /category/estrategias/
+/uma-noticia-boa-e-uma-excelente-para-voce/ /category/estrategias/
+/quem-vai-afiliados-brasil-2014/ /category/estrategias/
+/ebramad-com-inscricoes-abertas/ /category/estrategias/
+/video-o-fim-da-grande-familia/ /category/estrategias/
+/promocoes-secretas-da-black-friday-2018/ /category/estrategias/
+/maestria-ao-vivo-2019/ /category/estrategias/
+/digital-sem-barreiras-e-o-novo-formula-de-lancamento/ /category/estrategias/
+/curso-digital-sem-barreiras-10-motivos-para-voce-comprar-hoje/ /category/estrategias/
+
+# Páginas do WordPress que não vieram para o blog
+/historia-nerdrico/ /sobre/
+/contato-2/ /contato/
+/agencia-para-mentores/ /contato/
+/ferramentas/ /category/ferramentas/
+/marketingdigital/ /
+/novo-blog/ /
+/conteudos/ /
+/em-breve/ /
+/primeira-venda-nerd-rico/ /sobre/
+/empreendedores-digitais-de-santa-catarina-estao-usando-a-inteligencia-artificial-para-transformar-o-seu-negocio-em-uma-maquina-de-fazer-dinheiro/ /sobre/
+/lucrando-com-plr/lucrando-com-plr-politicas-de-privacidade/ /politica-de-privacidade/
+/lucrando-com-plr/lucrando-com-plr-termos-de-uso/ /termos-de-uso/
+/exercicio-de-prosperidade-e-riqueza/ /category/mentalidade/
+/exercicio-de-prosperidade-e-riqueza/efeito-arrasa-quarteirao-grupo-desafio/ /category/mentalidade/
+/exercicio-de-prosperidade-e-riqueza/o-livro-que-transformou-a-minha-vida-aos-18-anos/ /category/mentalidade/
+/osegredodeobama/ /o-segredo-de-obama/
+/6-dicas-ganhar-dinheiro-enviando-emails/ /6-dicas-escrever-e-mails-que-vendam/
+/como-abrir-um-negocio-com-pouco-dinheiro/ /como-abrir-negocio-pouco-dinheiro/
+/como-antonio-luiggi-usa-o-leadlovers-para-gerenciar-um-negocio-digital/ /analise-completa-todas-as-vantagens-e-beneficios-do-leadlovers/
+/aprenda-os-fundamentos-do-storytelling-para-vender-mais/ /storytelling-como-contar-historias/
+/como-comecar-a-vender-na-internet/ /vender-internet-marketing-digital/
+/como-ganhar-1000-por-dia-licenciamento-produtos-digitais-2021/ /como-ganhar-com-produtos-digitais-para-revenda/
+/como-ganhar-de-r-100-a-r-1000-por-dia-com-licenciamento-de-produtos-digitais/ /como-ganhar-com-produtos-digitais-para-revenda/
+/licenciamento-produtos-digitais-entrevista-romualdo-cronemberger/ /como-ganhar-com-produtos-digitais-para-revenda/
+
+# Páginas de venda e captura do WordPress: os cursos ficam no aluno.nerdrico.com.br
+/cursos/ https://aluno.nerdrico.com.br/lista-cursos
+/templates-do-nerd-rico/ https://aluno.nerdrico.com.br/lista-cursos
+/cadastro-gratis/ https://aluno.nerdrico.com.br/lista-cursos
+/lucrando-com-plr/ https://aluno.nerdrico.com.br/lista-cursos
+/lucrando-com-plr/lucrando-com-plr-parabens/ https://aluno.nerdrico.com.br/lista-cursos
+/campanha-caixa-rapido/ https://aluno.nerdrico.com.br/lista-cursos
+/caixa-rapido-parabens-pela-compra-falta-1-passo/ https://aluno.nerdrico.com.br/lista-cursos
+/emails-que-vendem-lancamentos/ https://aluno.nerdrico.com.br/lista-cursos
+/campanhas-de-emails-que-vendem/ https://aluno.nerdrico.com.br/lista-cursos
+/curso-basico-de-storytelling/ https://aluno.nerdrico.com.br/lista-cursos
+/masterclass-com-diego-carmona/ https://aluno.nerdrico.com.br/lista-cursos
+
+# Links curtos de afiliado e grupos (temporários, como na origem)
+/leadlovers/ https://go.hotmart.com/D2846509R 307
+/killerplayer/ https://shareasale.com/r.cfm?b=1982864&u=3184593&m=123110&urllink=&afftrack= 307
+/cursodigitalsembarreiras/ https://aluno.nerdrico.com.br/lista-cursos 307
+/fblinkpost/ http://vip.nerdrico.com.br/pluginfblinkpost?utm_source=youtube 307
+/camtasia/ http://send.onenetworkdirect.net/z/583014/CD238461/ 307
+/hostgator/ https://www.hostgator.com.br/6364.html 307
+/6estagios/ https://www.amazon.com.br/Est%C3%A1gios-Empreendedor-Sucesso-Rafael-Cruz-ebook/dp/B01DH3W09U/ref=sr_1_1?ie=UTF8&qid=1493148187&sr=8-1&keywords=6+est%C3%A1gios 307
+/gruponerdrico/ https://chat.whatsapp.com/ENPHXbUy9Dn6CxF3lbdn1M 307
+
+# Slugs antigos que o WordPress já redirecionava
+/go/leadlovers/ /leadlovers-o-tudo-em-um-de-baixo-custo-e-alta-qualidade-para-marketers/
+/aprenda-a-criar-a-persona-e-entenda-a-diferenca-entre-persona-e-publico-alvo/ /persona/
+/como-ganhar-com-licenciamento-de-produtos-digitais/ /como-ganhar-com-produtos-digitais-para-revenda/
+/o-poder-da-confiabilidade/ /o-poder-da-confianca/
+/o-poder-da-copy/ /o-poder-do-copywriting/
+/licenciamento-de-produtos-digitais-vale-a-pena/ /licenciamento-de-produtos-digitais-americanos/
+/como-vender-internet-30-dias-50-porcento-lucro/ /vender-internet-renda-extra/
+/5-dicas-de-e-mail-marketing-que-voce-precisa-conhecer/ /5-dicas-de-e-mail-marketing/
+/licenciamento-de-produtos-digitais-como-licenciar-produtos-digitais-do-exterior/ /licenciamento-de-produtos-digitais-do-exterior/
+/comprar-licencimento-de-produtos-digitais-americanos/ /licenciamento-de-produtos-digitais-americanos/
+/como-criar-lista-de-email-4-dicas-para-sua-pagina-de-captura/ /como-criar-lista-de-email/
+/conheca-os-5-melhores-assuntos-atrair-atencao-emails/ /melhores-assuntos-para-emails/
+/o-poder-da-segmentacao-da-lista-de-emails/ /poder-da-segmentacao-da-lista-de-emails/
+/aprenda-a-segmentar-e-mails-com-o-klickmail/ /como-usar-o-klickmail-segmentar-lista/
+/como-vender-na-internet-marketing-digital/ /vender-internet-marketing-digital/
+/de-desconhecido-top-afiliado-em-3-semanas/ /como-ser-um-top-afiliado-em-21-dias/
+/email-marketing-o-canal-de-vendas-que-desbanca-qualquer-rede-social/ /a-melhor-ferramenta-de-vendas-e-relacionamento-com-o-cliente/
+/nao-fazer-email-marketing-e-um-erro-e-voce-precisa-entender-porque/ /nao-fazer-email-marketing-e-um-erro/
+/escreva-ganchos-matadores-em-5-minutos-sem-pensar/ /como-escrever-titulos-que-vendem/
+/os-melhores-produtos-para-vender-na-internet/ /melhores-produtos-vender-internet/
+/o-checklist-marketing-digital/ /o-checklist-do-marketing-digital/
+/blog/e-mail-marketing-de-resultados-talento-pratica/ /e-mail-marketing-de-resultados-talento-pratica/
+/blog/10-coisas-se-fazer-antes-de-enviar-um-e-mail-para-sua-lista/ /10-coisas-se-fazer-antes-de-enviar-um-e-mail-para-sua-lista/
+/blog/6-dicas-escrever-e-mails-que-vendam/ /6-dicas-escrever-e-mails-que-vendam/
+
 # >>> importado do WordPress (scripts/import-wordpress). Gerado: não edite dentro deste bloco.
 # <<< fim da importação do WordPress

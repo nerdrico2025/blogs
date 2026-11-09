@@ -6,6 +6,8 @@ updated: 2026-10-27
 
 Ao acessar o site **{{site.domain}}** ({{site.name}}), você concorda com estes Termos de Uso. Se não concordar, não utilize o site.
 
+O site é mantido por {{legal.razaoSocial}}, CNPJ {{legal.cnpj}}.
+
 ## 1. Conteúdo
 
 Os textos, imagens e demais materiais publicados têm caráter informativo. Fazemos o possível para mantê-los corretos e atualizados, mas preços, regras e condições de terceiros podem mudar sem aviso. Confirme as informações com as empresas e os órgãos oficiais antes de tomar decisões.
@@ -32,6 +34,10 @@ Estes termos podem ser atualizados a qualquer momento. A data da última atualiz
 
 ## 7. Foro
 
-Fica eleito o foro da comarca de {{legal.city}} para resolver qualquer questão relacionada a estes termos, conforme a legislação brasileira.
+Fica eleito o foro da comarca de {{legal.cidade}} para resolver qualquer questão relacionada a estes termos, conforme a legislação brasileira.
+
+## Links para outros sites
+
+Por cortesia, alguns artigos levam a sites de terceiros que podem trazer informações úteis. Estes Termos e a nossa Política de Privacidade não valem para esses sites: consulte as regras de cada um.
 
 Dúvidas: {{contact.email}}.

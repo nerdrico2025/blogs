@@ -33,7 +33,7 @@ const UI_FILES: Record<string, string> = { "admin.css": "text/css", "admin.js": 
 const digest = (s: string) => createHash("sha256").update(s).digest();
 const WORDBEE_USER = "wordbee";
 /** Marcadores aceitos nas páginas fixas (src/lib/placeholders.ts). Outro marcador faria a publicação falhar. */
-const PAGE_PLACEHOLDERS = new Set(["site.name", "site.url", "site.domain", "contact.email", "legal.owner", "legal.city"]);
+const PAGE_PLACEHOLDERS = new Set(["site.name", "site.url", "site.domain", "contact.email", "legal.owner", "legal.city", "legal.cidade", "legal.razaoSocial", "legal.cnpj"]);
 const PAGE_LIMITS = { title: 120, description: 300, body: 60_000 };
 const SHARE_IMAGE = { width: 1200, height: 630 };
 

@@ -70,7 +70,8 @@ export interface SiteConfig {
   /** Autor de referência da aba Autor. Sem valor, vale a assinatura de `authors`. */
   authorProfile?: AuthorProfile;
   contact: { email: string };
-  legal: { owner: string; city: string };
+  /** razaoSocial e cnpj são opcionais: sem eles, as páginas mostram "(… a informar)" no lugar do marcador. */
+  legal: { owner: string; city: string; razaoSocial?: string; cnpj?: string };
   social: Author["links"];
   nav: Link[];
   /** Tira do menu as categorias sem nenhum artigo publicado. Sem valor (padrão), o menu mostra todas. */

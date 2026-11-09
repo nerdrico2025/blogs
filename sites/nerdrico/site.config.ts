@@ -65,7 +65,8 @@ export default defineSiteConfig({
 
   /** Usado nas páginas fixas pelos marcadores {{contact.email}} e {{legal.owner}}. */
   contact: { email: "atendimento@nerdrico.com.br" }, // o mesmo dos Termos de Uso da origem
-  legal: { owner: "Nerd Rico", city: "São Paulo, SP" },
+  /** Razão social, CNPJ e cidade ainda não informados: as páginas mostram "(… a informar)". */
+  legal: { owner: "Nerd Rico", city: "" },
 
   social: { youtube: "https://www.youtube.com/onerdrico" },
 

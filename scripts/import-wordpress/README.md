@@ -31,6 +31,7 @@ npm run import-wordpress -- \
 | `--verbose` | Mostra o começo do HTML limpo de cada post (na simulação) |
 | `--since <AAAA-MM-DD>` | Ignora os posts publicados antes desta data (a data em si entra) |
 | `--exclude <arquivo>` | Ignora os slugs listados no arquivo (ver "Deixar posts de fora") |
+| `--include-pages <a,b>` | Importa também estas páginas do WordPress, como posts no mesmo endereço (cada uma precisa de uma regra `post:<slug>`) |
 | `--suggest-categories` | Só sugere o mapeamento de categorias (ver abaixo). Não importa nada |
 
 **Antes de tudo:** o destino precisa ser o blog novo. Enquanto o domínio ainda aponta para o WordPress
@@ -88,6 +89,12 @@ categoria com `-`, depois data. Post que já está no blog não é apagado: excl
   `_yoast_wpseo_*` ou `rank_math_*`. O " - Nome do Site" do fim do título é removido, porque o blog já
   acrescenta o nome dele. O meta title vai para `seoTitle` no frontmatter, só se for diferente do título.
 - **Categoria:** a primeira regra do arquivo de mapeamento que bater com alguma categoria do post.
+- **Um post só:** `post:<slug> => <categoria>` vale só para aquele post e vence as regras por categoria
+  (ex.: posts que na origem estão só numa categoria genérica). `post:<slug> => -` deixa o post de fora. Slug de
+  regra que não existe na origem vira aviso.
+- **Páginas como post:** `--include-pages slug-a,slug-b` traz páginas do WordPress (não só posts), com a origem
+  marcada como nos posts. Na entrada, sai o título repetido no começo do texto (com ou sem `[artigo]`) e os
+  "títulos" que são só um endereço. A categoria vem da regra `post:<slug>`.
 - **Não importar:** no mapeamento, `categoria => -` marca uma categoria para ficar de fora (ex.: posts de
   demonstração do tema). O post que só tem categorias assim sai no relatório como "ignorado", sem contar como
   falha. Se ele também estiver numa categoria com regra, é importado por ela. O `-` vale antes do `*`, e a
@@ -128,6 +135,17 @@ O blog precisa estar na versão do servidor que devolve `meta.source`; se não e
 pede o deploy.
 
 ## Redirecionamentos
+
+**Regras manuais e links do corpo.** Antes do bloco gerado, o `redirects.txt` pode ter regras feitas à mão,
+com o tipo na 3ª coluna (`/antigo/ /novo/` é 301; `/curto/ https://parceiro.com/x 307` é temporário). Ao
+importar, um link do corpo que aponta para um caminho que não é post nem categoria segue essas regras:
+
+- regra **301/308** (página antiga, slug antigo): o link vai **direto ao destino final**, sem salto, mesmo com
+  regras encadeadas;
+- regra **302/307** (link curto de afiliado): o link **fica com o caminho local**, para continuar passando pelo
+  blog e pelo redirect temporário;
+- sem regra: o link fica com o mesmo caminho e entra no relatório em "Links internos sem destino conhecido",
+  com a contagem por caminho.
 
 O script grava, num bloco marcado do `redirects.txt` do blog, um 301 para cada endereço que mudou: post
 com outro caminho (permalink com categoria, slug ocupado), categoria antiga → nova (inclusive as filhas,

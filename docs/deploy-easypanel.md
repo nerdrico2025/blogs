@@ -441,7 +441,9 @@ Repita para cada blog (de preferência em lotes de 2 a 3, observando a memória 
 - **Pasta:** `sites/nerdrico/` (marca "Nerd Rico", cor provisória `#6d28d9`, 7 categorias, `hideEmptyCategories` ligado).
 - **Serviço:** `nerdrico`, volume `nerdrico-data`, `SITE=nerdrico`, `SITE_URL=https://nerdrico.com.br` (o mesmo domínio da origem: importe com `--api` no endereço provisório do Easypanel).
 - **Importação:** `--categories sites/nerdrico/categorias-wordpress.txt --exclude sites/nerdrico/excluir-nerdrico.txt` (24 posts de fora: notícias de IA e posts datados). "Blog" é a última regra do mapeamento, como reserva.
-- **Antes de importar:** decidir as 47 páginas do WordPress (páginas fixas, 301 ou nada), os links curtos de afiliado que o WordPress redireciona hoje (`/leadlovers/`, `/killerplayer/`…) e os slugs antigos que respondem 301. Eles entram no `redirects.txt`, fora do bloco gerado.
+- **Páginas fixas:** Sobre, Contato, Política de Privacidade, Termos de Uso, História do Nerd Rico (`/historia-do-nerd-rico/`, imagens em `public/historia/`) e a ajuda da lista de confiáveis do Gmail. Razão social, CNPJ e cidade ainda não informados: as páginas mostram "(… a informar)" e `npm test` lista as pendências.
+- **Redirects manuais** (`sites/nerdrico/redirects.txt`, fora do bloco gerado): 91 regras, 83 de 301 (posts excluídos, páginas antigas, páginas de venda para o aluno.nerdrico.com.br, slugs antigos) e 8 de 307 (links curtos de afiliado, como na origem).
+- **Comando de importação:** `--categories sites/nerdrico/categorias-wordpress.txt --exclude sites/nerdrico/excluir-nerdrico.txt --include-pages como-criar-lista-altamente-lucrativa,4-formas-criar-renda-passiva-internet --api <endereço provisório>`.
 - **Depois do deploy:** cadastrar o autor "Nerd Rico" na aba Autor do `/admin`; os cursos ficam em `https://aluno.nerdrico.com.br/lista-cursos`.
 
 ---

@@ -43,26 +43,46 @@ export function findRedirect(redirects: Map<string, string>, p: string): string 
   return redirects.get(n) ?? redirects.get(n.endsWith("/") ? n.slice(0, -1) : `${n}/`);
 }
 
-export function loadRedirects(file: string): Map<string, string> {
-  const map = new Map<string, string>();
+/** Tipos aceitos na 3ª coluna do redirects.txt. Sem ela, 301 (permanente). */
+export const REDIRECT_STATUSES = [301, 302, 307, 308] as const;
+export type RedirectStatus = (typeof REDIRECT_STATUSES)[number];
+
+/**
+ * Regras do redirects.txt com o tipo: "/antigo /novo" (301) ou "/antigo /novo 307". Um temporário
+ * (302 ou 307) serve para link curto de afiliado: o navegador não guarda o destino.
+ */
+export function loadRedirectRules(file: string): Map<string, { to: string; status: RedirectStatus }> {
+  const map = new Map<string, { to: string; status: RedirectStatus }>();
   if (!existsSync(file)) return map;
   for (const raw of readFileSync(file, "utf8").split("\n")) {
     const line = raw.trim();
     if (!line || line.startsWith("#")) continue;
-    const [from, to] = line.split(/\s+/);
-    if (!from?.startsWith("/") || !to || !(to.startsWith("/") || /^https?:\/\//.test(to))) {
-      throw new Error(`redirects.txt: linha inválida: "${line}" (use "/antigo /novo")`);
+    const [from, to, code, ...rest] = line.split(/\s+/);
+    const status = code === undefined ? 301 : (Number(code) as RedirectStatus);
+    if (!from?.startsWith("/") || !to || !(to.startsWith("/") || /^https?:\/\//.test(to)) || rest.length || !REDIRECT_STATUSES.includes(status)) {
+      throw new Error(`redirects.txt: linha inválida: "${line}" (use "/antigo /novo" ou "/antigo /novo 307")`);
     }
-    map.set(from.normalize("NFC"), to);
+    map.set(from.normalize("NFC"), { to, status });
   }
   return map;
+}
+
+export function loadRedirects(file: string): Map<string, string> {
+  return new Map([...loadRedirectRules(file)].map(([from, r]) => [from, r.to]));
+}
+
+/** Tipo da regra (301 quando não há regra ou ela não diz o tipo). */
+export function redirectStatus(rules: Map<string, { status: RedirectStatus }>, p: string): RedirectStatus {
+  const n = p.normalize("NFC");
+  return (rules.get(n) ?? rules.get(n.endsWith("/") ? n.slice(0, -1) : `${n}/`))?.status ?? 301;
 }
 
 const SETUP_PAGE = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex, nofollow"><title>Em configuração</title><style>body{margin:0;min-height:100vh;display:grid;place-items:center;font-family:system-ui,sans-serif;background:#f0f5fa;color:#334155;text-align:center;padding:24px}h1{color:#1e293b;margin:0 0 8px}</style></head><body><main><h1>Em configuração</h1><p>Este blog estará no ar em breve.</p></main></body></html>`;
 
 export async function registerStatic(app: FastifyInstance, env: ApiEnv, isConfigured: () => boolean = () => true): Promise<void> {
   await mkdir(env.uploadsDir, { recursive: true });
-  const redirects = loadRedirects(env.redirectsFile);
+  const redirectRules = loadRedirectRules(env.redirectsFile);
+  const redirects = new Map([...redirectRules].map(([from, r]) => [from, r.to]));
 
   const notFoundPage = (reply: FastifyReply) => {
     const page = path.join(env.currentLink, "404.html");
@@ -92,7 +112,12 @@ export async function registerStatic(app: FastifyInstance, env: ApiEnv, isConfig
     if (BLOCKED.test(p) && !p.startsWith("/.well-known/")) return notFoundPage(reply);
     // Migração: lista do blog, com ou sem barra no fim
     const target = findRedirect(redirects, p);
-    if (target) return reply.redirect(target, 301);
+    if (target) {
+      const status = redirectStatus(redirectRules, p);
+      // Link curto (temporário): o navegador e o Cloudflare não guardam o destino
+      if (status !== 301 && status !== 308) reply.header("Cache-Control", "no-store");
+      return reply.redirect(target, status);
+    }
     // Link antigo com data, quando o post existe aqui
     const dated = p.match(DATED);
     if (dated && existsSync(path.join(env.currentLink, dated[1]!, "index.html"))) return reply.redirect(`/${dated[1]}/`, 301);

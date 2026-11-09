@@ -17,7 +17,7 @@ import site from "../site.config.ts";
 import { adminCredentials, registerAdmin } from "./admin.ts";
 import { Authenticator } from "./auth.ts";
 import { clientIp } from "./client-ip.ts";
-import { findRedirect, loadRedirects, registerStatic } from "./static.ts";
+import { findRedirect, loadRedirectRules, redirectStatus, registerStatic } from "./static.ts";
 import { hostKey } from "./env.ts";
 import { BuildQueue } from "./build-queue.ts";
 import type { ApiEnv } from "./env.ts";
@@ -168,7 +168,8 @@ export async function buildApp(env: ApiEnv, opts: { logger?: boolean } = {}): Pr
   // Rate limit só nas rotas da API (o site estático não entra na conta)
   // Domínio antigo (ALIAS_HOSTS): tudo vai, num salto só, para o domínio em uso, já com a regra do redirects.txt
   if (env.aliasHosts.length) {
-    const redirects = loadRedirects(env.redirectsFile);
+    const redirectRules = loadRedirectRules(env.redirectsFile);
+    const redirects = new Map([...redirectRules].map(([from, r]) => [from, r.to]));
     app.addHook("onRequest", async (req, reply) => {
       const host = hostKey(req.host ?? "");
       // Nunca redireciona o domínio principal para ele mesmo (ex.: o mesmo domínio também na lista)
@@ -186,7 +187,9 @@ export async function buildApp(env: ApiEnv, opts: { logger?: boolean } = {}): Pr
       const target = rule && /^https?:\/\//i.test(rule) ? new URL(rule) : new URL(site.url);
       if (!rule || !/^https?:\/\//i.test(rule)) target.pathname = rule ?? rawPath;
       if (query && !target.search) target.search = query;
-      return reply.header("Cache-Control", "public, max-age=3600").redirect(target.href, 301);
+      // Regra temporária (link curto de afiliado) continua temporária no domínio antigo
+      const status = rule ? redirectStatus(redirectRules, decoded) : 301;
+      return reply.header("Cache-Control", status === 301 || status === 308 ? "public, max-age=3600" : "no-store").redirect(target.href, status);
     });
   }
 

@@ -13,8 +13,8 @@ import { parseArgs } from "node:util";
 import sharp from "sharp";
 import { BlogApi, type BlogCategory, type BlogMedia } from "./blog.ts";
 import { finishHtml, imageKey, originalCandidates, prepareHtml, type ImageRef } from "./html.ts";
-import { CategoryMapper, parseCategoryMap, writeRedirects } from "./mapping.ts";
-import { fetchWithRetry, pathOf, readRest, readXml, type SourcePost, type SourceSite } from "./source.ts";
+import { CategoryMapper, manualRedirects, parseCategoryMap, SKIP, slugKey, writeRedirects } from "./mapping.ts";
+import { fetchWithRetry, pathOf, readPages, readRest, readXml, type SourcePost, type SourceSite } from "./source.ts";
 import { runSuggest } from "./suggest.ts";
 
 const HELP = `Uso: node scripts/import-wordpress/import.ts --from <url> --blog <nome> --categories <arquivo> [opções]
@@ -33,6 +33,8 @@ const HELP = `Uso: node scripts/import-wordpress/import.ts --from <url> --blog <
   --slug <a,b>          só estes posts (slugs da origem)
   --since <AAAA-MM-DD>  ignora os posts da origem publicados antes desta data
   --exclude <arquivo>   ignora os slugs listados (um por linha, # comenta)
+  --include-pages <a,b> importa também estas páginas do WordPress, como posts (cada uma precisa de
+                        uma regra "post:<slug> => <categoria>" no mapeamento)
   --verbose             mostra o começo do HTML limpo de cada post
   --suggest-categories  só sugere o mapeamento de categorias (lê a origem e o site.config.ts do blog,
                         grava em --categories ou sites/<nome>/categorias-wordpress.txt; se o arquivo
@@ -54,6 +56,7 @@ const { values: args } = parseArgs({
     slug: { type: "string" },
     since: { type: "string" },
     exclude: { type: "string" },
+    "include-pages": { type: "string" },
     verbose: { type: "boolean", default: false },
     "suggest-categories": { type: "boolean", default: false },
     help: { type: "boolean", short: "h", default: false },
@@ -94,14 +97,6 @@ const limit = args.limit === undefined ? undefined : Number(args.limit);
 if (limit !== undefined && (!Number.isInteger(limit) || limit < 1)) fail("--limit precisa ser um número inteiro a partir de 1.");
 const dryRun = args["dry-run"];
 if (args.since !== undefined && (!/^\d{4}-\d{2}-\d{2}$/.test(args.since) || Number.isNaN(Date.parse(`${args.since}T00:00:00Z`)))) fail("--since precisa de uma data no formato AAAA-MM-DD.");
-/** Slug comparável: decodificado (%C3%A7 ou %CC%A7), acentos na forma composta, minúsculo. */
-const slugKey = (slug: string) => {
-  let s = slug.trim();
-  try {
-    s = decodeURIComponent(s);
-  } catch {}
-  return s.normalize("NFC").toLowerCase();
-};
 const excluded = new Set<string>();
 if (args.exclude) {
   if (!existsSync(args.exclude)) fail(`--exclude: o arquivo ${args.exclude} não existe.`);
@@ -143,6 +138,14 @@ if (args.from) {
   source = await readXml(args.xml!, { limit, slugs });
   console.log(`Origem: ${args.xml} (${source.url}): ${source.total} posts publicados${limit || slugs ? `, importando ${source.posts.length}` : ""}`);
 }
+// Páginas escolhidas, importadas como posts no mesmo endereço
+if (args["include-pages"]) {
+  if (!args.from) fail("--include-pages precisa de --from (lê as páginas pela REST API).");
+  const pages = await readPages(args.from, args["include-pages"].split(",").map((s) => s.trim()).filter(Boolean), warn);
+  for (const page of pages) source.allLinks.set(pathOf(page.link), page.slug);
+  source.posts.push(...pages);
+  console.log(`Páginas importadas como post: ${pages.length} (${pages.map((p) => p.slug).join(", ") || "nenhuma"})`);
+}
 
 // ---------------------------------------------------------------- destino
 let targets: BlogCategory[];
@@ -183,14 +186,39 @@ const ownPost = (src: string | undefined) => src === origin || src === "wordpres
 const describeSource = (src: string | undefined) =>
   src === "wordbee" ? "publicado pelo Wordbee" : src?.startsWith("wordpress:") ? `importado de ${src.slice("wordpress:".length)}` : src ? `fonte "${src}"` : "sem fonte registrada";
 
-/** Caminho antigo → caminho novo, para links internos. */
+/** Regras manuais do redirects.txt (fora do bloco gerado): páginas antigas, links curtos, slugs antigos. */
+const manual = manualRedirects(existsSync(redirectsFile) ? await readFile(redirectsFile, "utf8") : "");
+const manualRule = (p: string) => {
+  const n = p.normalize("NFC");
+  return manual.get(n) ?? manual.get(n.endsWith("/") ? n.slice(0, -1) : `${n}/`);
+};
+/** Links do corpo que não acharam destino, somando todos os posts (para o relatório). */
+const unresolvedLinks = new Map<string, number>();
+
+/**
+ * Caminho antigo → caminho novo, para links internos. Ordem: post, categoria, e por fim a regra manual
+ * do redirects.txt. Regra permanente (301/308) leva o link direto ao destino final, sem salto; regra
+ * temporária (302/307, link curto de afiliado) fica com o caminho local, para o link continuar passando
+ * pelo blog.
+ */
 function resolveLink(p: string): string | null {
   if (p === "/") return "/";
   const slug = source.allLinks.get(p);
   if (slug) return `/${slug}/`;
   const cat = catByPath.get(p);
   const target = cat && mapper.forCategory(cat);
-  return target ? `/category/${target.slug}/` : null;
+  if (target) return `/category/${target.slug}/`;
+  let rule = manualRule(p);
+  if (!rule) return null;
+  if (rule.status === 302 || rule.status === 307) return p;
+  // Segue regras encadeadas (/a/ → /b/ → destino), no máximo 5 saltos
+  let to = rule.to;
+  for (let i = 0; i < 5 && to.startsWith("/"); i++) {
+    const next = manualRule(to);
+    if (!next || next.status === 302 || next.status === 307) break;
+    to = next.to;
+  }
+  return to;
 }
 
 // ---------------------------------------------------------------- imagens
@@ -319,7 +347,14 @@ async function importPost(post: SourcePost, n: number): Promise<void> {
     console.log(`${dryRun ? "\n" : ""}${label}: ignorado (excluído pelo ${path.basename(args.exclude!)})`);
     return;
   }
-  if (mapper.skips(post.categories)) {
+  // Regra "post:<slug>" do mapeamento: vale antes das regras por categoria
+  const own = mapper.forSlug(post.slug);
+  if (own === SKIP) {
+    report.ignored.push(post.slug);
+    console.log(`${dryRun ? "\n" : ""}${label}: ignorado (regra "post:${post.slug} => -" no mapeamento)`);
+    return;
+  }
+  if (!own && mapper.skips(post.categories)) {
     report.ignored.push(post.slug);
     console.log(`${dryRun ? "\n" : ""}${label}: ignorado (categoria ${post.categories.map((c) => c.slug).join(", ")} marcada com "-" no mapeamento)`);
     return;
@@ -329,7 +364,7 @@ async function importPost(post: SourcePost, n: number): Promise<void> {
     console.log(`${dryRun ? "\n" : ""}${label}: ignorado (antes de ${args.since}: publicado em ${post.dateGmt.slice(0, 10)})`);
     return;
   }
-  const category = mapper.forPost(post.categories);
+  const category = own ?? mapper.forPost(post.categories);
   if (!category) throw new Error(`nenhuma regra de categoria para ${post.categories.map((c) => c.slug).join(", ") || "(sem categoria)"}`);
 
   // Antes de baixar imagens: slug ocupado por post de outra fonte não é tocado
@@ -394,6 +429,7 @@ async function importPost(post: SourcePost, n: number): Promise<void> {
     console.log(`  meta title:  ${!post.seoTitle ? "(nenhum; usa o título)" : post.seoTitle === post.title ? "(igual ao título)" : post.seoTitle}`);
     console.log(`  meta desc.:  ${post.seoDescription ?? "(nenhuma; usa o resumo)"}`);
     console.log(`  destacada:   ${featuredRef ? `${featured?.ok ? "ok" : "FALHA"} ${featured?.from ?? featuredRef.url} (alt ${featuredRef.altGenerated ? "gerado" : "original"}: "${featuredRef.alt}")` : "(nenhuma)"}`);
+    for (const l of s.linksUnresolved) unresolvedLinks.set(l, (unresolvedLinks.get(l) ?? 0) + 1);
     console.log(`  no corpo:    ${prep.images.length} imagens (${prep.images.filter((i) => i.altGenerated).length} com alt gerado), ${s.linksRewritten} links internos reescritos${s.linksUnresolved.length ? `, ${s.linksUnresolved.length} sem destino conhecido (${s.linksUnresolved.join(", ")})` : ""}`);
     if (s.videosLinked || s.embedsRemoved || s.shortcodes.length) {
       console.log(`  limpeza:     ${s.videosLinked} vídeo(s) do YouTube viraram link, ${s.embedsRemoved} incorporação(ões) removida(s), shortcodes: ${s.shortcodes.join(", ") || "nenhum"}`);
@@ -425,6 +461,7 @@ async function importPost(post: SourcePost, n: number): Promise<void> {
     }
   });
   const s = prep.stats;
+  for (const l of s.linksUnresolved) unresolvedLinks.set(l, (unresolvedLinks.get(l) ?? 0) + 1);
   if (s.linksUnresolved.length) warn(`${post.slug}: links internos sem destino conhecido (mantidos com o mesmo caminho): ${s.linksUnresolved.join(", ")}`);
   if (s.embedsRemoved) warn(`${post.slug}: ${s.embedsRemoved} incorporação(ões) que não são do YouTube foram removidas`);
 }
@@ -438,10 +475,11 @@ function addRedirectForImage(oldUrl: string, newPath: string) {
   } catch {}
 }
 
-// Slug do --exclude que não está na origem: provável erro de digitação
-if (excluded.size) {
+// Slug do --exclude ou de uma regra "post:" que não está na origem: provável erro de digitação
+{
   const known = new Set([...source.allLinks.values(), ...source.posts.map((p) => p.slug)].map(slugKey));
   for (const slug of excluded) if (!known.has(slug)) warn(`--exclude: o slug "${slug}" não existe na origem`);
+  for (const slug of mapper.postRuleSlugs()) if (!known.has(slug)) warn(`mapeamento: "post:${slug}" não existe na origem`);
 }
 
 let n = 0;
@@ -492,6 +530,9 @@ for (const i of report.images) console.log(`  - ${i.post}: ${i.url} (${i.error})
 console.log(`Redirects:    ${red.added} nov${red.added === 1 ? "o" : "os"}, ${red.total} no bloco gerado de ${path.relative(process.cwd(), redirectsFile)}${dryRun ? " (não gravado)" : ""}`);
 if (dryRun) for (const [from, to] of redirects) console.log(`  ${from} → ${to}`);
 for (const s of red.skipped) console.log(`  ignorado: ${s}`);
+const unresolvedTotal = [...unresolvedLinks.values()].reduce((a, b) => a + b, 0);
+console.log(`Links internos sem destino conhecido: ${unresolvedTotal}${unresolvedTotal ? ` em ${unresolvedLinks.size} caminho(s) (ficam com o mesmo caminho; crie a regra no redirects.txt)` : ""}`);
+for (const [p, n] of [...unresolvedLinks].sort((a, b) => b[1] - a[1])) console.log(`  ${p} (${n})`);
 if (red.adopted) console.log(`  ${red.adopted} regra(s) antiga(s) sem origem passaram para a seção "${origin}"`);
 if (red.conflicts.length) {
   console.log(`  conflitos de redirect: ${red.conflicts.length} (o caminho já é de outra origem; ficou como estava)`);

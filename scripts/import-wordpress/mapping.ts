@@ -19,6 +19,7 @@ export interface CategoryRule {
  * A ordem importa: num post com várias categorias, vale a primeira regra do arquivo que bater.
  * "*" vale para qualquer categoria sem regra.
  * Destino "-" = não importar: o post que só tem categorias assim é ignorado (ver CategoryMapper.skips).
+ * "post:<slug> => <categoria>" vale só para aquele post e tem prioridade sobre as regras por categoria.
  */
 export function parseCategoryMap(text: string): CategoryRule[] {
   const t = text.trim();
@@ -49,14 +50,36 @@ export function findTarget(value: string, targets: BlogCategory[]): BlogCategory
 
 /** Destino especial: não importar os posts desta categoria. */
 export const SKIP = "-";
+/** Prefixo da regra de um post só: "post:<slug> => <categoria>". */
+export const POST_RULE = "post:";
+
+/** Slug comparável: decodificado (%C3%A7 ou %CC%A7), acentos na forma composta, minúsculo. */
+export function slugKey(slug: string): string {
+  let s = slug.trim();
+  try {
+    s = decodeURIComponent(s);
+  } catch {}
+  return s.normalize("NFC").toLowerCase();
+}
 
 export class CategoryMapper {
   private readonly rules: { from: string; to: BlogCategory }[] = [];
   private readonly skipped: string[] = [];
+  /** Regras de um post só (slugKey → categoria, ou SKIP). */
+  private readonly posts = new Map<string, BlogCategory | typeof SKIP>();
   readonly problems: string[] = [];
 
   constructor(rules: CategoryRule[], targets: BlogCategory[]) {
     for (const r of rules) {
+      if (r.from.startsWith(POST_RULE)) {
+        const slug = slugKey(r.from.slice(POST_RULE.length));
+        const to = r.to.trim() === SKIP ? SKIP : findTarget(r.to, targets);
+        if (!slug) this.problems.push(`"${r.from}": falta o slug do post depois de "${POST_RULE}"`);
+        else if (!to) this.problems.push(`"${r.from}" → "${r.to}": categoria de destino não existe no blog (há: ${targets.map((c) => c.slug).join(", ")})`);
+        else if (this.posts.has(slug)) this.problems.push(`"${r.from}": o post aparece em mais de uma regra "${POST_RULE}"`);
+        else this.posts.set(slug, to);
+        continue;
+      }
       if (r.to.trim() === SKIP) {
         if (r.from === "*") this.problems.push(`"* => ${SKIP}" não é aceito: marque com "${SKIP}" só as categorias que não devem ser importadas`);
         else this.skipped.push(r.from);
@@ -86,6 +109,16 @@ export class CategoryMapper {
    */
   skips(categories: SourceCategory[]): boolean {
     return !this.explicit(categories) && categories.some((c) => this.skipped.some((from) => this.matches(from, c)));
+  }
+
+  /** Regra "post:<slug>" deste post: a categoria, SKIP ("-") ou undefined (sem regra própria). */
+  forSlug(slug: string): BlogCategory | typeof SKIP | undefined {
+    return this.posts.get(slugKey(slug));
+  }
+
+  /** Slugs com regra "post:" (para avisar quando algum não existe na origem). */
+  postRuleSlugs(): string[] {
+    return [...this.posts.keys()];
   }
 
   /** Categoria de destino de um post (pela ordem das regras), ou null. */
@@ -196,6 +229,24 @@ export function mergeRedirects(existing: string, rules: Map<string, string>, ori
   const head = outside.join("\n").replace(/\n+$/, "");
   const content = `${head ? `${head}\n\n` : ""}${BLOCK_START}\n${body.join("\n")}${body.length ? "\n" : ""}${BLOCK_END}\n`;
   return { content, added, total: owner.size, skipped, conflicts, adopted };
+}
+
+/**
+ * Regras manuais do redirects.txt (fora do bloco gerado), com o tipo: "/antigo /novo" (301) ou
+ * "/antigo /novo 307". Usadas pelo importador para reescrever links do corpo direto para o destino final.
+ */
+export function manualRedirects(existing: string): Map<string, { to: string; status: number }> {
+  const lines = existing.split("\n");
+  const start = lines.indexOf(BLOCK_START);
+  const end = lines.indexOf(BLOCK_END);
+  const outside = start !== -1 && end > start ? [...lines.slice(0, start), ...lines.slice(end + 1)] : lines;
+  const map = new Map<string, { to: string; status: number }>();
+  for (const l of outside) {
+    const [from, to, code] = l.trim().split(/\s+/);
+    if (!from || !to || from.startsWith("#")) continue;
+    map.set(from.normalize("NFC"), { to, status: code ? Number(code) : 301 });
+  }
+  return map;
 }
 
 export async function writeRedirects(file: string, rules: Map<string, string>, dryRun: boolean, origin?: string): Promise<RedirectResult> {

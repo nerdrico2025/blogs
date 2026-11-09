@@ -222,6 +222,52 @@ function postmeta(item: string): Map<string, string> {
 
 const gmtIso = (s: string) => (s && !s.startsWith("0000") ? s.trim().replace(" ", "T") : "");
 
+/**
+ * Limpeza de uma página importada como post: tira o título repetido no começo do texto (com ou sem um
+ * "[artigo]" na frente) e os "títulos" que são só um endereço (rodapé de e-book: site, YouTube, Instagram).
+ */
+export function cleanPageHtml(html: string, title: string): string {
+  const plain = (h: string) => htmlText(h).replace(/^\[[a-z]+\]\s*/i, "").replace(/\s+/g, " ").trim().toLowerCase();
+  let out = html;
+  const first = out.match(/^\s*<h[1-6][^>]*>([\s\S]*?)<\/h[1-6]>/i);
+  if (first && plain(first[1]!) === plain(title)) out = out.slice(first[0].length);
+  return out.replace(/<h[1-6][^>]*>([\s\S]*?)<\/h[1-6]>/gi, (m, inner: string) => (/^https?:\/\/\S+$/i.test(htmlText(inner).trim()) ? "" : m));
+}
+
+/**
+ * Páginas do WordPress escolhidas pelo slug (--include-pages), no formato de post. Não têm categoria:
+ * o mapeamento precisa de uma regra "post:<slug> => <categoria>" para cada uma.
+ */
+export async function readPages(from: string, slugs: string[], onWarn: (msg: string) => void): Promise<SourcePost[]> {
+  const api = `${from.replace(/\/+$/, "")}/wp-json/wp/v2`;
+  const out: SourcePost[] = [];
+  for (const wanted of slugs) {
+    const { data } = await getJson<(WpPost & { status?: string })[]>(`${api}/pages?slug=${encodeURIComponent(wanted)}&_embed=wp:featuredmedia`);
+    const p = data[0];
+    if (!p) {
+      onWarn(`--include-pages: a página "${wanted}" não existe na origem`);
+      continue;
+    }
+    const title = htmlText(p.title.rendered);
+    const media = p._embedded?.["wp:featuredmedia"]?.[0];
+    out.push({
+      id: `page-${p.id}`,
+      title,
+      slug: decodeURIComponent(p.slug),
+      link: p.link,
+      dateGmt: p.date_gmt,
+      modifiedGmt: p.modified_gmt,
+      categories: [],
+      html: cleanPageHtml(p.content.rendered, title),
+      excerpt: cleanExcerpt(p.excerpt?.rendered ?? ""),
+      ...(media?.source_url && !media.code ? { featured: { url: media.source_url, alt: (media.alt_text ?? "").trim() } } : {}),
+      ...(p.yoast_head_json?.title ? { seoTitle: p.yoast_head_json.title } : {}),
+      ...(p.yoast_head_json?.description ? { seoDescription: p.yoast_head_json.description } : {}),
+    });
+  }
+  return out;
+}
+
 export async function readXml(file: string, opts: { limit?: number; slugs?: string[]; base?: string }): Promise<SourceSite> {
   const xml = await readFile(file, "utf8");
   const channel = xml.split(/<item>/)[0]!;

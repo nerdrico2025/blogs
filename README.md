@@ -106,6 +106,8 @@ Um site WordPress comum, nos mesmos 4 endpoints de `/wp-json/wp/v2`: `users/me`,
 
 Menu lateral em grupos, com um endereço para cada tela: Conteúdo (`/admin/artigos`, `/admin/categorias`, `/admin/paginas`, `/admin/autor`), Aparência (`/admin/marca`, `/admin/home`, `/admin/textos`), Monetização e dados (`/admin/anuncios`, `/admin/rastreamento`) e Site (`/admin/dominio`, `/admin/wordbee`). `/admin/` abre Artigos.
 
+O `redirects.txt` aceita o tipo do redirect na 3ª coluna (`/curto/ https://parceiro.com/x 307`); sem ela, 301.
+
 As páginas fixas editadas em **Páginas** ficam em `/data/pages/` e, a partir da primeira edição, valem mais que as de
 `sites/<nome>/pages/` (os `redirects.txt` continuam vindo do repositório).
 

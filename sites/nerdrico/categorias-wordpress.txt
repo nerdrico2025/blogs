@@ -1,6 +1,22 @@
 # Mapeamento de categorias: nerdrico.com.br (WordPress) => sites/nerdrico
 # Num post com várias categorias vale a PRIMEIRA regra que bater: as específicas vêm antes.
 # "Blog" está em quase todos os posts e fica por último, como reserva (posts só em "Blog" vão para estrategias).
+# Regras de um post só (têm prioridade sobre as regras por categoria): posts que estavam só em "Blog"
+post:analytics-model-a-revolucao-da-analise-de-dados-com-ia-em-2024 => ferramentas   # 22581
+post:insert-chat-a-revolucao-do-chatbot => ferramentas   # 22587
+post:make-vs-zapier-qual-automatizador-vai-revolucionar-seu-trabalho-em-2024 => ferramentas   # 22605
+post:10-ferramentas-de-ia-marketing-2025 => ferramentas   # 22729
+post:automacao-de-workflows-5-estrategias-produtividade => ferramentas   # 22733
+post:canva-10-truques-para-designs => ferramentas   # 22651
+post:5-ferramentas-de-marketing-digital-2025 => ferramentas   # 22619
+post:plataformas-de-cursos-online-seu-guia-definitivo-para-ensinar-melhor-em-2024 => produtos-digitais   # 22614
+post:seo-5-estrategias-google-2025 => trafego   # 22719
+
+# Páginas do WordPress importadas como post (--include-pages), no mesmo endereço
+post:como-criar-lista-altamente-lucrativa => email-marketing
+post:4-formas-criar-renda-passiva-internet => produtos-digitais
+
+# Regras por categoria de origem
 leadlovers => email-marketing
 e-mail-marketing => email-marketing
 copy => copywriting

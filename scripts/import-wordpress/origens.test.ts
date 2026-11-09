@@ -40,7 +40,15 @@ interface FakePost {
 const NOTICIAS = [{ id: 1, slug: "noticias", name: "Notícias" }];
 
 /** WordPress mínimo: as rotas que o importador lê, com uma categoria "noticias" (ou as passadas). */
-function fakeWordPress(name: string, posts: FakePost[], cats = NOTICIAS) {
+/** Página do WordPress (rota /pages), com o endereço sem data. */
+interface FakePage {
+  id: number;
+  slug: string;
+  title: string;
+  html: string;
+}
+
+function fakeWordPress(name: string, posts: FakePost[], cats = NOTICIAS, pages: FakePage[] = []) {
   let base = "";
   const server = http.createServer((req, res) => {
     const url = new URL(req.url!, "http://x");
@@ -49,6 +57,14 @@ function fakeWordPress(name: string, posts: FakePost[], cats = NOTICIAS) {
       res.end(JSON.stringify(data));
     };
     if (url.pathname === "/wp-json/") return send({ name });
+    if (url.pathname === "/wp-json/wp/v2/pages") {
+      const wanted = url.searchParams.get("slug");
+      return send(
+        pages
+          .filter((p) => !wanted || p.slug === wanted)
+          .map((p) => ({ id: p.id, date_gmt: "2019-12-19T10:00:00", modified_gmt: "2019-12-19T10:00:00", slug: p.slug, link: `${base}/${p.slug}/`, title: { rendered: p.title }, content: { rendered: p.html }, excerpt: { rendered: "" } }))
+      );
+    }
     if (url.pathname === "/wp-json/wp/v2/categories") return send(cats.map((c) => ({ ...c, link: `${base}/category/${c.slug}/` })));
     if (url.pathname === "/wp-json/wp/v2/posts") {
       if (url.searchParams.get("_fields") === "slug,link") return send(posts.map((p) => ({ slug: p.slug, link: `${base}/2024/01/${p.slug}/` })));
@@ -60,7 +76,8 @@ function fakeWordPress(name: string, posts: FakePost[], cats = NOTICIAS) {
           slug: p.slug,
           link: `${base}/2024/01/${p.slug}/`,
           title: { rendered: p.title },
-          content: { rendered: p.html },
+          // "{BASE}" no HTML vira o endereço deste WordPress falso (links para o próprio domínio)
+          content: { rendered: p.html.replaceAll("{BASE}", base) },
           excerpt: { rendered: "" },
           categories: [p.category, ...(p.more ?? [])],
           yoast_head_json: { title: p.title, description: "Resumo." },
@@ -89,11 +106,11 @@ const b = fakeWordPress("Site B", [{ id: 7, slug: "ola-mundo", title: "Olá do s
 let fromA = "";
 let fromB = "";
 
-async function importer(from: string, map: string, extra: string[] = []): Promise<{ code: number; out: string }> {
+async function importer(from: string, map: string, extra: string[] = [], redirects = redirectsFile): Promise<{ code: number; out: string }> {
   const file = path.join(tmp, `map-${Math.random().toString(36).slice(2)}.txt`);
   await writeFile(file, map);
   return new Promise((resolve) => {
-    const child = spawn(process.execPath, ["scripts/import-wordpress/import.ts", "--from", from, "--blog", "exemplo", "--categories", file, "--api", blogUrl, "--redirects", redirectsFile, ...extra], {
+    const child = spawn(process.execPath, ["scripts/import-wordpress/import.ts", "--from", from, "--blog", "exemplo", "--categories", file, "--api", blogUrl, "--redirects", redirects, ...extra], {
       env: { ...process.env, IMPORT_BLOG_USER: "wordbee", IMPORT_BLOG_PASSWORD: "senha do teste" },
     });
     let out = "";
@@ -268,6 +285,49 @@ describe("--since e --exclude", () => {
     const missing = await importer("http://127.0.0.1:1", "noticias => dicas\n", ["--exclude", path.join(tmp, "nao-ha.txt")]);
     assert.equal(missing.code, 1);
     assert.match(missing.out, /--exclude: o arquivo .* não existe/);
+  });
+});
+
+describe("post:<slug>, --include-pages e links pelo redirects.txt manual", () => {
+  test("regra de um post vence a da categoria; página vira post; links seguem a regra 301 e mantêm o link curto 307", async () => {
+    const cats = [...NOTICIAS, { id: 2, slug: "blog", name: "Blog" }];
+    const body = `<p>Veja <a href="{BASE}/pagina-velha/">a página</a>, <a href="{BASE}/curso/">o curso</a>, <a href="{BASE}/afiliado/">o link curto</a> e <a href="{BASE}/sumiu/">um caminho sem regra</a>.</p>`;
+    const g = fakeWordPress("Site G", [
+      { id: 41, slug: "so-no-blog", title: "Só no Blog", html: "<p>x</p>", category: 2 },
+      { id: 42, slug: "com-links", title: "Com links", html: body, category: 1 },
+    ], cats, [
+      { id: 90, slug: "ebook-grande", title: "E-book Grande", html: `<h2>[artigo]E-book Grande</h2><h2>Capítulo I</h2><p>Texto do e-book.</p><h3>https://site.example</h3>` },
+    ]);
+    const base = await g.start("127.0.0.1");
+    // Regras manuais: 301 encadeado, 301 para fora e um link curto 307
+    const red = path.join(tmp, "redirects-g.txt");
+    await writeFile(red, ["/pagina-velha/ /outra-pagina/", "/outra-pagina/ /category/dicas/", "/curso/ https://aluno.example/cursos", "/afiliado/ https://parceiro.example/x 307", ""].join("\n"));
+    try {
+      const map = "post:so-no-blog => roteiros\npost:ebook-grande => dicas\npost:nao-existe => dicas\nnoticias => dicas\nblog => dicas\n";
+      const r = await importer(base, map, ["--include-pages", "ebook-grande"], red);
+      assert.equal(r.code, 0, r.out);
+      assert.match(r.out, /Páginas importadas como post: 1 \(ebook-grande\)/);
+      assert.match(r.out, /mapeamento: "post:nao-existe" não existe na origem/);
+      // Regra do post (roteiros, id 2) vence a da categoria "blog" (dicas)
+      assert.equal((await post("so-no-blog")).categories[0], 2);
+      // A página vira post no mesmo endereço, com a origem marcada, sem o título repetido e sem o "título" que é só um endereço
+      const ebook = await post("ebook-grande");
+      assert.equal(ebook.meta.source, "wordpress:127.0.0.1");
+      assert.equal(ebook.categories[0], 3);
+      const md = file("ebook-grande");
+      assert.doesNotMatch(md, /\[artigo\]|## E-book Grande|site\.example/);
+      assert.match(md, /## Capítulo I/);
+      // Links: 301 encadeado vai direto ao destino final; destino externo também; o 307 fica no caminho local
+      const links = file("com-links");
+      assert.match(links, /\[a página\]\(\/category\/dicas\/\)/);
+      assert.match(links, /\[o curso\]\(https:\/\/aluno\.example\/cursos\)/);
+      assert.match(links, /\[o link curto\]\(\/afiliado\/\)/);
+      assert.match(links, /\[um caminho sem regra\]\(\/sumiu\/\)/);
+      assert.match(r.out, /Links internos sem destino conhecido: 1 em 1 caminho\(s\)/);
+      assert.match(r.out, /\n  \/sumiu\/ \(1\)/);
+    } finally {
+      g.server.close();
+    }
   });
 });
 
