@@ -77,6 +77,8 @@ export interface PrepareOptions {
   resolveLink: (path: string) => string | null;
   /** Link do domínio antigo que sai do texto (caminho decodificado, como está no link). */
   dropLink?: (path: string) => boolean;
+  /** Link do domínio antigo que deixa de ser link: o texto (ou a imagem) dentro dele fica. */
+  unwrapLink?: (path: string) => boolean;
   /** URL de áudio que substitui o link do domínio antigo (o arquivo é copiado para o blog). */
   replaceLink?: (path: string) => string | null;
 }
@@ -282,6 +284,7 @@ export function prepareHtml(rawHtml: string, opts: PrepareOptions): Prepared {
       const url = href && !href.startsWith("#") ? absolute(href, opts.base) : null;
       el.properties = href ? { href } : {};
       if (url && isOld(url) && /^https?:$/.test(url.protocol)) {
+        if (opts.unwrapLink?.(decodeURI(url.pathname))) return replace(...(el.children as RootContent[]));
         if (opts.dropLink?.(decodeURI(url.pathname))) {
           if (parent.type === "element") dropped.add(parent);
           return replace();
