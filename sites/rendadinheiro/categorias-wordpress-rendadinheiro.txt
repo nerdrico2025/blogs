@@ -1,0 +1,12 @@
+# Mapeamento de categorias sugerido: https://rendadinheiro.com.br => sites/rendadinheiro
+# Gerado por --suggest-categories. Revise antes de importar: troque cada "?" por uma categoria do blog
+# (slug, nome ou id) ou apague a linha. Enquanto houver "?", a importação e o --dry-run param.
+# Num post com várias categorias vale a PRIMEIRA regra que bater: as subcategorias vêm antes.
+# "* => <categoria>" vale para qualquer categoria sem regra.
+negocios-online => trabalho-online  # confiança média (pelo nome), 7 post(s), "Negócios Online"
+criptomoedas => investimentos       # escolhido à mão (sugestão era renda-extra), 5 post(s), "Criptomoedas"
+acoes => investimentos              # confiança média (pelos títulos dos posts), 3 post(s), "Ações"
+forex => investimentos              # confiança média (pelos títulos dos posts), 2 post(s), "Forex"
+ia => renda-extra                   # confiança média (pelos títulos dos posts), 7 post(s), "IA"
+ganhar-dinheiro => renda-extra      # confiança média (pelos títulos dos posts), 17 post(s), "Ganhar Dinheiro"
+noticias => economia                # escolhido à mão: o único post é sobre economizar em hospedagem, 1 post(s), "Notícias"
