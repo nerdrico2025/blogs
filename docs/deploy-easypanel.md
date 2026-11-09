@@ -452,7 +452,7 @@ do asasdomundo; o que muda a cada rodada é preenchido no `/admin` e fica no vol
 | Sobre, Contato, Aviso Legal, Termos, Privacidade, Cookies, Afiliados | Páginas |
 | Autor e foto | Autor |
 | E-mail de contato, responsável, cidade, aviso de cookies, aviso de parceiros, título da caixa do autor | Textos |
-| Caixas da lateral, faixa do topo, rodapé, texto da busca | Home |
+| Caixas da lateral, faixa do topo, rodapé, texto da busca | Página inicial |
 | ID do AdSense, ads.txt, script da rede, posições de anúncio | Anúncios |
 | Google Analytics, Tag Manager, outros códigos | Rastreamento |
 

@@ -60,6 +60,17 @@ input[type=url],input[type=email],input[type=search]{width:100%;padding:10px;bor
 .in-app input,.in-app select,.in-app textarea{border-color:#94a3b8}
 .in-app button{min-height:44px}
 button.danger{background:#b91c1c;color:#fff}
+/* Modal único do painel (modal.js), com a cor principal e a fonte do blog */
+.modal-backdrop{position:fixed;inset:0;z-index:100;background:rgba(15,23,42,.45);display:flex;align-items:center;justify-content:center;padding:16px}
+.modal{width:min(480px,100%);max-height:calc(100vh - 32px);overflow-y:auto;background:#fff;color:var(--t);border-radius:14px;box-shadow:0 20px 50px rgba(15,23,42,.25);border-top:4px solid var(--modal-primary,var(--a))}
+.modal-head{display:flex;align-items:center;gap:12px;padding:18px 20px 4px}.modal-head h2{margin:0;font-size:19px;color:var(--ink)}
+.modal-logo{height:28px;width:auto;max-width:120px;object-fit:contain}
+.modal-body{padding:4px 20px 8px;white-space:normal;overflow-wrap:anywhere}.modal-body p{margin:8px 0}.modal-body label{margin-top:10px}
+.modal-body input{width:100%;padding:10px;border:1px solid #94a3b8;border-radius:10px;font:inherit;min-height:44px}
+.modal-actions{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:10px;padding:12px 20px 18px}
+.modal-actions button{min-height:44px;border-radius:10px;font-family:inherit}
+.modal-actions button:not(.ghost):not(.danger){background:var(--modal-primary,var(--a));color:var(--modal-primary-text,#fff)}
+.modal-actions button.ghost{background:#fff;color:var(--modal-primary-readable,var(--a));border-color:var(--modal-primary-readable,var(--a))}
 .share-preview{max-height:96px;border-radius:6px;border:1px solid var(--b)}
 .checklist{border-color:#f59e0b;background:#fffbeb}.checklist ul{list-style:none;margin:8px 0;padding:0}.checklist li{display:flex;align-items:center;gap:8px;min-height:40px}
 .checklist .mark{flex:none;min-width:52px;text-align:center;font-size:12px;font-weight:700;padding:2px 8px;border-radius:999px;background:#fde68a;color:#713f12}
