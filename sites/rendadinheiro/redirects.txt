@@ -6,6 +6,63 @@
 # /quem-somos/ /sobre/
 
 # >>> importado do WordPress (scripts/import-wordpress). Gerado: não edite dentro deste bloco.
+# origem: wordpress:diariobitcoin.com.br
+/category/bitcoin-ethereum/ /category/criptomoedas/
+/category/jogos-nft/ /category/criptomoedas/
+/category/lancamentos-tokens/ /category/criptomoedas/
+/category/mineracao/ /category/criptomoedas/
+/category/oportunidades/ /category/criptomoedas/
+/category/staking/ /category/criptomoedas/
+/wp-content/uploads/2022/03/como-ganhar-dinheiro-principal-scaled-1.jpeg /wp-content/uploads/2026/11/como-ganhar-dinheiro-principal-scaled-1.jpg
+/wp-content/uploads/2022/03/IMG_3712.jpg /wp-content/uploads/2026/11/img-3712.jpg
+/wp-content/uploads/2022/03/IMG_3715-1024x572.jpg /wp-content/uploads/2026/11/img-3715.jpg
+/wp-content/uploads/2022/03/IMG_3715.jpg /wp-content/uploads/2026/11/img-3715.jpg
+/wp-content/uploads/2022/03/IMG_3716-1024x541.jpg /wp-content/uploads/2026/11/img-3716.jpg
+/wp-content/uploads/2022/03/IMG_3716.jpg /wp-content/uploads/2026/11/img-3716.jpg
+/wp-content/uploads/2022/03/IMG_3717.jpg /wp-content/uploads/2026/11/img-3717.jpg
+/wp-content/uploads/2022/03/IMG_3718-707x1024.jpg /wp-content/uploads/2026/11/img-3718.jpg
+/wp-content/uploads/2022/03/IMG_3718.jpg /wp-content/uploads/2026/11/img-3718.jpg
+/wp-content/uploads/2022/03/IMG_3719-1024x455.jpg /wp-content/uploads/2026/11/img-3719.jpg
+/wp-content/uploads/2022/03/IMG_3719.jpg /wp-content/uploads/2026/11/img-3719.jpg
+/wp-content/uploads/2022/03/IMG_3720-576x1024.png /wp-content/uploads/2026/11/img-3720.jpg
+/wp-content/uploads/2022/03/IMG_3720.png /wp-content/uploads/2026/11/img-3720.jpg
+/wp-content/uploads/2022/04/binance-1024x462.png /wp-content/uploads/2026/11/binance.jpg
+/wp-content/uploads/2022/04/binance.png /wp-content/uploads/2026/11/binance.jpg
+/wp-content/uploads/2022/04/bitcoin-faucet-1024x574.jpeg /wp-content/uploads/2026/11/bitcoin-faucet.jpg
+/wp-content/uploads/2022/04/bitcoin-faucet.jpeg /wp-content/uploads/2026/11/bitcoin-faucet.jpg
+/wp-content/uploads/2022/04/bitcoin-mining-1024x576.jpeg /wp-content/uploads/2026/11/bitcoin-mining.jpg
+/wp-content/uploads/2022/04/bitcoin-mining.jpeg /wp-content/uploads/2026/11/bitcoin-mining.jpg
+/wp-content/uploads/2022/04/bitcoin-pesquisa.jpeg /wp-content/uploads/2026/11/bitcoin-pesquisa.jpg
+/wp-content/uploads/2022/04/capa-artigo-bitcoin.jpg /wp-content/uploads/2026/11/capa-artigo-bitcoin.jpg
+/wp-content/uploads/2022/04/cryptocurrency-mining-rig-programer.webp /wp-content/uploads/2026/11/cryptocurrency-mining-rig-programer.jpg
+/wp-content/uploads/2022/04/Dicas-para-começar-a-investir-em-criptomoedas.webp /wp-content/uploads/2026/11/dicas-para-comecar-a-investir-em-criptomoedas.jpg
+/wp-content/uploads/2022/04/working-for-bitcoin-1024x657.png /wp-content/uploads/2026/11/working-for-bitcoin.jpg
+/wp-content/uploads/2022/04/working-for-bitcoin.png /wp-content/uploads/2026/11/working-for-bitcoin.jpg
+/wp-content/uploads/2024/12/bitcoine80cdea0-f830-4d55-bd82-a54fe33b99e0.jpg /wp-content/uploads/2026/11/bitcoine80cdea0-f830-4d55-bd82-a54fe33b99e0.jpg
+/wp-content/uploads/2024/12/bitcoinea82cf8f-3c0f-4ec3-b7dd-88108c48282e.jpg /wp-content/uploads/2026/11/bitcoinea82cf8f-3c0f-4ec3-b7dd-88108c48282e.jpg
+/wp-content/uploads/2024/12/nerdrico2024_BitGo_a_digital_assets_solutions_provider_debuted__6669698d-fbb4-4455-a14c-9ecfb633838f.png /wp-content/uploads/2026/11/nerdrico2024-bitgo-a-digital-assets-solutions-provider-debuted-6669698d-fbb4-445.jpg
+/wp-content/uploads/2025/01/ATMsdeBitcoine8bad473-4c88-4594-8c25-a82c2059b1ea.jpg /wp-content/uploads/2026/11/atmsdebitcoine8bad473-4c88-4594-8c25-a82c2059b1ea.jpg
+/wp-content/uploads/2025/01/bitcoin320b8649-1339-4667-9ca8-520826228fa7.jpg /wp-content/uploads/2026/11/bitcoin320b8649-1339-4667-9ca8-520826228fa7.jpg
+/wp-content/uploads/2025/01/bitcoin80b0d2e2-7310-43fe-a0d6-a1a9628f87aa.jpg /wp-content/uploads/2026/11/bitcoin80b0d2e2-7310-43fe-a0d6-a1a9628f87aa.jpg
+/wp-content/uploads/2025/01/bitcoin829d186e-b9a3-4fd0-b338-259b92caf437.jpg /wp-content/uploads/2026/11/bitcoin829d186e-b9a3-4fd0-b338-259b92caf437.jpg
+/wp-content/uploads/2025/01/bitcoina6eec47b-ba4d-4dbb-8e01-75f27f10c67d.jpg /wp-content/uploads/2026/11/bitcoina6eec47b-ba4d-4dbb-8e01-75f27f10c67d.jpg
+/wp-content/uploads/2025/01/bitcoinb88be112-3ef0-4a85-8ad6-68e3c5fd94b1.jpg /wp-content/uploads/2026/11/bitcoinb88be112-3ef0-4a85-8ad6-68e3c5fd94b1.jpg
+/wp-content/uploads/2025/01/bitcoinf61043a4-ea34-4c6f-af36-f877807f0dc2.jpg /wp-content/uploads/2026/11/bitcoinf61043a4-ea34-4c6f-af36-f877807f0dc2.jpg
+/wp-content/uploads/2025/01/criptoativosefb710fd-df53-4b94-9e45-74c7db75ca4b.jpg /wp-content/uploads/2026/11/criptoativosefb710fd-df53-4b94-9e45-74c7db75ca4b.jpg
+/wp-content/uploads/2025/01/criptomoedas0bba4e15-e362-4ccd-a3d3-a33abce75ff3.jpg /wp-content/uploads/2026/11/criptomoedas0bba4e15-e362-4ccd-a3d3-a33abce75ff3.jpg
+/wp-content/uploads/2025/01/criptomoedas78762d02-4342-4715-92c6-262756a4350a.jpg /wp-content/uploads/2026/11/criptomoedas78762d02-4342-4715-92c6-262756a4350a.jpg
+/wp-content/uploads/2025/01/criptomoedasbeb69565-d9d1-454f-abb9-3b9f4df3ad6a.jpg /wp-content/uploads/2026/11/criptomoedasbeb69565-d9d1-454f-abb9-3b9f4df3ad6a.jpg
+/wp-content/uploads/2025/01/criptomoedasda529459-f71f-4e40-84bd-645bd186565b.jpg /wp-content/uploads/2026/11/criptomoedasda529459-f71f-4e40-84bd-645bd186565b.jpg
+/wp-content/uploads/2025/01/criptomoedasf38cb7f3-4f7b-46cc-9f7c-6ea00b307307.jpg /wp-content/uploads/2026/11/criptomoedasf38cb7f3-4f7b-46cc-9f7c-6ea00b307307.jpg
+/wp-content/uploads/2025/01/exchanges1181858c-802c-4f08-8211-df3bcd8fc757.jpg /wp-content/uploads/2026/11/exchanges1181858c-802c-4f08-8211-df3bcd8fc757.jpg
+/wp-content/uploads/2025/01/extracaodedados16a41e3b-b021-4e3c-8c3d-3572a8930c5e.jpg /wp-content/uploads/2026/11/extracaodedados16a41e3b-b021-4e3c-8c3d-3572a8930c5e.jpg
+/wp-content/uploads/2025/01/hackers22c958a9-2f54-4e5f-884a-cbe1960a98a7.jpg /wp-content/uploads/2026/11/hackers22c958a9-2f54-4e5f-884a-cbe1960a98a7.jpg
+/wp-content/uploads/2025/01/memecoins4dac468a-0e0a-479d-9b8c-b3e5640dbec9.jpg /wp-content/uploads/2026/11/memecoins4dac468a-0e0a-479d-9b8c-b3e5640dbec9.jpg
+/wp-content/uploads/2025/01/MEXC6ebc69ca-36f1-494b-8c38-f59e50941e56.jpg /wp-content/uploads/2026/11/mexc6ebc69ca-36f1-494b-8c38-f59e50941e56.jpg
+/wp-content/uploads/2025/01/ransomwaref85f1516-f86c-4ccc-939c-033a2b542307.jpg /wp-content/uploads/2026/11/ransomwaref85f1516-f86c-4ccc-939c-033a2b542307.jpg
+/wp-content/uploads/2025/01/TrumpCoin5eebf504-6762-42a9-b6e3-cfc9543d58dc.jpg /wp-content/uploads/2026/11/trumpcoin5eebf504-6762-42a9-b6e3-cfc9543d58dc.jpg
+/wp-content/uploads/2025/01/XRP1149bdd2-3985-47fa-a139-6cd321511d4d.jpg /wp-content/uploads/2026/11/xrp1149bdd2-3985-47fa-a139-6cd321511d4d.jpg
+/wp-content/uploads/2025/01/XRPf430d41a-5c93-4058-abd0-84f82979bb8b.jpg /wp-content/uploads/2026/11/xrpf430d41a-5c93-4058-abd0-84f82979bb8b.jpg
 # origem: wordpress:rendadinheiro.com.br
 /a-logica-das-ações-e-da-bolsa-de-valores/ /a-logica-das-acoes-e-da-bolsa-de-valores/
 /category/acoes/ /category/investimentos/
