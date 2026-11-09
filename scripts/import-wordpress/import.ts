@@ -155,6 +155,12 @@ if (mapper.problems.length) {
 const hostOf = (u: string) => new URL(u).hostname.toLowerCase().replace(/^www\./, "");
 const oldHosts = new Set([hostOf(source.url), ...(args["old-domain"] ?? []).map((h) => h.toLowerCase().replace(/^www\./, ""))]);
 const catByPath = new Map(source.categories.map((c) => [c.path, c]));
+/** Marca de origem gravada em cada post e nas seções do redirects.txt. */
+const origin = `wordpress:${hostOf(source.url)}`;
+/** Post que esta origem pode atualizar: da mesma origem, ou da importação antiga (sem domínio). */
+const ownPost = (src: string | undefined) => src === origin || src === "wordpress";
+const describeSource = (src: string | undefined) =>
+  src === "wordbee" ? "publicado pelo Wordbee" : src?.startsWith("wordpress:") ? `importado de ${src.slice("wordpress:".length)}` : src ? `fonte "${src}"` : "sem fonte registrada";
 
 /** Caminho antigo → caminho novo, para links internos. */
 function resolveLink(p: string): string | null {
@@ -269,6 +275,8 @@ const report = {
   unchanged: [] as string[],
   unverified: [] as string[],
   failed: [] as { slug: string; error: string }[],
+  /** Slug já usado no blog por post de outra fonte: não foi atualizado. */
+  conflicts: [] as { slug: string; existing: string; link: string }[],
   images: [] as { post: string; url: string; error: string }[],
   imagesOk: 0,
   altGenerated: 0,
@@ -282,6 +290,15 @@ async function importPost(post: SourcePost, n: number): Promise<void> {
   const label = `[${n}/${source.posts.length}] ${post.slug}`;
   const category = mapper.forPost(post.categories);
   if (!category) throw new Error(`nenhuma regra de categoria para ${post.categories.map((c) => c.slug).join(", ") || "(sem categoria)"}`);
+
+  // Antes de baixar imagens: slug ocupado por post de outra fonte não é tocado
+  const existing = canQuery ? await api.findPost(post.slug) : null;
+  if (existing && existing.meta === undefined) fail("o blog de destino não informa a origem dos posts: faça o deploy da versão nova do servidor antes de importar.");
+  if (existing && !ownPost(existing.meta?.source)) {
+    report.conflicts.push({ slug: post.slug, existing: describeSource(existing.meta?.source), link: existing.link });
+    console.log(`${dryRun ? "\n" : ""}${label}: conflito: o slug já é de um post ${describeSource(existing.meta?.source)} (${existing.link}); nada foi alterado`);
+    return;
+  }
 
   const prep = prepareHtml(post.html, { base: source.url, oldHosts, postTitle: post.title, resolveLink });
   const featuredRef: ImageRef | undefined = post.featured && {
@@ -319,10 +336,8 @@ async function importPost(post: SourcePost, n: number): Promise<void> {
     categories: [category.id],
     date_gmt: post.dateGmt,
     ...(post.modifiedGmt ? { modified_gmt: post.modifiedGmt } : {}),
-    meta: { seo_title: post.seoTitle ?? "", seo_description: post.seoDescription ?? "", source: "wordpress" },
+    meta: { seo_title: post.seoTitle ?? "", seo_description: post.seoDescription ?? "", source: origin },
   };
-
-  const existing = canQuery ? await api.findPost(post.slug) : null;
   const status = !canQuery ? "a verificar" : existing ? "atualizaria" : "criaria";
   const oldPath = pathOf(post.link);
 
@@ -399,7 +414,7 @@ for (const c of source.categories) {
   if (target) addRedirect(c.path, `/category/${target.slug}/`);
 }
 
-const red = await writeRedirects(redirectsFile, redirects, dryRun);
+const red = await writeRedirects(redirectsFile, redirects, dryRun, origin);
 
 // ---------------------------------------------------------------- relatório
 const line = "-".repeat(60);
@@ -415,14 +430,21 @@ if (dryRun) {
 }
 console.log(`Falhas:       ${report.failed.length}`);
 for (const f of report.failed) console.log(`  - ${f.slug}: ${f.error}`);
+console.log(`Conflitos:    ${report.conflicts.length}${report.conflicts.length ? " (slug já usado no blog por post de outra fonte; não foram alterados)" : ""}`);
+for (const c of report.conflicts) console.log(`  - ${c.slug}: post ${c.existing} (${c.link})`);
 console.log(`Imagens:      ${report.imagesOk} ${dryRun ? "disponíveis para baixar" : "enviadas"} (${report.altGenerated} com alt gerado), ${report.images.length} ${dryRun ? "que não baixariam" : "que não baixaram"}`);
 for (const i of report.images) console.log(`  - ${i.post}: ${i.url} (${i.error})`);
 console.log(`Redirects:    ${red.added} nov${red.added === 1 ? "o" : "os"}, ${red.total} no bloco gerado de ${path.relative(process.cwd(), redirectsFile)}${dryRun ? " (não gravado)" : ""}`);
 if (dryRun) for (const [from, to] of redirects) console.log(`  ${from} → ${to}`);
 for (const s of red.skipped) console.log(`  ignorado: ${s}`);
+if (red.adopted) console.log(`  ${red.adopted} regra(s) antiga(s) sem origem passaram para a seção "${origin}"`);
+if (red.conflicts.length) {
+  console.log(`  conflitos de redirect: ${red.conflicts.length} (o caminho já é de outra origem; ficou como estava)`);
+  for (const c of red.conflicts) console.log(`    ${c.from}: queria → ${c.to}, continua → ${c.kept} (${c.owner})`);
+}
 if (warnings.length) {
   console.log(`Avisos:`);
   for (const w of warnings) console.log(`  - ${w}`);
 }
 if (!dryRun && red.added) console.log(`\nO redirects.txt é lido quando o servidor inicia: publique-o (commit e deploy) para os 301 valerem.`);
-process.exit(report.failed.length ? 2 : 0);
+process.exit(report.failed.length || report.conflicts.length || red.conflicts.length ? 2 : 0);

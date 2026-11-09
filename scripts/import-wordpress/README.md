@@ -86,12 +86,33 @@ endereço e com o mesmo id (`POST /posts/:id`); se nada mudou, o arquivo não é
 como "sem mudanças". As imagens também não se repetem: o blog reconhece os mesmos bytes e devolve a
 mídia já gravada. Pode rodar quantas vezes precisar, em partes (`--limit`, `--slug`).
 
+## Mais de uma origem no mesmo blog
+
+Cada post importado guarda de onde veio: `source: wordpress:<domínio de origem>` (o blog devolve esse campo
+em `meta.source` no `GET /posts?slug=`). Na hora de atualizar, o importador confere a origem:
+
+- **Mesma origem:** atualiza (ou "sem mudanças").
+- **Importação antiga** (`source: wordpress`, sem domínio, como os posts do asasdomundo): atualiza e o post
+  passa a ter o domínio desta origem. Da próxima vez, é "mesma origem".
+- **Outra fonte** (outro domínio de WordPress, post publicado pelo Wordbee ou qualquer outra): **conflito**. O
+  post do blog não é alterado, as imagens nem são baixadas, e o relatório diz de qual fonte é o post existente.
+  No `--dry-run` aparece como "conflito". Para trazer o post, mude o slug na origem ou exclua o do blog.
+
+O blog precisa estar na versão do servidor que devolve `meta.source`; se não estiver, o importador para e
+pede o deploy.
+
 ## Redirecionamentos
 
 O script grava, num bloco marcado do `redirects.txt` do blog, um 301 para cada endereço que mudou: post
 com outro caminho (permalink com categoria, slug ocupado), categoria antiga → nova (inclusive as filhas,
 `/category/lugares/america/`) e imagem antiga → nova. Caminhos iguais não geram regra. Regras fora do bloco
 não são tocadas e têm prioridade. A cada rodada o bloco é completado, não apagado.
+
+Dentro do bloco, cada origem tem a sua seção (`# origem: wordpress:<domínio>`), e uma rodada só mexe na seção da
+própria origem. Se outra origem já tem regra para o mesmo caminho antigo (por exemplo, as duas tinham
+`/category/noticias/`), a regra existente fica e o relatório mostra o conflito. Regras de antes das seções
+(sem `# origem:`) continuam valendo; a origem que gera a mesma regra passa a ser dona dela, e uma regra com
+outro destino vira conflito, sem troca.
 O servidor lê o `redirects.txt` ao iniciar: depois de importar, faça commit e publique.
 Links com data (`/2016/08/slug/`) já redirecionam sozinhos.
 
@@ -100,8 +121,9 @@ para outro redirecionamento (Cloudflare ou Traefik) para o novo.
 
 ## Relatório
 
-No fim: importados, atualizados, sem mudanças, falhas (com o motivo), imagens que não baixaram (post e
-URL), redirects gravados e avisos. Código de saída 2 quando há falha.
+No fim: importados, atualizados, sem mudanças, falhas (com o motivo), conflitos (slug de post de outra fonte
+e caminhos de redirect de outra origem), imagens que não baixaram (post e URL), redirects gravados e avisos.
+Código de saída 2 quando há falha ou conflito.
 
 ## Limites
 
