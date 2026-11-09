@@ -170,8 +170,25 @@ describe("--drop-links com troca por áudio", () => {
     assert.equal(finishHtml(p, () => null, () => "/wp-content/uploads/2026/11/ep3.mp3"), `<h3>Baixe</h3><p><a href="/wp-content/uploads/2026/11/ep3.mp3">MP3</a></p>`);
   });
 
-  test("se a cópia falhar, o link sai em vez de apontar para outro site", () => {
-    assert.equal(finishHtml(make(), () => null, () => null), `<h3>Baixe</h3>`);
+  test("se a cópia falhar, saem o link e o título vazio, e o texto não promete o áudio", () => {
+    const p = prepareHtml(
+      `<p>Ouça agora mesmo e deixe o seu comentário.</p><h3>Baixe</h3><p><a href="http://antigo.com.br/errado.mp3">MP3</a></p><h3>Assine</h3><p>Feed.</p>`,
+      { base: "https://antigo.com.br", oldHosts: new Set(["antigo.com.br"]), postTitle: "T", resolveLink: () => null, replaceLink: (x) => (x === "/errado.mp3" ? url : null) }
+    );
+    assert.equal(finishHtml(p, () => null, () => null), `<p>Deixe o seu comentário.</p><h3>Assine</h3><p>Feed.</p>`);
+  });
+
+  test("com o áudio copiado, o convite para ouvir fica", () => {
+    const p = prepareHtml(
+      `<p>Ouça agora mesmo e deixe o seu comentário.</p><p><a href="http://antigo.com.br/errado.mp3">MP3</a></p>`,
+      { base: "https://antigo.com.br", oldHosts: new Set(["antigo.com.br"]), postTitle: "T", resolveLink: () => null, replaceLink: (x) => (x === "/errado.mp3" ? url : null) }
+    );
+    assert.match(finishHtml(p, () => null, () => "/novo.mp3"), /Ouça agora mesmo e deixe/);
+  });
+
+  test("áudio da origem que não copiou não mexe no texto", () => {
+    const p = prep(`<p>Ouça agora mesmo e comente.</p><p><a href="http://antigo.com.br/ep.mp3">MP3</a></p>`);
+    assert.match(finishHtml(p, () => null), /Ouça agora mesmo e comente/);
   });
 });
 
