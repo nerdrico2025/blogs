@@ -26,6 +26,12 @@
       "description": "Tesouro Direto, renda fixa, fundos e ações explicados para iniciantes."
     },
     {
+      "id": 8,
+      "name": "Criptomoedas",
+      "slug": "criptomoedas",
+      "description": "Bitcoin, altcoins, carteiras e como investir em criptomoedas com segurança, explicado para iniciantes."
+    },
+    {
       "id": 5,
       "name": "Economia",
       "slug": "economia",
@@ -44,5 +50,5 @@
       "description": "Contas digitais, cartões de crédito, tarifas e programas de pontos."
     }
   ],
-  "nextCategoryId": 8
+  "nextCategoryId": 9
 }

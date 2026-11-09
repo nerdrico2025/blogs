@@ -4,7 +4,7 @@
 # Num post com várias categorias vale a PRIMEIRA regra que bater: as subcategorias vêm antes.
 # "* => <categoria>" vale para qualquer categoria sem regra.
 negocios-online => trabalho-online  # confiança média (pelo nome), 7 post(s), "Negócios Online"
-criptomoedas => investimentos       # escolhido à mão (sugestão era renda-extra), 5 post(s), "Criptomoedas"
+criptomoedas => criptomoedas        # categoria própria no blog (id 8), 5 post(s), "Criptomoedas"
 acoes => investimentos              # confiança média (pelos títulos dos posts), 3 post(s), "Ações"
 forex => investimentos              # confiança média (pelos títulos dos posts), 2 post(s), "Forex"
 ia => renda-extra                   # confiança média (pelos títulos dos posts), 7 post(s), "IA"
